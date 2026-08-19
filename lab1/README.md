@@ -1,0 +1,49 @@
+# Laboratorio 1 — To-Do API
+
+API REST de lista de tareas construida con **Python 3.13**, **FastAPI** y **SQLite** (sin ORM, usando `sqlite3` de la librería estándar).
+
+## Stack
+
+- Python 3.13 + FastAPI + uvicorn
+- SQLite vía `sqlite3` estándar
+- Validación de datos con modelos Pydantic
+- Tests con pytest + httpx (`TestClient` de FastAPI)
+
+## Estructura
+
+```
+src/
+  main.py        # App FastAPI y endpoints
+  database.py     # Conexión SQLite e inicialización de tablas
+  models.py       # Modelos Pydantic
+tests/
+  test_todos.py   # Tests, al menos uno por endpoint
+requirements.txt
+```
+
+## Endpoints
+
+| Método | Ruta                | Descripción                                   |
+|--------|---------------------|------------------------------------------------|
+| GET    | `/api/todos`        | Lista tareas (soporta `?status=pending\|done`) |
+| GET    | `/api/todos/{id}`   | Detalle de una tarea                           |
+| POST   | `/api/todos`        | Crea una tarea (`title`, `description?`)       |
+| PATCH  | `/api/todos/{id}`   | Actualiza título, descripción o status         |
+| DELETE | `/api/todos/{id}`   | Elimina una tarea                              |
+
+## Cómo correrlo
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+uvicorn src.main:app --reload
+```
+
+La API queda disponible en `http://127.0.0.1:8000` y la documentación interactiva en `http://127.0.0.1:8000/docs`.
+
+## Tests
+
+```bash
+pytest
+```

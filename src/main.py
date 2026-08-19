@@ -6,7 +6,15 @@ from typing import Iterator
 from fastapi import Depends, FastAPI, HTTPException, Query
 
 from src.database import get_connection, init_db
-from src.models import TodoCreate, TodoOut, TodoStatus, TodoUpdate
+from src.email_service import send_email
+from src.models import (
+    EmailReportCreate,
+    EmailReportOut,
+    TodoCreate,
+    TodoOut,
+    TodoStatus,
+    TodoUpdate,
+)
 
 
 @asynccontextmanager
@@ -97,3 +105,63 @@ def delete_todo(todo_id: int, conn: sqlite3.Connection = Depends(get_db)) -> Non
     _get_todo_or_404(conn, todo_id)
     conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
     conn.commit()
+
+
+def _row_to_email_report(row: sqlite3.Row) -> EmailReportOut:
+    return EmailReportOut(**dict(row))
+
+
+def _build_report_body(todos: list[sqlite3.Row], note: str | None) -> str:
+    lines = [f"Reporte de actividades completadas ({len(todos)})", ""]
+    for todo in todos:
+        line = f"- #{todo['id']} {todo['title']}"
+        if todo["description"]:
+            line += f": {todo['description']}"
+        lines.append(line)
+    if not todos:
+        lines.append("(No hay actividades completadas por el momento.)")
+    if note:
+        lines += ["", "Notas:", note]
+    return "\n".join(lines)
+
+
+@app.get("/api/email-reports", response_model=list[EmailReportOut])
+def list_email_reports(conn: sqlite3.Connection = Depends(get_db)) -> list[EmailReportOut]:
+    rows = conn.execute("SELECT * FROM email_reports ORDER BY id DESC").fetchall()
+    return [_row_to_email_report(row) for row in rows]
+
+
+@app.post("/api/email-reports", response_model=EmailReportOut, status_code=201)
+def create_email_report(
+    payload: EmailReportCreate, conn: sqlite3.Connection = Depends(get_db)
+) -> EmailReportOut:
+    done_rows = conn.execute(
+        "SELECT * FROM todos WHERE status = 'done' ORDER BY id"
+    ).fetchall()
+    todo_ids = ",".join(str(row["id"]) for row in done_rows)
+    body = _build_report_body(done_rows, payload.description)
+
+    status, error_message = send_email(
+        payload.recipient, "Reporte de actividades completadas", body
+    )
+
+    cursor = conn.execute(
+        """
+        INSERT INTO email_reports
+            (recipient, description, todo_ids, todo_count, status, error_message)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            payload.recipient,
+            payload.description,
+            todo_ids,
+            len(done_rows),
+            status,
+            error_message,
+        ),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT * FROM email_reports WHERE id = ?", (cursor.lastrowid,)
+    ).fetchone()
+    return _row_to_email_report(row)

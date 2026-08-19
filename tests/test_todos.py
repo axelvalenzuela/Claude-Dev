@@ -126,3 +126,48 @@ def test_delete_todo(client: TestClient):
 def test_delete_todo_not_found(client: TestClient):
     response = client.delete("/api/todos/999")
     assert response.status_code == 404
+
+
+def test_create_email_report_simulated_without_smtp(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.delenv("SMTP_HOST", raising=False)
+    todo_id = create_sample_todo(client).json()["id"]
+    client.patch(f"/api/todos/{todo_id}", json={"status": "done"})
+
+    response = client.post(
+        "/api/email-reports",
+        json={"recipient": "consultor@empresa.com", "description": "Avance semanal"},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "simulated"
+    assert body["todo_count"] == 1
+    assert body["todo_ids"] == str(todo_id)
+    assert body["recipient"] == "consultor@empresa.com"
+    assert body["description"] == "Avance semanal"
+
+
+def test_create_email_report_invalid_recipient(client: TestClient):
+    response = client.post("/api/email-reports", json={"recipient": "no-es-un-correo"})
+    assert response.status_code == 422
+
+
+def test_create_email_report_with_no_completed_todos(client: TestClient):
+    create_sample_todo(client)
+
+    response = client.post(
+        "/api/email-reports", json={"recipient": "consultor@empresa.com"}
+    )
+    assert response.status_code == 201
+    assert response.json()["todo_count"] == 0
+
+
+def test_list_email_reports(client: TestClient):
+    client.post("/api/email-reports", json={"recipient": "consultor@empresa.com"})
+    client.post("/api/email-reports", json={"recipient": "otro@empresa.com"})
+
+    response = client.get("/api/email-reports")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2

@@ -27,6 +27,20 @@ def init_db(db_path: Path | str = DB_PATH) -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS email_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipient TEXT NOT NULL,
+                description TEXT,
+                todo_ids TEXT NOT NULL,
+                todo_count INTEGER NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('sent', 'simulated', 'failed')),
+                error_message TEXT,
+                sent_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
         conn.commit()
     finally:
         conn.close()

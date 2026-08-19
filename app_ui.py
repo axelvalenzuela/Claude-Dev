@@ -1,12 +1,12 @@
 """Panel de control Streamlit para la API de to-dos (FastAPI + SQLite)."""
 import os
 
+import pandas as pd
 import requests
 import streamlit as st
 
 API_BASE_URL = os.environ.get("TODO_API_URL", "http://127.0.0.1:8000/api/todos")
 
-STATUS_COLORS = {"pending": "#f0ad4e", "done": "#5cb85c"}
 STATUS_LABELS = {"pending": "Pendiente", "done": "Completada"}
 
 st.set_page_config(page_title="To-Do Dashboard", page_icon="✅", layout="wide")
@@ -35,6 +35,25 @@ def delete_todo(todo_id: int) -> None:
     response.raise_for_status()
 
 
+def todos_to_dataframe(todos: list[dict]) -> pd.DataFrame:
+    df = pd.DataFrame(todos)
+    if df.empty:
+        return df
+    df["status"] = df["status"].map(STATUS_LABELS).fillna(df["status"])
+    df = df.rename(
+        columns={
+            "id": "ID",
+            "title": "Título",
+            "description": "Descripción",
+            "status": "Estado",
+            "created_at": "Creada",
+            "updated_at": "Actualizada",
+        }
+    )
+    df["Descripción"] = df["Descripción"].fillna("—")
+    return df[["ID", "Título", "Descripción", "Estado", "Creada", "Actualizada"]]
+
+
 st.title("✅ To-Do Dashboard")
 
 try:
@@ -43,69 +62,70 @@ except requests.exceptions.RequestException as exc:
     st.error(f"No se pudo conectar con la API en {API_BASE_URL}. ¿Está corriendo uvicorn?\n\n{exc}")
     st.stop()
 
-total = len(todos)
-done_count = sum(1 for t in todos if t["status"] == "done")
-pending_count = total - done_count
+tab_dashboard, tab_registros = st.tabs(["📊 Dashboard", "📋 Registros"])
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Total", total)
-col2.metric("Pendientes", pending_count)
-col3.metric("Completadas", done_count)
+with tab_dashboard:
+    total = len(todos)
+    done_count = sum(1 for t in todos if t["status"] == "done")
+    pending_count = total - done_count
 
-st.divider()
-st.subheader("Nueva tarea")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total", total)
+    col2.metric("Pendientes", pending_count)
+    col3.metric("Completadas", done_count)
 
-with st.form("new_todo_form", clear_on_submit=True):
-    title = st.text_input("Título")
-    description = st.text_area("Descripción", height=80)
-    submitted = st.form_submit_button("Crear tarea")
-    if submitted:
-        if not title.strip():
-            st.warning("El título es obligatorio.")
-        else:
-            try:
-                create_todo(title.strip(), description.strip() or None)
-                st.rerun()
-            except requests.exceptions.RequestException as exc:
-                st.error(f"No se pudo crear la tarea: {exc}")
+    if total:
+        st.divider()
+        st.subheader("Resumen por estado")
+        summary_df = pd.DataFrame(
+            {"Estado": ["Pendiente", "Completada"], "Cantidad": [pending_count, done_count]}
+        ).set_index("Estado")
+        st.bar_chart(summary_df)
 
-st.divider()
-st.subheader("Tareas")
-
-if not todos:
-    st.info("No hay tareas todavía. Crea una arriba.")
-else:
-    header = st.columns([0.6, 2, 3, 1.4, 1.1, 1.1])
-    for col, label in zip(header, ["ID", "Título", "Descripción", "Estado", "Completar", "Eliminar"]):
-        col.markdown(f"**{label}**")
-
-    for todo in todos:
-        row = st.columns([0.6, 2, 3, 1.4, 1.1, 1.1])
-        row[0].write(todo["id"])
-        row[1].write(todo["title"])
-        row[2].write(todo["description"] or "—")
-
-        color = STATUS_COLORS[todo["status"]]
-        label = STATUS_LABELS[todo["status"]]
-        row[3].markdown(
-            f'<span style="background-color:{color};color:white;padding:2px 10px;'
-            f'border-radius:12px;font-size:0.85em;">{label}</span>',
-            unsafe_allow_html=True,
-        )
-
-        if todo["status"] == "pending":
-            if row[4].button("✅", key=f"done_{todo['id']}", help="Marcar como completada"):
+with tab_registros:
+    st.subheader("Nueva tarea")
+    with st.form("new_todo_form", clear_on_submit=True):
+        title = st.text_input("Título")
+        description = st.text_area("Descripción", height=80)
+        submitted = st.form_submit_button("Crear tarea")
+        if submitted:
+            if not title.strip():
+                st.warning("El título es obligatorio.")
+            else:
                 try:
-                    mark_done(todo["id"])
+                    create_todo(title.strip(), description.strip() or None)
+                    st.rerun()
+                except requests.exceptions.RequestException as exc:
+                    st.error(f"No se pudo crear la tarea: {exc}")
+
+    st.divider()
+    st.subheader("Tareas registradas")
+
+    if not todos:
+        st.info("No hay tareas todavía. Crea una arriba.")
+    else:
+        st.dataframe(todos_to_dataframe(todos), hide_index=True, use_container_width=True)
+
+        st.divider()
+        st.subheader("Acciones")
+        options = {f"#{t['id']} — {t['title']}": t for t in todos}
+        selected_label = st.selectbox("Selecciona una tarea", options.keys())
+        selected_todo = options[selected_label]
+
+        action_col1, action_col2 = st.columns(2)
+        if selected_todo["status"] == "pending":
+            if action_col1.button("✅ Marcar como completada"):
+                try:
+                    mark_done(selected_todo["id"])
                     st.rerun()
                 except requests.exceptions.RequestException as exc:
                     st.error(f"No se pudo actualizar la tarea: {exc}")
         else:
-            row[4].write("—")
+            action_col1.write("Ya completada")
 
-        if row[5].button("🗑️", key=f"delete_{todo['id']}", help="Eliminar tarea"):
+        if action_col2.button("🗑️ Eliminar tarea"):
             try:
-                delete_todo(todo["id"])
+                delete_todo(selected_todo["id"])
                 st.rerun()
             except requests.exceptions.RequestException as exc:
                 st.error(f"No se pudo eliminar la tarea: {exc}")

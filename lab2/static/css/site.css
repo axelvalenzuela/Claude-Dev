@@ -1,0 +1,8 @@
+body {
+    background-color: #f5f6f8;
+}
+
+.badge-draft { background-color: #6c757d; }
+.badge-submitted { background-color: #f0ad4e; }
+.badge-approved { background-color: #5cb85c; }
+.badge-rejected { background-color: #d9534f; }

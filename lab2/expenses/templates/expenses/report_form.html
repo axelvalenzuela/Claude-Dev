@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Nuevo reporte{% endblock %}
+{% block content %}
+<h2>Nuevo reporte de gastos</h2>
+<div class="row">
+    <div class="col-md-6">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">{{ form.title.label }}</label>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors|striptags }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ form.description.label }}</label>
+                {{ form.description }}
+            </div>
+            <button type="submit" class="btn btn-primary">Crear</button>
+            <a href="{% url 'reports:list' %}" class="btn btn-link">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

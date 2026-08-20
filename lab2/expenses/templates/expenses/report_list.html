@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Mis reportes{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Mis reportes de gastos</h2>
+    <a class="btn btn-primary" href="{% url 'reports:create' %}">+ Nuevo reporte</a>
+</div>
+
+{% if not reports %}
+    <div class="alert alert-info">Todavía no tienes reportes. Crea uno para empezar a subir tus documentos de viaje.</div>
+{% else %}
+    <table class="table table-striped bg-white">
+        <thead>
+            <tr>
+                <th>Título</th>
+                <th>Estado</th>
+                <th># Documentos</th>
+                <th>Total</th>
+                <th>Creado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for report in reports %}
+                <tr>
+                    <td>{{ report.title }}</td>
+                    <td>{% include "expenses/_status_badge.html" with status=report.status %}</td>
+                    <td>{{ report.documents.count }}</td>
+                    <td>${{ report.total_amount }}</td>
+                    <td>{{ report.created_at|date:"d/m/Y" }}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'reports:detail' report.pk %}">Ver</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+{% endblock %}

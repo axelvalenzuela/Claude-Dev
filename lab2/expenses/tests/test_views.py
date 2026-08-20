@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from expenses.models import ExpenseReport, ExpenseReportAuditLog
+from expenses.models import MAX_TRIP_SPAN_DAYS, ExpenseReport, ExpenseReportAuditLog
 from expenses.tests.helpers import make_pdf_bytes as _make_pdf_bytes
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_")
@@ -205,6 +205,104 @@ class ReportFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)  # re-renders the form with the error
         self.assertFalse(ExpenseReport.objects.filter(title="Bad document").exists())
+
+    def test_create_rejects_pdf_with_too_many_pages(self):
+        pdf_bytes = _make_pdf_bytes(["Page 1", "Page 2", "Page 3", "Page 4", "Page 5"])
+        response = self.client.post(
+            reverse("reports:create"),
+            {
+                "title": "Too many pages",
+                "description": "",
+                "supervisor_name": "Maria Lopez",
+                "supervisor_email": "",
+                "action": "draft",
+                "files": [SimpleUploadedFile("receipt.pdf", pdf_bytes, content_type="application/pdf")],
+                "doc_type": ["hotel"],
+                "doc_date": [TODAY.isoformat()],
+                "doc_amount": ["50.00"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ExpenseReport.objects.filter(title="Too many pages").exists())
+
+    def test_create_rejects_receipts_from_unrelated_trips(self):
+        march_date = TODAY.replace(month=3, day=1) if TODAY.month != 3 else TODAY
+        june_date = march_date.replace(month=6)
+
+        response = self.client.post(
+            reverse("reports:create"),
+            {
+                "title": "Two different trips",
+                "description": "",
+                "supervisor_name": "Maria Lopez",
+                "supervisor_email": "",
+                "action": "draft",
+                "files": [
+                    SimpleUploadedFile("march.jpg", b"fake-image", content_type="image/jpeg"),
+                    SimpleUploadedFile("june.jpg", b"fake-image", content_type="image/jpeg"),
+                ],
+                "doc_type": ["hotel", "hotel"],
+                "doc_date": [march_date.isoformat(), june_date.isoformat()],
+                "doc_amount": ["50.00", "60.00"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(ExpenseReport.objects.filter(title="Two different trips").exists())
+
+    def test_create_allows_receipts_within_the_same_trip(self):
+        start = TODAY
+        end = TODAY + timedelta(days=MAX_TRIP_SPAN_DAYS - 1)
+
+        response = self.client.post(
+            reverse("reports:create"),
+            {
+                "title": "One trip, spread out",
+                "description": "",
+                "supervisor_name": "Maria Lopez",
+                "supervisor_email": "",
+                "action": "draft",
+                "files": [
+                    SimpleUploadedFile("start.jpg", b"fake-image", content_type="image/jpeg"),
+                    SimpleUploadedFile("end.jpg", b"fake-image", content_type="image/jpeg"),
+                ],
+                "doc_type": ["hotel", "hotel"],
+                "doc_date": [start.isoformat(), end.isoformat()],
+                "doc_amount": ["50.00", "60.00"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ExpenseReport.objects.filter(title="One trip, spread out").exists())
+
+    def test_upload_document_rejects_date_outside_existing_trip(self):
+        report, _ = self._create_report()
+        self.client.post(
+            reverse("reports:upload_document", args=[report.pk]),
+            {
+                "type": "hotel",
+                "document_date": TODAY.isoformat(),
+                "amount": "50.00",
+                "file": SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
+            },
+        )
+
+        far_date = TODAY + timedelta(days=MAX_TRIP_SPAN_DAYS + 5)
+        response = self.client.post(
+            reverse("reports:upload_document", args=[report.pk]),
+            {
+                "type": "taxi",
+                "document_date": far_date.isoformat(),
+                "amount": "20.00",
+                "file": SimpleUploadedFile("taxi.jpg", b"fake-image", content_type="image/jpeg"),
+            },
+            follow=True,
+        )
+
+        self.assertEqual(report.documents.count(), 1)
+        messages = [str(m) for m in response.context["messages"]]
+        self.assertTrue(any("trip" in m.lower() for m in messages))
 
     def test_preview_document_extracts_amount_and_type_from_pdf(self):
         pdf_bytes = _make_pdf_bytes("Hotel Reservation Total $85.50")

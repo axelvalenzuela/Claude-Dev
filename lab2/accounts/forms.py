@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
-from .models import User
+from .models import User, generate_employee_number
 
 
 class LoginForm(AuthenticationForm):
@@ -37,6 +37,7 @@ class SignUpForm(UserCreationForm):
         user = super().save(commit=False)
         user.username = self.cleaned_data["email"]
         user.email = self.cleaned_data["email"]
+        user.employee_number = generate_employee_number()
         if commit:
             user.save()
         return user

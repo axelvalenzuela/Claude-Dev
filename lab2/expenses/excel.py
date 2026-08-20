@@ -18,14 +18,23 @@ def build_report_workbook(report) -> Workbook:
     sheet["A1"] = "Travel expense report"
     sheet["A1"].font = Font(bold=True, size=14)
 
-    sheet["A3"], sheet["B3"] = "Employee", report.user.get_full_name() or report.user.email
-    sheet["A4"], sheet["B4"] = "Department", report.user.department
-    sheet["A5"], sheet["B5"] = "Title", report.title
-    sheet["A6"], sheet["B6"] = "Status", report.get_status_display()
-    sheet["A7"], sheet["B7"] = "Created", report.created_at.strftime("%Y-%m-%d %H:%M")
-    sheet["A8"], sheet["B8"] = "Supervisor", report.supervisor_name
+    trip_range = report.trip_date_range
+    trip_range_text = f"{trip_range[0]:%Y-%m-%d} to {trip_range[1]:%Y-%m-%d}" if trip_range else "—"
 
-    info_rows = 8
+    info_rows = 2
+    for label, value in [
+        ("Employee", report.user.get_full_name() or report.user.email),
+        ("Employee #", report.user.employee_number or "—"),
+        ("Department", report.user.department),
+        ("Supervisor", report.supervisor_name),
+        ("Title", report.title),
+        ("Trip dates", trip_range_text),
+        ("Status", report.get_status_display()),
+        ("Created", report.created_at.strftime("%Y-%m-%d %H:%M")),
+    ]:
+        info_rows += 1
+        sheet[f"A{info_rows}"], sheet[f"B{info_rows}"] = label, value
+
     if report.reviewed_at:
         info_rows += 1
         sheet[f"A{info_rows}"], sheet[f"B{info_rows}"] = "Reviewed", report.reviewed_at.strftime("%Y-%m-%d %H:%M")

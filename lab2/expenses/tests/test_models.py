@@ -9,7 +9,13 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from accounts.models import User
-from expenses.models import DAILY_LIMIT_USD, ExpenseReport, TravelDocument
+from expenses.models import (
+    DAILY_LIMIT_USD,
+    MAX_TRIP_SPAN_DAYS,
+    ExpenseReport,
+    TravelDocument,
+    validate_trip_span,
+)
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_")
 
@@ -145,3 +151,40 @@ class ExpenseReportRulesTests(TestCase):
         self._add_document(doc_type=TravelDocument.DocType.FLIGHT, date=flight_date)
 
         self.assertEqual(self.report.trip_start_date, flight_date)
+
+    def test_trip_date_range_spans_earliest_to_latest_document(self):
+        start = timezone.now().date() - timedelta(days=10)
+        end = timezone.now().date()
+        self._add_document(date=start)
+        self._add_document(date=end)
+
+        self.assertEqual(self.report.trip_date_range, (start, end))
+
+    def test_trip_date_range_none_without_documents(self):
+        self.assertIsNone(self.report.trip_date_range)
+
+
+class ValidateTripSpanTests(TestCase):
+    def test_allows_dates_within_the_span(self):
+        base = timezone.now().date()
+        dates = [base, base + timedelta(days=MAX_TRIP_SPAN_DAYS)]
+
+        validate_trip_span(dates)  # should not raise
+
+    def test_rejects_dates_further_apart_than_the_span(self):
+        base = timezone.now().date()
+        dates = [base, base + timedelta(days=MAX_TRIP_SPAN_DAYS + 1)]
+
+        with self.assertRaises(ValidationError):
+            validate_trip_span(dates)
+
+    def test_march_and_june_receipts_are_rejected_together(self):
+        march = timezone.now().date().replace(month=3, day=1)
+        june = march.replace(month=6, day=1)
+
+        with self.assertRaises(ValidationError):
+            validate_trip_span([march, june])
+
+    def test_single_date_or_empty_never_raises(self):
+        validate_trip_span([])
+        validate_trip_span([timezone.now().date()])

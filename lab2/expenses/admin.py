@@ -106,6 +106,7 @@ class ExpenseReportAdmin(admin.ModelAdmin):
     list_display = (
         "title",
         "employee",
+        "employee_number",
         "department",
         "status",
         "total_amount_display",
@@ -114,9 +115,10 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         "submitted_at",
     )
     list_filter = ("status",)
-    search_fields = ("title", "user__first_name", "user__email")
+    search_fields = ("title", "user__first_name", "user__email", "user__employee_number")
     readonly_fields = (
         "user",
+        "employee_number",
         "title",
         "description",
         "supervisor_name",
@@ -127,12 +129,14 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         "reviewed_by",
         "total_amount_display",
         "daily_breakdown_display",
+        "trip_date_range_display",
         "trip_start_date",
         "submission_deadline",
         "approval_clause",
     )
     fields = (
         "user",
+        "employee_number",
         "title",
         "description",
         "supervisor_name",
@@ -143,6 +147,7 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         "approval_clause",
         "created_at",
         "submitted_at",
+        "trip_date_range_display",
         "trip_start_date",
         "submission_deadline",
         "reviewed_at",
@@ -159,6 +164,20 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         return obj.user.get_full_name() or obj.user.email
 
     employee.short_description = "Employee"
+
+    def employee_number(self, obj):
+        return obj.user.employee_number or "—"
+
+    employee_number.short_description = "Employee #"
+
+    def trip_date_range_display(self, obj):
+        trip_range = obj.trip_date_range
+        if not trip_range:
+            return "—"
+        start, end = trip_range
+        return f"{start:%Y-%m-%d} to {end:%Y-%m-%d}"
+
+    trip_date_range_display.short_description = "Trip dates"
 
     def department(self, obj):
         return obj.user.department

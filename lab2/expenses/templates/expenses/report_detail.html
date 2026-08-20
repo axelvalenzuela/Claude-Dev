@@ -5,13 +5,25 @@
     <div>
         <h2>{{ report.title }} {% include "expenses/_status_badge.html" with status=report.status %}</h2>
         {% if report.description %}<p class="text-muted">{{ report.description }}</p>{% endif %}
-        <p class="text-muted mb-0">Supervisor: {{ report.supervisor_name }}{% if report.supervisor_email %} ({{ report.supervisor_email }}){% endif %}</p>
     </div>
     <div class="text-end">
         <a class="btn btn-outline-secondary" href="{% url 'reports:export_excel' report.pk %}">Download Excel</a>
         <a class="btn btn-link" href="{% url 'reports:list' %}">Back</a>
     </div>
 </div>
+
+<table class="table table-sm table-bordered bg-white w-auto mb-4">
+    <tbody>
+        <tr><th class="text-muted">Employee</th><td>{{ report.user.get_full_name|default:report.user.email }}</td></tr>
+        <tr><th class="text-muted">Employee #</th><td>{{ report.user.employee_number|default:"—" }}</td></tr>
+        <tr><th class="text-muted">Department</th><td>{{ report.user.department|default:"—" }}</td></tr>
+        <tr><th class="text-muted">Supervisor</th><td>{{ report.supervisor_name }}{% if report.supervisor_email %} ({{ report.supervisor_email }}){% endif %}</td></tr>
+        <tr>
+            <th class="text-muted">Trip dates</th>
+            <td>{% if report.trip_date_range %}{{ report.trip_date_range.0|date:"m/d/Y" }} – {{ report.trip_date_range.1|date:"m/d/Y" }}{% else %}—{% endif %}</td>
+        </tr>
+    </tbody>
+</table>
 
 {% if report.status == "approved" or report.status == "rejected" %}
     <div class="alert {% if report.status == 'approved' %}alert-success{% else %}alert-danger{% endif %}">
@@ -116,7 +128,7 @@
     <div class="card mb-4">
         <div class="card-header">Add a travel document</div>
         <div class="card-body">
-            <form action="{% url 'reports:upload_document' report.pk %}" method="post" enctype="multipart/form-data">
+            <form action="{% url 'reports:upload_document' report.pk %}" method="post" enctype="multipart/form-data" id="single-upload-form">
                 {% csrf_token %}
                 <div class="row g-3">
                     <div class="col-md-3">
@@ -137,13 +149,55 @@
                     </div>
                 </div>
                 <div class="form-text mt-2">
-                    PDF receipts are scanned automatically for the amount and expense type as an early check
-                    against company policy — you'll see a warning here if something looks off.
+                    Attaching a PDF previews the detected amount and expense type right here, live, before you
+                    upload it — an early check against company policy. <span id="single-preview-status"></span>
                 </div>
                 <button type="submit" class="btn btn-primary mt-3">Upload document</button>
             </form>
         </div>
     </div>
+    <script>
+    (function () {
+        const fileInput = document.getElementById("id_file");
+        if (!fileInput) return;
+
+        const previewUrl = "{% url 'reports:preview_document' %}";
+        const csrfToken = document.querySelector("#single-upload-form [name=csrfmiddlewaretoken]").value;
+        const status = document.getElementById("single-preview-status");
+
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+            status.textContent = "";
+            if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
+                return;
+            }
+
+            status.textContent = "Analyzing PDF…";
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch(previewUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData })
+                .then((response) => response.json())
+                .then((data) => {
+                    let detected = [];
+                    if (data.extracted_amount) {
+                        document.getElementById("id_amount").value = data.extracted_amount;
+                        detected.push("$" + data.extracted_amount);
+                    }
+                    if (data.detected_type) {
+                        document.getElementById("id_type").value = data.detected_type;
+                        detected.push(data.detected_type_label);
+                    }
+                    status.textContent = detected.length
+                        ? "Detected: " + detected.join(" · ") + " (edit above if needed)"
+                        : "Couldn't detect anything — enter details manually.";
+                })
+                .catch(() => {
+                    status.textContent = "Preview failed — enter details manually.";
+                });
+        });
+    })();
+    </script>
 
     <form action="{% url 'reports:submit' report.pk %}" method="post" onsubmit="return confirm('Submit this report for review? You will no longer be able to edit it.');">
         {% csrf_token %}

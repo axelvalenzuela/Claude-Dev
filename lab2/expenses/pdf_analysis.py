@@ -4,16 +4,22 @@ only when a human reviews the report.
 
 This is intentionally lightweight: it reads the PDF's text layer (no OCR, no
 external binaries) and falls back to "nothing detected" for scanned/image
-PDFs or any file it can't parse. It never blocks an upload — it only
-annotates the TravelDocument with what it found, so the employee/admin can
-double check.
+PDFs or any file it can't parse. It never blocks an upload on its own — it
+only annotates the TravelDocument with what it found — except for the page
+count, which the company treats as a hard limit (see validate_pdf_page_count).
 """
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
+from django.core.exceptions import ValidationError
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
+
+# Real-world travel receipts are 1-4 pages; the actual charge is almost
+# always on page 1 or 2 (a boarding pass, hotel folio, ride receipt...).
+MAX_PDF_PAGES = 4
+PRIORITY_PAGE_COUNT = 2
 
 AMOUNT_PATTERN = re.compile(r"\$?\s?(\d{1,3}(?:,\d{3})*(?:\.\d{2}))")
 
@@ -31,32 +37,70 @@ class PdfAnalysisResult:
     detected_type: str | None = None
 
 
+def validate_pdf_page_count(file):
+    """Company policy: a travel receipt PDF must be at most MAX_PDF_PAGES
+    pages. Non-PDF files and unreadable PDFs are left alone here — this only
+    enforces the page count when it can actually be determined."""
+    if not file.name.lower().endswith(".pdf"):
+        return
+
+    page_count = _safe_page_count(file)
+    if page_count is not None and page_count > MAX_PDF_PAGES:
+        raise ValidationError(
+            f"This PDF has {page_count} pages; travel receipts must be at most "
+            f"{MAX_PDF_PAGES} pages (the charge is normally on page 1 or 2)."
+        )
+
+
 def analyze_pdf(file_obj) -> PdfAnalysisResult:
     """Extract a likely total amount and expense category from a PDF's text.
-    Returns an empty result (no exception) if the file isn't a readable PDF."""
-    text = _extract_text(file_obj)
-    if not text:
+    Prioritizes the first couple of pages, since that's where the actual
+    charge normally is on a real receipt; falls back to the full document if
+    nothing is found there. Returns an empty result (no exception) if the
+    file isn't a readable PDF."""
+    pages = _extract_pages(file_obj)
+    if not pages:
         return PdfAnalysisResult()
 
-    return PdfAnalysisResult(
-        extracted_amount=_guess_amount(text),
-        detected_type=_guess_type(text),
-    )
+    priority_text = "\n".join(pages[:PRIORITY_PAGE_COUNT])
+    full_text = "\n".join(pages)
+
+    amount = _guess_amount(priority_text)
+    if amount is None:
+        amount = _guess_amount(full_text)
+
+    detected_type = _guess_type(priority_text)
+    if detected_type is None:
+        detected_type = _guess_type(full_text)
+
+    return PdfAnalysisResult(extracted_amount=amount, detected_type=detected_type)
 
 
-def _extract_text(file_obj) -> str:
+def _extract_pages(file_obj) -> list[str]:
     try:
         file_obj.seek(0)
         reader = PdfReader(file_obj)
-        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        return [page.extract_text() or "" for page in reader.pages]
     except (PdfReadError, ValueError, OSError):
-        return ""
+        return []
     finally:
         try:
             file_obj.seek(0)
         except (ValueError, OSError):
             pass
-    return text
+
+
+def _safe_page_count(file_obj) -> int | None:
+    try:
+        file_obj.seek(0)
+        return len(PdfReader(file_obj).pages)
+    except Exception:  # noqa: BLE001 - page-count check must never crash an upload
+        return None
+    finally:
+        try:
+            file_obj.seek(0)
+        except (ValueError, OSError):
+            pass
 
 
 def _guess_amount(text: str) -> Decimal | None:

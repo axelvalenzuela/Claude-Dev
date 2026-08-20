@@ -12,7 +12,7 @@ from django.views.generic import DetailView, ListView
 
 from .excel import build_report_workbook
 from .forms import ExpenseReportForm, TravelDocumentForm
-from .models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_action
+from .models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_action, validate_trip_span
 from .pdf_analysis import analyze_pdf
 from .services import DocumentUploadError, build_travel_document
 
@@ -103,6 +103,12 @@ class ReportCreateView(LoginRequiredMixin, View):
             except DocumentUploadError as exc:
                 errors.append(f"{file.name}: {exc.message}")
 
+        if not errors and documents:
+            try:
+                validate_trip_span([document.document_date for document in documents])
+            except ValidationError as exc:
+                errors.append("; ".join(exc.messages))
+
         if errors:
             for error in errors:
                 messages.error(request, error)
@@ -166,6 +172,13 @@ class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
             )
         except DocumentUploadError as exc:
             messages.error(request, f"Couldn't upload the document: {exc.message}")
+            return redirect("reports:detail", pk=pk)
+
+        try:
+            existing_dates = [d.document_date for d in report.documents.all()]
+            validate_trip_span(existing_dates + [document.document_date])
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
             return redirect("reports:detail", pk=pk)
 
         document.expense_report = report

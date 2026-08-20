@@ -1,16 +1,24 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import LoginEvent, User
+from .models import LoginEvent, User, generate_employee_number
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("email", "first_name", "department", "is_staff", "is_active")
+    list_display = ("email", "employee_number", "first_name", "department", "is_staff", "is_active")
     list_filter = ("department", "is_staff", "is_active")
-    search_fields = ("email", "first_name", "department")
-    fieldsets = BaseUserAdmin.fieldsets + (("Company", {"fields": ("department",)}),)
+    search_fields = ("email", "first_name", "department", "employee_number")
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ("Company", {"fields": ("employee_number", "department")}),
+    )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (("Company", {"fields": ("department",)}),)
+    readonly_fields = ("employee_number",)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.employee_number:
+            obj.employee_number = generate_employee_number()
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(LoginEvent)

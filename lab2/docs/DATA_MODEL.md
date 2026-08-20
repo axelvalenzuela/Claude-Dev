@@ -20,6 +20,7 @@ erDiagram
         string email UK "also the username"
         string first_name
         string department
+        string employee_number UK "random 7-digit id, e.g. 2490198 - auto-assigned, nullable"
         bool is_staff "true only for the seeded CEO-delegated admin account"
         bool is_superuser
     }
@@ -127,3 +128,18 @@ audit trail that can be edited after the fact isn't one.
   `approval_clause="Approved under authority delegated by Steffan Widmer, CEO."`.
   The admin form (`ExpenseReportAdminForm`) surfaces this as a required
   checkbox that must be ticked to approve — rejecting doesn't need it.
+- **One report = one trip**: `validate_trip_span()` (`expenses/models.py`)
+  rejects a document whose date is more than `MAX_TRIP_SPAN_DAYS` (21) away
+  from the rest of the report's documents — checked both when a report is
+  created with several attachments at once and when a single document is
+  added afterward. Nothing is persisted if the check fails.
+- **Max 4 pages, charge usually on page 1-2**: `pdf_analysis.validate_pdf_page_count`
+  rejects a PDF over `MAX_PDF_PAGES` (4); `analyze_pdf` reads every page but
+  only searches the first `PRIORITY_PAGE_COUNT` (2) for the amount/type,
+  falling back to the rest of the document only if nothing is found there.
+- **Employee number**: `User.employee_number` (accounts/models.py) is a
+  random, unique 7-digit id assigned automatically — at signup
+  (`SignUpForm.save()`), when an admin creates a user directly
+  (`UserAdmin.save_model`), and, for accounts that existed before this field
+  was added, via a one-off data migration
+  (`accounts/migrations/0005_backfill_employee_numbers.py`).

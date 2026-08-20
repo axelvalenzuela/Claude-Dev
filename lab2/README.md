@@ -26,7 +26,7 @@ reporte en Excel.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **49 tests**.
+- Test framework de Django (basado en `unittest`): **67 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -144,7 +144,30 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 - `submit()` **rechaza el envío** si ya pasó la fecha límite, con un mensaje
   claro indicando la fecha límite calculada.
 
-### 5. Cláusula de aprobación del CEO — Steffan Widmer
+### 5. Documentos deben pertenecer al mismo viaje (`validate_trip_span`)
+- Los recibos de un mismo reporte no pueden estar separados por más de
+  **`MAX_TRIP_SPAN_DAYS` = 21 días**. Si ya hay documentos de marzo y se
+  intenta adjuntar uno de junio, se rechaza con un mensaje claro indicando
+  el rango detectado y el límite — exactamente el caso que pediste.
+- Se valida en dos puntos: al crear el reporte con varios adjuntos a la vez
+  (compara las fechas de todo el lote entre sí) y al agregar un documento
+  suelto después (lo compara contra los documentos ya guardados en el
+  reporte). Ningún documento se guarda si la validación falla.
+- `ExpenseReport.trip_date_range` expone `(fecha_min, fecha_max)` del viaje
+  — se muestra en el detalle del reporte, en el admin y en el Excel como
+  parte del formato empresarial ("Trip dates: 03/01/2026 – 03/15/2026").
+
+### 6. Límite de páginas por PDF (`pdf_analysis.validate_pdf_page_count`)
+- Un recibo de viaje debe tener **máximo 4 páginas**; se rechaza al subirlo
+  si tiene más (mensaje claro, no crashea con PDFs corruptos — si no se
+  puede leer el número de páginas, no bloquea).
+- El análisis de monto/tipo (`analyze_pdf`) **prioriza las primeras 2
+  páginas** del PDF — donde casi siempre está el cargo real — y solo
+  recurre al resto del documento si no encuentra nada ahí, evitando que un
+  número irrelevante de una página posterior (p. ej. un balance de puntos)
+  se confunda con el total del gasto.
+
+### 7. Cláusula de aprobación del CEO — Steffan Widmer
 - `ExpenseReport.approve(reviewer, note, ceo_clause_ack)` **exige**
   `ceo_clause_ack=True` para aprobar; si no se confirma, lanza error.
 - Al aprobar, se graba `ceo_authorized=True` y
@@ -155,7 +178,7 @@ La app queda disponible en `http://127.0.0.1:8080/`:
   marcarse para poder guardar una aprobación — rechazar no lo requiere, pero
   sí exige una nota con el motivo.
 
-### 6. Panel de administrador — Django Admin (`expenses/admin.py`)
+### 8. Panel de administrador — Django Admin (`expenses/admin.py`)
 - Accesible solo para la cuenta sembrada (`is_staff=True`); cualquier
   empleado normal es rechazado por el framework mismo.
 - **`ExpenseReportAdmin`**: solo reportes ya enviados (los borradores son
@@ -168,7 +191,7 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 - Aprobar/rechazar reusa las mismas reglas de negocio del modelo
   (`ExpenseReport.approve()`/`reject()`), no las reimplementa.
 
-### 7. Auditoría e histórico de reportes (`ExpenseReportAuditLog`)
+### 9. Auditoría e histórico de reportes (`ExpenseReportAuditLog`)
 - Registro inmutable (solo lectura en el admin) de cada evento del ciclo de
   vida de un reporte: creado, documento subido, documento eliminado,
   enviado, aprobado, rechazado — con quién (`actor`) y cuándo.
@@ -178,18 +201,34 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 - Ver [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) para el diagrama de
   relaciones completo y el porqué de este diseño.
 
-### 8. Generación de Excel (`expenses/excel.py`)
-- Encabezado con empleado/departamento/estado, la cláusula de aprobación del
-  CEO si el reporte fue aprobado, la tabla de documentos, y el **desglose
-  diario contra la política de $60/día** con las filas fuera de límite
-  resaltadas.
+### 10. Generación de Excel (`expenses/excel.py`)
+- Encabezado con empleado, **número de empleado**, departamento, supervisor,
+  **fechas del viaje**, estado y fecha de creación; la cláusula de
+  aprobación del CEO si el reporte fue aprobado; la tabla de documentos; y
+  el **desglose diario contra la política de $60/día** con las filas fuera
+  de límite resaltadas. Formato pensado para verse como un reporte
+  corporativo real, no una tabla suelta.
 
-### 9. Documentos y almacenamiento (`expenses/models.py`)
-- `TravelDocument.file` valida extensión (`.pdf`, `.jpg`, `.jpeg`, `.png`) y
-  tamaño máximo (10 MB).
+### 11. Documentos y almacenamiento (`expenses/models.py`)
+- `TravelDocument.file` valida extensión (`.pdf`, `.jpg`, `.jpeg`, `.png`),
+  tamaño máximo (10 MB) y número de páginas (PDFs, máximo 4).
 - Nombre físico único (`uuid4`) bajo `media/uploads/{user_id}/{report_id}/`;
   se conserva el nombre original (`original_filename`) para mostrarlo y
   descargarlo.
+
+### 12. Número de empleado (`accounts/models.py`)
+- `User.employee_number`: 7 dígitos aleatorios (ej. `2490198`), único,
+  asignado automáticamente — nunca lo captura el empleado.
+  - Al registrarse (`SignUpForm.save()`), se genera con
+    `generate_employee_number()`.
+  - Si se crea un usuario desde `/admin/` sin número, `UserAdmin.save_model`
+    se lo asigna igual.
+  - Los usuarios que ya existían en la base antes de este campo (incluida
+    la cuenta admin sembrada) lo reciben mediante una migración de datos
+    (`accounts/migrations/0005_backfill_employee_numbers.py`) — "si existe
+    gente, ponles un número random", tal como pediste.
+- Visible en el admin de usuarios, en el detalle del reporte, en el admin
+  de reportes y en el Excel.
 
 ## Reglas de negocio (testeadas, `expenses/models.py`)
 
@@ -206,6 +245,10 @@ draft --submit()--> submitted --approve(ceo_clause_ack=True)--> approved
   límite (fecha de vuelo + 30 días).
 - `approve()`: exige estado `submitted` y `ceo_clause_ack=True`.
 - `reject()`: exige estado `submitted` y una nota no vacía.
+- `validate_trip_span()`: exige que las fechas de los documentos de un mismo
+  reporte no se separen por más de 21 días (se corre al crear el reporte
+  con adjuntos y al agregar un documento nuevo — nunca al guardar el
+  modelo directamente, para no romper reportes ya existentes).
 
 ## Estructura
 
@@ -216,17 +259,19 @@ lab2/
   docs/DATA_MODEL.md          # diagrama ER y trazabilidad
   config/                    # settings (django-environ), urls, wsgi/asgi
   accounts/
-    models.py                 # User, LoginEvent
+    models.py                 # User (+ employee_number), LoginEvent
     signals.py                 # graba LoginEvent en cada intento de login
     views.py                   # SignUpView (CBV)
     migrations/0002_seed_admin.py
+    migrations/0005_backfill_employee_numbers.py
   expenses/
-    models.py                  # ExpenseReport, TravelDocument, ExpenseReportAuditLog
-    pdf_analysis.py             # extracción de monto/tipo desde el PDF
-    views.py                    # CBVs (ListView/CreateView/DetailView/View + mixins)
+    models.py                  # ExpenseReport, TravelDocument, ExpenseReportAuditLog, validate_trip_span
+    pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
+    services.py                  # build_travel_document, compartido por subida individual y en lote
+    views.py                    # CBVs (ListView/CreateView/DetailView/View + mixins) + preview AJAX
     admin.py                    # panel de aprobación, cláusula CEO, auditoría
     excel.py
-    tests/                      # test_models, test_excel, test_views, test_pdf_analysis
+    tests/                      # test_models, test_excel, test_views, test_pdf_analysis, helpers.py
   templates/base.html           # layout compartido (Bootstrap 5 vía CDN, en inglés)
   static/css/site.css
   media/uploads/                # archivos subidos (no versionado)
@@ -240,10 +285,13 @@ cd lab2
 python manage.py test
 ```
 
-49 tests: reglas de transición de `ExpenseReport` (incluye deadline y
-cláusula CEO), política de $60/día, análisis de PDF (monto y tipo
-detectados, y el endpoint de preview en vivo), creación de reportes con
-adjuntos múltiples, generación del Excel, signup/aislamiento entre empleados,
-subida y envío de documentos, auditoría de reportes, trazabilidad de logins
-(exitosos y fallidos), y el flujo de aprobación/rechazo a través del Django
+67 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
+límite de páginas de PDF y priorización de las primeras 2 páginas, política
+de $60/día, análisis de PDF (monto y tipo detectados, y el endpoint de
+preview en vivo), creación de reportes con adjuntos múltiples, número de
+empleado (generación y unicidad), generación del Excel, signup/aislamiento
+entre empleados, subida y envío de documentos, auditoría de reportes,
+trazabilidad de logins (exitosos y fallidos), y el flujo de
+aprobación/rechazo a través del Django
 Admin.

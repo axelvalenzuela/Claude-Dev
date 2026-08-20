@@ -4,28 +4,7 @@ from io import BytesIO
 from django.test import SimpleTestCase
 
 from expenses.pdf_analysis import _guess_amount, _guess_type, analyze_pdf
-
-
-def _make_pdf_bytes(text: str) -> bytes:
-    """Hand-rolled minimal single-page PDF with a text-showing operator, just
-    enough for pypdf's text extraction (used instead of pulling in a full PDF
-    writer dependency for a handful of tests)."""
-    content = f"BT /F1 18 Tf 10 100 Td ({text}) Tj ET".encode()
-    return b"""%%PDF-1.4
-1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
-2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj
-3 0 obj<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /MediaBox [0 0 400 200] /Contents 5 0 R >>endobj
-4 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj
-5 0 obj<< /Length %d >>
-stream
-%s
-endstream
-endobj
-trailer<< /Size 6 /Root 1 0 R >>
-startxref
-0
-%%%%EOF
-""" % (len(content), content)
+from expenses.tests.helpers import make_pdf_bytes as _make_pdf_bytes
 
 
 class GuessAmountTests(SimpleTestCase):

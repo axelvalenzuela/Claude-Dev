@@ -3,16 +3,18 @@ import os
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
-from django.http import FileResponse, Http404, HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.db import transaction
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
-from django.views.generic import CreateView, DetailView, ListView
+from django.views.generic import DetailView, ListView
 
 from .excel import build_report_workbook
 from .forms import ExpenseReportForm, TravelDocumentForm
 from .models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_action
 from .pdf_analysis import analyze_pdf
+from .services import DocumentUploadError, build_travel_document
 
 
 class OwnedReportMixin:
@@ -33,19 +35,102 @@ class ReportListView(LoginRequiredMixin, ListView):
         return self.request.user.expense_reports.all()
 
 
-class ReportCreateView(LoginRequiredMixin, CreateView):
-    model = ExpenseReport
-    form_class = ExpenseReportForm
+class PreviewDocumentView(LoginRequiredMixin, View):
+    """AJAX endpoint used while composing a new report: analyzes one PDF at
+    a time (as soon as it's attached, before the report is created or
+    anything is saved) and returns the amount/type it detected, so the
+    employee can review it live instead of only finding out after saving."""
+
+    def post(self, request):
+        file = request.FILES.get("file")
+        if not file:
+            return JsonResponse({"error": "No file provided."}, status=400)
+
+        if not file.name.lower().endswith(".pdf"):
+            return JsonResponse(
+                {"is_pdf": False, "extracted_amount": None, "detected_type": None, "detected_type_label": None}
+            )
+
+        analysis = analyze_pdf(file)
+        detected_type_label = None
+        if analysis.detected_type:
+            detected_type_label = dict(TravelDocument.DocType.choices).get(analysis.detected_type)
+
+        return JsonResponse(
+            {
+                "is_pdf": True,
+                "extracted_amount": str(analysis.extracted_amount) if analysis.extracted_amount is not None else None,
+                "detected_type": analysis.detected_type,
+                "detected_type_label": detected_type_label,
+            }
+        )
+
+
+class ReportCreateView(LoginRequiredMixin, View):
+    """Report creation, with all its receipts attached in the same step.
+    Each attached PDF is analyzed live client-side (see PreviewDocumentView)
+    so the employee can eyeball the detected amount/type before saving;
+    here on the server every file is re-validated and re-analyzed
+    independently — the client-side preview is a convenience, not the
+    source of truth."""
+
     template_name = "expenses/report_form.html"
 
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        log_action(self.object, self.request.user, ExpenseReportAuditLog.Action.CREATED)
-        return response
+    def get(self, request):
+        return render(request, self.template_name, {"form": ExpenseReportForm(), "doc_types": TravelDocument.DocType.choices})
 
-    def get_success_url(self):
-        return reverse("reports:detail", args=[self.object.pk])
+    def post(self, request):
+        form = ExpenseReportForm(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, {"form": form, "doc_types": TravelDocument.DocType.choices})
+
+        files = request.FILES.getlist("files")
+        doc_types = request.POST.getlist("doc_type")
+        doc_dates = request.POST.getlist("doc_date")
+        doc_amounts = request.POST.getlist("doc_amount")
+
+        documents, errors = [], []
+        for index, file in enumerate(files):
+            try:
+                documents.append(
+                    build_travel_document(
+                        file,
+                        doc_types[index] if index < len(doc_types) else "",
+                        doc_dates[index] if index < len(doc_dates) else "",
+                        doc_amounts[index] if index < len(doc_amounts) else "",
+                    )
+                )
+            except DocumentUploadError as exc:
+                errors.append(f"{file.name}: {exc.message}")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return render(request, self.template_name, {"form": form, "doc_types": TravelDocument.DocType.choices})
+
+        with transaction.atomic():
+            report = form.save(commit=False)
+            report.user = request.user
+            report.save()
+            log_action(report, request.user, ExpenseReportAuditLog.Action.CREATED)
+
+            for document in documents:
+                document.expense_report = report
+                document.save()
+                log_action(report, request.user, ExpenseReportAuditLog.Action.DOCUMENT_UPLOADED, document.file_name)
+
+            if request.POST.get("action") == "submit":
+                try:
+                    report.submit()
+                    report.save()
+                    log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
+                    messages.success(request, f"Report created and submitted to {report.supervisor_name} for review.")
+                except ValidationError as exc:
+                    messages.warning(request, "Saved as a draft instead: " + "; ".join(exc.messages))
+            else:
+                messages.success(request, "Report saved as a draft.")
+
+        return redirect("reports:detail", pk=report.pk)
 
 
 class ReportDetailView(LoginRequiredMixin, OwnedReportMixin, DetailView):
@@ -70,25 +155,20 @@ class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
             messages.error(request, "You can only add documents while the report is a draft.")
             return redirect("reports:detail", pk=pk)
 
-        form = TravelDocumentForm(request.POST, request.FILES)
-        if not form.is_valid():
-            errors = "; ".join(f"{field}: {', '.join(errs)}" for field, errs in form.errors.items())
-            messages.error(request, f"Couldn't upload the document: {errors}")
+        file = request.FILES.get("file")
+        if not file:
+            messages.error(request, "Select a file.")
             return redirect("reports:detail", pk=pk)
 
-        document = form.save(commit=False)
+        try:
+            document = build_travel_document(
+                file, request.POST.get("type"), request.POST.get("document_date"), request.POST.get("amount")
+            )
+        except DocumentUploadError as exc:
+            messages.error(request, f"Couldn't upload the document: {exc.message}")
+            return redirect("reports:detail", pk=pk)
+
         document.expense_report = report
-
-        uploaded_file = form.cleaned_data["file"]
-        if uploaded_file.name.lower().endswith(".pdf"):
-            analysis = analyze_pdf(uploaded_file)
-            document.extracted_amount = analysis.extracted_amount
-            document.detected_type = analysis.detected_type or ""
-            if analysis.extracted_amount is not None:
-                document.amount_mismatch = abs(analysis.extracted_amount - document.amount) > 1
-            if analysis.detected_type:
-                document.type_mismatch = analysis.detected_type != document.type
-
         document.save()
         log_action(report, request.user, ExpenseReportAuditLog.Action.DOCUMENT_UPLOADED, document.file_name)
 
@@ -104,7 +184,7 @@ class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
                 f"Heads up: the PDF looks like a {document.get_detected_type_display()} receipt, "
                 f"but you selected {document.get_type_display()}.",
             )
-        else:
+        if not document.amount_mismatch and not document.type_mismatch:
             messages.success(request, "Document added.")
 
         return redirect("reports:detail", pk=pk)
@@ -134,7 +214,7 @@ class SubmitReportView(LoginRequiredMixin, OwnedReportMixin, View):
             report.submit()
             report.save()
             log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
-            messages.success(request, "Report submitted for review.")
+            messages.success(request, f"Report submitted to {report.supervisor_name} for review.")
         except ValidationError as exc:
             messages.error(request, "; ".join(exc.messages))
         return redirect("reports:detail", pk=pk)

@@ -1,6 +1,7 @@
 import shutil
 import tempfile
 from datetime import timedelta
+from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
@@ -9,6 +10,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from expenses.models import ExpenseReport, ExpenseReportAuditLog
+from expenses.tests.helpers import make_pdf_bytes as _make_pdf_bytes
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_")
 TODAY = timezone.now().date()
@@ -30,10 +32,15 @@ class ReportFlowTests(TestCase):
         )
         self.client.login(username="ana@example.com", password="clave123")
 
-    def _create_report(self):
-        response = self.client.post(
-            reverse("reports:create"), {"title": "Trip to Mexico City", "description": "Client X"}
-        )
+    def _create_report(self, **extra):
+        data = {
+            "title": "Trip to Mexico City",
+            "description": "Client X",
+            "supervisor_name": "Maria Lopez",
+            "supervisor_email": "",
+        }
+        data.update(extra)
+        response = self.client.post(reverse("reports:create"), data)
         return ExpenseReport.objects.get(title="Trip to Mexico City", user=self.employee), response
 
     def test_create_report_belongs_to_current_user(self):
@@ -120,6 +127,108 @@ class ReportFlowTests(TestCase):
             response["Content-Type"],
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+
+    def test_create_requires_supervisor_name(self):
+        response = self.client.post(
+            reverse("reports:create"),
+            {"title": "No supervisor", "description": "", "supervisor_name": "", "supervisor_email": ""},
+        )
+        self.assertEqual(response.status_code, 200)  # re-renders the form with an error
+        self.assertFalse(ExpenseReport.objects.filter(title="No supervisor").exists())
+
+    def test_create_with_attached_receipts_saves_documents(self):
+        response = self.client.post(
+            reverse("reports:create"),
+            {
+                "title": "Trip with receipts",
+                "description": "",
+                "supervisor_name": "Maria Lopez",
+                "supervisor_email": "maria@example.com",
+                "action": "draft",
+                "files": [
+                    SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
+                ],
+                "doc_type": ["hotel"],
+                "doc_date": [TODAY.isoformat()],
+                "doc_amount": ["150.00"],
+            },
+        )
+
+        report = ExpenseReport.objects.get(title="Trip with receipts")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(report.documents.count(), 1)
+        self.assertEqual(report.documents.first().amount, Decimal("150.00"))
+        self.assertEqual(report.supervisor_name, "Maria Lopez")
+        self.assertTrue(
+            report.audit_log.filter(action=ExpenseReportAuditLog.Action.DOCUMENT_UPLOADED).exists()
+        )
+
+    def test_create_and_submit_in_one_step(self):
+        response = self.client.post(
+            reverse("reports:create"),
+            {
+                "title": "Trip create and submit",
+                "description": "",
+                "supervisor_name": "Maria Lopez",
+                "supervisor_email": "",
+                "action": "submit",
+                "files": [
+                    SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
+                ],
+                "doc_type": ["hotel"],
+                "doc_date": [TODAY.isoformat()],
+                "doc_amount": ["150.00"],
+            },
+        )
+
+        report = ExpenseReport.objects.get(title="Trip create and submit")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(report.status, ExpenseReport.Status.SUBMITTED)
+
+    def test_create_with_invalid_document_does_not_create_report(self):
+        response = self.client.post(
+            reverse("reports:create"),
+            {
+                "title": "Bad document",
+                "description": "",
+                "supervisor_name": "Maria Lopez",
+                "supervisor_email": "",
+                "action": "draft",
+                "files": [
+                    SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
+                ],
+                "doc_type": ["hotel"],
+                "doc_date": [TODAY.isoformat()],
+                "doc_amount": ["not-a-number"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)  # re-renders the form with the error
+        self.assertFalse(ExpenseReport.objects.filter(title="Bad document").exists())
+
+    def test_preview_document_extracts_amount_and_type_from_pdf(self):
+        pdf_bytes = _make_pdf_bytes("Hotel Reservation Total $85.50")
+        response = self.client.post(
+            reverse("reports:preview_document"),
+            {"file": SimpleUploadedFile("receipt.pdf", pdf_bytes, content_type="application/pdf")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["is_pdf"])
+        self.assertEqual(data["extracted_amount"], "85.50")
+        self.assertEqual(data["detected_type"], "hotel")
+
+    def test_preview_document_skips_non_pdf_files(self):
+        response = self.client.post(
+            reverse("reports:preview_document"),
+            {"file": SimpleUploadedFile("photo.jpg", b"fake-image", content_type="image/jpeg")},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["is_pdf"])
+        self.assertIsNone(data["extracted_amount"])
 
 
 ADMIN_MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_admin_")

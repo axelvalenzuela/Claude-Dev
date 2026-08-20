@@ -5,6 +5,7 @@
     <div>
         <h2>{{ report.title }} {% include "expenses/_status_badge.html" with status=report.status %}</h2>
         {% if report.description %}<p class="text-muted">{{ report.description }}</p>{% endif %}
+        <p class="text-muted mb-0">Supervisor: {{ report.supervisor_name }}{% if report.supervisor_email %} ({{ report.supervisor_email }}){% endif %}</p>
     </div>
     <div class="text-end">
         <a class="btn btn-outline-secondary" href="{% url 'reports:export_excel' report.pk %}">Download Excel</a>

@@ -26,7 +26,7 @@ reporte en Excel.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **43 tests**.
+- Test framework de Django (basado en `unittest`): **49 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -86,21 +86,42 @@ La app queda disponible en `http://127.0.0.1:8080/`:
   dónde, y quién falló al intentarlo.
 
 ### 2. Portal del empleado (`expenses/views.py` — vistas basadas en clases)
-- `ReportListView`, `ReportCreateView`, `ReportDetailView` (todas con
-  `LoginRequiredMixin`), y `UploadDocumentView` / `DeleteDocumentView` /
-  `SubmitReportView` / `ExportExcelView` / `DownloadDocumentView` como `View`
-  con un `OwnedReportMixin` compartido que garantiza que un empleado **solo
-  puede ver/tocar sus propios reportes** (404 en cualquier otro caso).
-- Subir documento de viaje: tipo (**TAXI / MEAL / FLIGHT / HOTEL / OTHER**),
-  fecha, monto, archivo (PDF/JPG/PNG) — solo mientras el reporte es `draft`.
+- `ReportListView`, `ReportDetailView` (con `LoginRequiredMixin`), y
+  `UploadDocumentView` / `DeleteDocumentView` / `SubmitReportView` /
+  `ExportExcelView` / `DownloadDocumentView` como `View` con un
+  `OwnedReportMixin` compartido que garantiza que un empleado **solo puede
+  ver/tocar sus propios reportes** (404 en cualquier otro caso).
+- **Crear reporte con adjuntos y preview en vivo** (`ReportCreateView` +
+  `PreviewDocumentView`, `/reports/new/`): en la misma pantalla donde se
+  captura título/descripción/supervisor, se pueden adjuntar **varios PDFs y
+  fotos a la vez** (`<input type="file" multiple>`). Cada PDF adjuntado se
+  envía por AJAX (`fetch`) al instante a `PreviewDocumentView`
+  (`/reports/preview-document/`), que corre el mismo análisis de PDF y
+  responde con el monto y tipo detectados — la fila de ese documento se
+  autocompleta con esa sugerencia (editable) antes de guardar nada, así el
+  empleado puede revisar y corregir antes de decidir crear/enviar el
+  reporte. Las fotos (JPG/PNG) no se analizan (no hay texto que leer);
+  solo piden tipo/fecha/monto manuales. Al enviar el formulario hay dos
+  botones: **Save as draft** (crea el reporte, se puede seguir editando) o
+  **Create & submit for review** (crea y envía en un solo paso, quedando
+  sujeto a las mismas validaciones de `submit()` — documentos y fecha
+  límite). El análisis del lado del servidor (`build_travel_document` en
+  `expenses/services.py`, compartido con la subida individual) es siempre
+  el que se guarda; el preview del cliente es solo una ayuda visual.
+- Documento de viaje: tipo (**TAXI / MEAL / FLIGHT / HOTEL / OTHER**),
+  fecha, monto, archivo (PDF/JPG/PNG) — se puede seguir agregando/quitando
+  documentos individualmente en el detalle del reporte mientras sigue en
+  `draft`.
 - **Análisis del PDF al subirlo** (`expenses/pdf_analysis.py`): lee el texto
   del PDF y adivina el monto total y el tipo de gasto por palabras clave
   (`boarding pass`→flight, `hotel/check-in`→hotel, `uber/taxi`→taxi,
   `restaurant/dinner`→meal). Si el monto o el tipo detectado no coincide con
   lo que el empleado capturó, se marca `amount_mismatch` / `type_mismatch` y
-  se le avisa **en el momento de subir el archivo**, antes de que nadie lo
-  revise — así se evitan errores/posibles incumplimientos de política desde
-  el origen, no solo al aprobar.
+  se le avisa — así se evitan errores/posibles incumplimientos de política
+  desde el origen, no solo al aprobar.
+- **Supervisor**: cada reporte guarda `supervisor_name` (obligatorio) y
+  `supervisor_email` (opcional) — a quién queda dirigido el envío. Visible
+  en el detalle, en el admin y en el Excel.
 - **Enviar a revisión**: exige al menos un documento y respeta la **fecha
   límite de envío** (ver política de deadline abajo).
 - **Descarga a Excel** con el desglose diario de gastos.
@@ -219,9 +240,10 @@ cd lab2
 python manage.py test
 ```
 
-43 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+49 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), política de $60/día, análisis de PDF (monto y tipo
-detectados), generación del Excel, signup/aislamiento entre empleados,
+detectados, y el endpoint de preview en vivo), creación de reportes con
+adjuntos múltiples, generación del Excel, signup/aislamiento entre empleados,
 subida y envío de documentos, auditoría de reportes, trazabilidad de logins
 (exitosos y fallidos), y el flujo de aprobación/rechazo a través del Django
 Admin.

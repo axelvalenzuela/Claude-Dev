@@ -6,10 +6,12 @@ from .models import ExpenseReport, TravelDocument
 class ExpenseReportForm(forms.ModelForm):
     class Meta:
         model = ExpenseReport
-        fields = ["title", "description"]
+        fields = ["title", "description", "supervisor_name", "supervisor_email"]
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Mexico City trip - August 2026"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "supervisor_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Who should review this report"}),
+            "supervisor_email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "optional"}),
         }
 
 

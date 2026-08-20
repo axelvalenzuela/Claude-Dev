@@ -23,15 +23,17 @@ def build_report_workbook(report) -> Workbook:
     sheet["A5"], sheet["B5"] = "Title", report.title
     sheet["A6"], sheet["B6"] = "Status", report.get_status_display()
     sheet["A7"], sheet["B7"] = "Created", report.created_at.strftime("%Y-%m-%d %H:%M")
+    sheet["A8"], sheet["B8"] = "Supervisor", report.supervisor_name
 
-    info_rows = 7
+    info_rows = 8
     if report.reviewed_at:
-        sheet["A8"], sheet["B8"] = "Reviewed", report.reviewed_at.strftime("%Y-%m-%d %H:%M")
-        sheet["A9"], sheet["B9"] = "Review note", report.review_note
-        info_rows = 9
+        info_rows += 1
+        sheet[f"A{info_rows}"], sheet[f"B{info_rows}"] = "Reviewed", report.reviewed_at.strftime("%Y-%m-%d %H:%M")
+        info_rows += 1
+        sheet[f"A{info_rows}"], sheet[f"B{info_rows}"] = "Review note", report.review_note
         if report.approval_clause:
-            sheet[f"A{info_rows + 1}"], sheet[f"B{info_rows + 1}"] = "Approval clause", report.approval_clause
             info_rows += 1
+            sheet[f"A{info_rows}"], sheet[f"B{info_rows}"] = "Approval clause", report.approval_clause
 
     header_row = info_rows + 2
     headers = ["#", "Type", "Date", "File", "Amount"]

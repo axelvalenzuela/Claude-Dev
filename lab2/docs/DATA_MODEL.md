@@ -19,10 +19,11 @@ erDiagram
         int id PK
         string email UK "also the username"
         string first_name
-        string department
+        string department "the employee's own department, e.g. ICS"
         string employee_number UK "random 7-digit id, e.g. 2490198 - auto-assigned, nullable"
-        bool is_staff "true only for the seeded CEO-delegated admin account"
-        bool is_superuser
+        string supervised_department "admins only: the one department they approve for, e.g. ICS"
+        bool is_staff "true for any admin account (HR or a department admin)"
+        bool is_superuser "true only for the HR/general admin - sees every department"
     }
 
     EXPENSE_REPORT {
@@ -143,3 +144,20 @@ audit trail that can be edited after the fact isn't one.
   (`UserAdmin.save_model`), and, for accounts that existed before this field
   was added, via a one-off data migration
   (`accounts/migrations/0005_backfill_employee_numbers.py`).
+- **Department-scoped approval + notifications**: `User.supervised_department`
+  marks a staff account as the approver for one department (e.g. Adrian
+  Heymes → `"ICS"`); `ExpenseReportAdmin.get_queryset` filters the report
+  list by `user__department == request.user.supervised_department` for
+  anyone who isn't a superuser. Because Django admin resolves a single
+  report's change page through that same queryset, opening another
+  department's report by guessing its URL doesn't leak it either — admin
+  treats it as "object not found" and redirects away, it never renders.
+  (`has_module_permission`/`has_view_permission`/`has_change_permission` are
+  overridden to allow any `is_staff` account in — the queryset above is
+  what actually decides which reports they can see or act on, not Django's
+  separate per-model Permission objects.) The HR admin (`is_superuser=True`)
+  has no `supervised_department` and sees everything.
+  `accounts/context_processors.py:pending_reports_notification`
+  runs the same scoping to compute the "N reports awaiting your review"
+  count shown on the admin dashboard (`templates/admin/index.html`) — both
+  are driven by the same two fields, so they can't disagree with each other.

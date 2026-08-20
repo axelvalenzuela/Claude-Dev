@@ -158,7 +158,31 @@ class ExpenseReportAdmin(admin.ModelAdmin):
     inlines = [TravelDocumentInline, AuditLogInline]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).exclude(status=ExpenseReport.Status.DRAFT)
+        # Drafts are private to the employee regardless of who's asking.
+        queryset = super().get_queryset(request).exclude(status=ExpenseReport.Status.DRAFT)
+
+        # HR / the general admin (is_superuser) sees every department. A
+        # department admin (supervised_department set) only ever sees their
+        # own department's reports — never another team's, even by guessing
+        # a URL, since this scoping happens at the queryset level.
+        if not request.user.is_superuser and request.user.supervised_department:
+            queryset = queryset.filter(user__department=request.user.supervised_department)
+
+        return queryset
+
+    def has_module_permission(self, request):
+        # Any admin account (HR or a department admin) can open this app —
+        # WHICH reports they can see/act on is entirely decided by
+        # get_queryset() above, not by Django's permission system (a
+        # department admin has no explicit "view_expensereport" Permission
+        # object; is_staff plus the queryset scoping is the whole model).
+        return request.user.is_active and request.user.is_staff
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_staff
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_staff
 
     def employee(self, obj):
         return obj.user.get_full_name() or obj.user.email

@@ -16,12 +16,34 @@ def generate_employee_number() -> str:
 
 
 class User(AbstractUser):
-    """App user. username = email; adds the employee's department and
-    company employee number."""
+    """App user. username = email; adds the employee's department, company
+    employee number, and (for admin accounts only) the department they
+    approve expense reports for.
+
+    Two kinds of admin accounts exist (both are is_staff=True):
+      - The general/HR admin (is_superuser=True) approves every report,
+        regardless of department. There should only be one or two of these
+        (seeded as Iris Cortez — see migration 0006_seed_org_admins).
+      - A department admin (is_superuser=False, supervised_department set)
+        only sees and approves reports from employees in that one
+        department (enforced in expenses/admin.py's get_queryset and used
+        for the "reports to review" notification). Seeded example: Adrian
+        Heymes for the ICS department.
+    """
 
     department = models.CharField("Department", max_length=100, blank=True)
     employee_number = models.CharField(
         "Employee number", max_length=20, unique=True, null=True, blank=True
+    )
+    supervised_department = models.CharField(
+        "Supervises department (admin only)",
+        max_length=100,
+        blank=True,
+        help_text=(
+            "For a department admin: the one department whose submitted reports "
+            "they can see and approve. Leave blank for regular employees and for "
+            "the general/HR admin (who sees every department via is_superuser)."
+        ),
     )
 
     def __str__(self):

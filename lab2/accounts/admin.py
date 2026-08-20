@@ -6,11 +6,19 @@ from .models import LoginEvent, User, generate_employee_number
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ("email", "employee_number", "first_name", "department", "is_staff", "is_active")
-    list_filter = ("department", "is_staff", "is_active")
+    list_display = (
+        "email",
+        "employee_number",
+        "first_name",
+        "department",
+        "supervised_department",
+        "is_staff",
+        "is_active",
+    )
+    list_filter = ("department", "supervised_department", "is_staff", "is_active")
     search_fields = ("email", "first_name", "department", "employee_number")
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("Company", {"fields": ("employee_number", "department")}),
+        ("Company", {"fields": ("employee_number", "department", "supervised_department")}),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (("Company", {"fields": ("department",)}),)
     readonly_fields = ("employee_number",)

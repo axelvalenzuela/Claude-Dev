@@ -31,6 +31,12 @@ DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
+# Local-dev convenience: `python manage.py runserver` kills its own process
+# after this many hours so a forgotten server doesn't run forever on a dev
+# machine. See accounts/server_lifecycle.py for the implementation. Set to 0
+# (or a negative number) to disable.
+AUTO_SHUTDOWN_HOURS = env.float("AUTO_SHUTDOWN_HOURS", default=12)
+
 
 # Application definition
 
@@ -70,6 +76,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Powers the "reports to review" notification banner shown to
+                # admins (scoped to their department unless they're HR/superuser).
+                'accounts.context_processors.pending_reports_notification',
             ],
         },
     },
@@ -141,6 +150,11 @@ LOGOUT_REDIRECT_URL = 'login'
 MESSAGE_TAGS = {
     messages_constants.ERROR: 'danger',
 }
+
+# Portal branding, shared by templates/base.html and the Django Admin
+# overrides (see accounts/apps.py, which sets admin.site.site_header/title).
+PORTAL_BRAND_NAME = "MHP"
+PORTAL_BRAND_TAGLINE = "by Porsche"
 
 # pypdf logs a warning for every unparsable PDF (e.g. a scanned image with no
 # text layer, or a corrupt upload) — expected/handled in pdf_analysis.py, so

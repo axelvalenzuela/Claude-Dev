@@ -1,8 +1,8 @@
-"""Crea, en el primer `migrate`, la única cuenta con acceso al panel /admin/.
+"""Creates, on the first `migrate`, the bootstrap account with /admin/ access.
 
-Los valores se toman de variables de entorno para no dejar credenciales fijas
-en el código; si no se definen, se usan valores de desarrollo local (ver
-README de este laboratorio).
+Values come from environment variables so no credentials are hardcoded in
+the source; if they're not set, local development defaults are used (see
+this lab's README).
 """
 import os
 

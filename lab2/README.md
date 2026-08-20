@@ -1,18 +1,32 @@
-# Laboratorio 2 — Travel Expense Reports
+# Laboratorio 2 — MHP by Porsche · Travel Expense Reports
 
 Aplicación web para que cada empleado suba sus documentos de viaje (vuelos,
 hoteles, taxis, comidas...), arme un reporte de gastos y lo envíe a revisión.
-Un único usuario administrador (actuando bajo la autoridad delegada del CEO,
-**Steffan Widmer**) aprueba o rechaza los reportes; el empleado ve el
-resultado en su propio portal. Cualquiera de los dos roles puede descargar el
-reporte en Excel.
+El reporte se aprueba (o rechaza) por el admin del **departamento** del
+empleado, o por el admin general de **RH**; el empleado ve el resultado en
+su propio portal. Cualquiera de los dos roles puede descargar el reporte en
+Excel. Toda aprobación final queda sujeta a la cláusula de autoridad
+delegada del CEO, **Steffan Widmer**.
 
 > La interfaz de la aplicación está **en inglés** (plataforma "enterprise"
 > orientada a un equipo internacional); esta documentación queda en español
-> para el equipo que la mantiene.
+> para el equipo que la mantiene. Todos los comentarios en el código
+> (`.py`) están en inglés.
 >
 > Se evaluó inicialmente hacerlo en .NET/C#, pero por restricciones de
 > permisos en el equipo de desarrollo se implementó en **Python + Django**.
+
+## Marca "MHP by Porsche"
+
+El header de ambas interfaces (portal del empleado y panel admin) lleva el
+wordmark **MHP by Porsche**. Se decidió construirlo como un tratamiento
+tipográfico en CSS (negro/rojo, la paleta de marca de Porsche) en vez de
+descargar e incrustar el logo oficial real: un logo con derechos de autor
+metido dentro del repo de git (que además queda en el historial para
+siempre) es un riesgo de marca registrada innecesario para un proyecto de
+laboratorio — el resultado visual es igual de distintivo sin ese riesgo. Si
+más adelante quieres el logo oficial, lo más seguro es enlazarlo desde un
+recurso interno propio de la empresa, no incrustarlo en el repo.
 
 ## Stack
 
@@ -26,7 +40,7 @@ reporte en Excel.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **67 tests**.
+- Test framework de Django (basado en `unittest`): **84 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -61,14 +75,36 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 - `/reports/` — portal del empleado (redirige aquí tras login)
 - `/admin/` — panel de administrador (solo la cuenta sembrada)
 
-### Cuenta de administrador (sembrada automáticamente)
+### Cuentas admin (sembradas automáticamente)
 
-- **Correo**: `axel.valenzuela@uabc.edu.mx`
-- **Password**: `Admin#2026Local`
+Tres cuentas con acceso a `/admin/`, cada una representando un rol distinto
+del organigrama:
 
-> Contraseña de desarrollo local únicamente. Cámbiala editando `.env` (o
-> definiendo las variables `ADMIN_SEED_*` antes del primer `migrate`) si vas
-> a correr esto fuera de tu máquina.
+| Rol | Correo | Password | Alcance |
+|---|---|---|---|
+| Admin general (RH) | `iris.cortez@mhp.com` | `Iris#2026Local` | **Iris Cortez** — ve y aprueba reportes de **todos** los departamentos (`is_superuser`). Es la aprobadora final por defecto. |
+| Admin de departamento (ICS) | `adrian.heymes@mhp.com` | `Adrian#2026Local` | **Adrian Heymes** — ve y aprueba **solo** reportes de empleados con `department="ICS"`. |
+| Bootstrap (dev) | `axel.valenzuela@uabc.edu.mx` | `Admin#2026Local` | Cuenta genérica de arranque local, configurable vía `ADMIN_SEED_*`; independiente del organigrama. |
+
+Un empleado de ICS (p. ej. tú, registrado con `department="ICS"`) solo
+aparece en la bandeja de aprobación de **Adrian Heymes**; **Iris Cortez**
+ve ese mismo reporte y el de cualquier otro departamento, porque es la
+admin general. Ver la sección de "Roles de administrador" más abajo.
+
+> Contraseñas de desarrollo local únicamente. Cámbialas editando `.env` (o
+> las variables `HR_ADMIN_*` / `ICS_ADMIN_*` / `ADMIN_SEED_*` antes del
+> primer `migrate`) si vas a correr esto fuera de tu máquina.
+
+### El servidor local se apaga solo a las 12 horas
+
+`python manage.py runserver` arma un timer en segundo plano
+(`accounts/server_lifecycle.py`) que termina el proceso automáticamente
+después de `AUTO_SHUTDOWN_HOURS` (default: **12**, configurable en `.env`).
+Es solo para evitar dejar un servidor de desarrollo corriendo indefinidamente
+en tu máquina — no aplica a `test`, `migrate`, `shell`, etc., y no interfiere
+con el auto-reload de Django (el timer se arma una sola vez, en el proceso
+que realmente atiende peticiones). Para desactivarlo, pon
+`AUTO_SHUTDOWN_HOURS=0` en `.env`.
 
 ## Módulos implementados
 
@@ -179,8 +215,10 @@ La app queda disponible en `http://127.0.0.1:8080/`:
   sí exige una nota con el motivo.
 
 ### 8. Panel de administrador — Django Admin (`expenses/admin.py`)
-- Accesible solo para la cuenta sembrada (`is_staff=True`); cualquier
-  empleado normal es rechazado por el framework mismo.
+- Accesible solo para cuentas admin (`is_staff=True`); cualquier empleado
+  normal es rechazado por el framework mismo. Con el header, colores y
+  hover animations de la marca ("formato empresarial y distintivo" —
+  ver `templates/admin/base_site.html` y `static/css/brand.css`).
 - **`ExpenseReportAdmin`**: solo reportes ya enviados (los borradores son
   privados del empleado), **ordenados por fecha de envío**
   (`ordering = ["-submitted_at"]`, más reciente primero). Columnas de lista
@@ -191,7 +229,47 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 - Aprobar/rechazar reusa las mismas reglas de negocio del modelo
   (`ExpenseReport.approve()`/`reject()`), no las reimplementa.
 
-### 9. Auditoría e histórico de reportes (`ExpenseReportAuditLog`)
+### 9. Roles de administrador por departamento + notificación de pendientes
+- `User.supervised_department`: si se define (p. ej. `"ICS"`), esa cuenta
+  admin **solo ve y aprueba** reportes de empleados de ese mismo
+  departamento (`ExpenseReportAdmin.get_queryset` filtra por
+  `user__department`; intentar abrir el reporte de otro departamento por
+  URL directa da 404, no solo se oculta de la lista).
+- Una cuenta con `is_superuser=True` (la admin de RH, Iris Cortez) no tiene
+  `supervised_department` y ve **todos** los departamentos — es la
+  aprobadora general.
+- **Notificación "novedades a revisar"**: al entrar a `/admin/`, un banner
+  en la parte superior del dashboard muestra cuántos reportes están
+  esperando revisión — con el conteo ya filtrado por departamento si quien
+  entró es un admin de departamento, o el total si es RH/superusuario.
+  Implementado con un context processor
+  (`accounts/context_processors.py:pending_reports_notification`) más
+  `templates/admin/index.html`, así que usa exactamente la misma lógica de
+  alcance que `ExpenseReportAdmin.get_queryset` — nunca pueden quedar
+  desincronizados.
+- **Organigrama sembrado** (`accounts/migrations/0007_seed_org_admins.py`):
+  Iris Cortez (RH, general) y Adrian Heymes (ICS) — ver la tabla de
+  credenciales más arriba.
+
+### 10. Retención de archivos de viaje — decisión de buena práctica
+Se consideró eliminar los PDFs/fotos de un reporte una vez generado, o
+moverlos a un archivo aparte visible solo para el admin. **Se descartó
+ambas opciones** a favor de mantenerlos donde ya están (ligados al
+`TravelDocument` de su reporte, sin cambios):
+- Un sistema de gastos que borra los recibos originales rompe su propio
+  propósito: esos archivos son el soporte legal/contable del gasto, y
+  deben poder consultarse ante una auditoría o disputa mucho después de
+  aprobado el reporte.
+- Un "archivo aparte" con capturas duplicaría el almacenamiento sin
+  aportar nada — el admin **ya** puede ver todos los recibos de un reporte
+  con solo entrar a ese reporte en `/admin/` (inline de documentos con
+  liga de descarga), que es exactamente el flujo que se pidió ("simplemente
+  tiene que entrar a gestionar el reporte de ese usuario que ya envió").
+- Lo único que se automatiza es el *acceso* (el admin correcto ve el
+  reporte correcto, ver punto 9) y la *auditoría* (`ExpenseReportAuditLog`,
+  punto 12) — no el borrado de evidencia.
+
+### 11. Auditoría e histórico de reportes (`ExpenseReportAuditLog`)
 - Registro inmutable (solo lectura en el admin) de cada evento del ciclo de
   vida de un reporte: creado, documento subido, documento eliminado,
   enviado, aprobado, rechazado — con quién (`actor`) y cuándo.
@@ -255,26 +333,37 @@ draft --submit()--> submitted --approve(ceo_clause_ack=True)--> approved
 ```
 lab2/
   manage.py
-  .env.example              # variables de entorno documentadas (copiar a .env)
-  docs/DATA_MODEL.md          # diagrama ER y trazabilidad
-  config/                    # settings (django-environ), urls, wsgi/asgi
+  .env.example                 # variables de entorno documentadas (copiar a .env)
+  docs/DATA_MODEL.md            # diagrama ER y trazabilidad
+  config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding), urls, wsgi/asgi
   accounts/
-    models.py                 # User (+ employee_number), LoginEvent
-    signals.py                 # graba LoginEvent en cada intento de login
-    views.py                   # SignUpView (CBV)
+    models.py                    # User (+ employee_number, supervised_department), LoginEvent
+    signals.py                    # graba LoginEvent en cada intento de login
+    context_processors.py         # pending_reports_notification (banner "novedades a revisar")
+    server_lifecycle.py           # apagado automático del runserver a las 12h
+    views.py                      # SignUpView (CBV)
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
+    migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
+    tests_org_admins.py            # roles por departamento + notificación
+    tests_server_lifecycle.py      # apagado automático (sin esperar 12h reales)
   expenses/
     models.py                  # ExpenseReport, TravelDocument, ExpenseReportAuditLog, validate_trip_span
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
     services.py                  # build_travel_document, compartido por subida individual y en lote
     views.py                    # CBVs (ListView/CreateView/DetailView/View + mixins) + preview AJAX
-    admin.py                    # panel de aprobación, cláusula CEO, auditoría
+    admin.py                    # panel de aprobación, cláusula CEO, auditoría, alcance por departamento
     excel.py
     tests/                      # test_models, test_excel, test_views, test_pdf_analysis, helpers.py
-  templates/base.html           # layout compartido (Bootstrap 5 vía CDN, en inglés)
-  static/css/site.css
-  media/uploads/                # archivos subidos (no versionado)
+  templates/
+    base.html                    # layout del portal del empleado (en inglés)
+    admin/base_site.html          # branding "MHP by Porsche" del panel admin
+    admin/index.html               # banner de reportes pendientes por revisar
+    admin/login.html                # login admin con formato empresarial
+  static/css/
+    site.css
+    brand.css                     # marca + hover animations compartidas por ambas interfaces
+  media/uploads/                # archivos subidos (no versionado, nunca se eliminan — ver módulo 10)
   requirements.txt
 ```
 
@@ -285,13 +374,15 @@ cd lab2
 python manage.py test
 ```
 
-67 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+84 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día, análisis de PDF (monto y tipo detectados, y el endpoint de
 preview en vivo), creación de reportes con adjuntos múltiples, número de
 empleado (generación y unicidad), generación del Excel, signup/aislamiento
 entre empleados, subida y envío de documentos, auditoría de reportes,
-trazabilidad de logins (exitosos y fallidos), y el flujo de
-aprobación/rechazo a través del Django
-Admin.
+trazabilidad de logins (exitosos y fallidos), roles de administrador por
+departamento (Iris Cortez/RH ve todo, Adrian Heymes solo ICS, sin fugas por
+URL directa), el banner de notificación de pendientes, la lógica de apagado
+automático del servidor a las 12h, y el flujo de aprobación/rechazo a
+través del Django Admin.

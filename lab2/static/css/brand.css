@@ -1,0 +1,194 @@
+/*
+ * "MHP by Porsche" brand theme, shared by:
+ *   - the employee portal (Bootstrap-based templates, templates/base.html)
+ *   - the Django Admin approval interface (templates/admin/*.html)
+ *
+ * Rather than embedding a scraped/copyrighted logo image, the brand mark is
+ * a plain CSS wordmark (MHP + "by Porsche" tagline) in Porsche's black/red
+ * language — safe to commit to a git repo and just as distinctive.
+ */
+
+:root {
+    --brand-black: #0a0a0a;
+    --brand-red: #d5001c;
+    --brand-red-dark: #a30016;
+    --brand-white: #ffffff;
+    --brand-gray-bg: #f4f4f5;
+    --brand-gray-border: #e2e2e4;
+}
+
+/* ---- Django Admin: reskin via its own CSS custom properties ------------ */
+/* (defined in admin/css/base.css; overriding them here re-themes buttons,
+   headers, links, and breadcrumbs everywhere, including their hover states) */
+:root {
+    --primary: var(--brand-red);
+    --secondary: var(--brand-black);
+    --accent: var(--brand-red);
+    --primary-fg: var(--brand-white);
+
+    --header-color: var(--brand-white);
+    --header-branding-color: var(--brand-white);
+    --header-bg: var(--brand-black);
+    --header-link-color: var(--brand-white);
+
+    --breadcrumbs-fg: #d8d8d8;
+    --breadcrumbs-link-fg: var(--brand-white);
+    --breadcrumbs-bg: #1c1c1c;
+
+    --link-fg: var(--brand-black);
+    --link-hover-color: var(--brand-red);
+
+    --button-bg: var(--brand-black);
+    --button-hover-bg: var(--brand-red);
+    --default-button-bg: var(--brand-black);
+    --default-button-hover-bg: var(--brand-red);
+
+    --object-tools-bg: var(--brand-black);
+    --object-tools-hover-bg: var(--brand-red);
+}
+
+/* Smooth hover transitions across every admin button/link (Django's admin
+   CSS doesn't animate color changes by default). */
+.button, input[type=submit], input[type=button], .submit-row input, a.button,
+#site-name a, .object-tools a, table thead th a {
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+.button:hover, input[type=submit]:hover, input[type=button]:hover, a.button:hover {
+    transform: translateY(-1px);
+}
+
+#header {
+    border-bottom: 3px solid var(--brand-red);
+}
+
+/* Wordmark used in the admin header (block branding, base_site.html). */
+.brand-mark {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--brand-white) !important;
+    text-decoration: none;
+}
+.brand-mark .brand-name {
+    font-weight: 800;
+    font-size: 1.15rem;
+    letter-spacing: 0.06em;
+}
+.brand-mark .brand-tagline {
+    font-size: 0.75rem;
+    color: var(--brand-red);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.brand-mark .brand-suffix {
+    font-size: 0.8rem;
+    color: #cfcfcf;
+    font-weight: 400;
+}
+.brand-mark:hover .brand-name { color: var(--brand-red) !important; }
+
+/* "Reports to review" notification banner on the admin dashboard. */
+.pending-reports-banner {
+    margin: 0 0 16px;
+    padding: 12px 18px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: var(--brand-gray-bg);
+    border: 1px solid var(--brand-gray-border);
+    color: #333;
+}
+.pending-reports-banner.has-pending {
+    background: #fff4f5;
+    border-color: var(--brand-red);
+    color: var(--brand-black);
+}
+.pending-reports-banner a {
+    color: var(--brand-red);
+    font-weight: 600;
+}
+.pending-reports-banner a:hover {
+    text-decoration: underline;
+}
+
+.admin-login-title {
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+.admin-login-subtitle {
+    color: var(--body-quiet-color, #666);
+    margin-bottom: 1rem;
+}
+
+/* Row hover highlight in changelists, a touch more visible than default. */
+#changelist table tbody tr:hover {
+    background-color: #fff4f5 !important;
+    transition: background-color 0.15s ease;
+}
+
+/* ---- Employee portal (Bootstrap-based templates) ------------------------ */
+
+.brand-navbar {
+    background-color: var(--brand-black) !important;
+    border-bottom: 3px solid var(--brand-red);
+}
+.brand-navbar .navbar-brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+.brand-navbar .navbar-brand .brand-name {
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--brand-white);
+}
+.brand-navbar .navbar-brand .brand-tagline {
+    font-size: 0.7rem;
+    color: var(--brand-red);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.brand-navbar .navbar-brand .brand-suffix {
+    font-size: 0.85rem;
+    color: #cfcfcf;
+    font-weight: 400;
+}
+
+.btn-brand {
+    background-color: var(--brand-red);
+    border-color: var(--brand-red);
+    color: var(--brand-white);
+    transition: background-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+}
+.btn-brand:hover {
+    background-color: var(--brand-red-dark);
+    border-color: var(--brand-red-dark);
+    color: var(--brand-white);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(213, 0, 28, 0.25);
+}
+
+/* Hover lift on cards and table rows across the employee portal. */
+.card {
+    transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.card:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+.table-hover tbody tr {
+    transition: background-color 0.15s ease;
+}
+.btn {
+    transition: transform 0.12s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+.btn:hover {
+    transform: translateY(-1px);
+}
+.navbar .btn:hover, .navbar a.btn:hover {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+.badge {
+    transition: transform 0.12s ease;
+}
+tr:hover .badge {
+    transform: scale(1.05);
+}

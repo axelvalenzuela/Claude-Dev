@@ -3,13 +3,13 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>My expense reports</h2>
-    <a class="btn btn-primary" href="{% url 'reports:create' %}">+ New report</a>
+    <a class="btn btn-brand" href="{% url 'reports:create' %}">+ New report</a>
 </div>
 
 {% if not reports %}
     <div class="alert alert-info">You don't have any reports yet. Create one to start uploading your travel documents.</div>
 {% else %}
-    <table class="table table-striped bg-white">
+    <table class="table table-striped table-hover bg-white">
         <thead>
             <tr>
                 <th>Title</th>

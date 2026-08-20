@@ -12,22 +12,24 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 
+import environ
 from django.contrib.messages import constants as messages_constants
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
+# Secrets and per-environment values live in .env (gitignored), never in code.
+# See .env.example for the full list of variables this project reads.
+env = environ.Env(DJANGO_DEBUG=(bool, True))
+environ.Env.read_env(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-lf&$pp5=pl(*h!-da(k+n6i5i2dtzo8m!=g!1)a#d-13607(-#'
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-key-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 
 # Application definition
@@ -109,7 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'es-mx'
+LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'America/Tijuana'
 
@@ -138,4 +140,16 @@ LOGOUT_REDIRECT_URL = 'login'
 
 MESSAGE_TAGS = {
     messages_constants.ERROR: 'danger',
+}
+
+# pypdf logs a warning for every unparsable PDF (e.g. a scanned image with no
+# text layer, or a corrupt upload) — expected/handled in pdf_analysis.py, so
+# it's silenced here instead of spamming the console on every such upload.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'loggers': {
+        'pypdf': {'handlers': ['console'], 'level': 'ERROR'},
+    },
 }

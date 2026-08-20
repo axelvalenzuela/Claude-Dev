@@ -7,32 +7,47 @@
         {% if report.description %}<p class="text-muted">{{ report.description }}</p>{% endif %}
     </div>
     <div class="text-end">
-        <a class="btn btn-outline-secondary" href="{% url 'reports:export_excel' report.pk %}">Descargar Excel</a>
-        <a class="btn btn-link" href="{% url 'reports:list' %}">Volver</a>
+        <a class="btn btn-outline-secondary" href="{% url 'reports:export_excel' report.pk %}">Download Excel</a>
+        <a class="btn btn-link" href="{% url 'reports:list' %}">Back</a>
     </div>
 </div>
 
 {% if report.status == "approved" or report.status == "rejected" %}
     <div class="alert {% if report.status == 'approved' %}alert-success{% else %}alert-danger{% endif %}">
-        <strong>{% if report.status == "approved" %}Aprobado{% else %}Rechazado{% endif %}</strong>
-        el {{ report.reviewed_at|date:"d/m/Y H:i" }} por {{ report.reviewed_by.get_full_name|default:"el administrador" }}.
-        {% if report.review_note %}<div class="mt-1">Nota: {{ report.review_note }}</div>{% endif %}
+        <strong>{% if report.status == "approved" %}Approved{% else %}Rejected{% endif %}</strong>
+        on {{ report.reviewed_at|date:"m/d/Y H:i" }} by {{ report.reviewed_by.get_full_name|default:"the administrator" }}.
+        {% if report.review_note %}<div class="mt-1">Note: {{ report.review_note }}</div>{% endif %}
+        {% if report.approval_clause %}<div class="mt-1 fst-italic">{{ report.approval_clause }}</div>{% endif %}
+    </div>
+{% endif %}
+
+{% if report.status == "draft" and report.submission_deadline %}
+    <div class="alert {% if report.is_past_deadline %}alert-danger{% else %}alert-warning{% endif %}">
+        Submission deadline based on the flight date: <strong>{{ report.submission_deadline|date:"m/d/Y" }}</strong>
+        {% if report.is_past_deadline %} — this deadline has already passed.{% endif %}
+    </div>
+{% endif %}
+
+{% if report.has_policy_violations %}
+    <div class="alert alert-danger">
+        ⚠ One or more days exceed the company's $60/day travel expense policy. See the breakdown below.
     </div>
 {% endif %}
 
 <div class="card mb-4">
-    <div class="card-header">Documentos ({{ report.documents.count }}) — Total: ${{ report.total_amount }}</div>
+    <div class="card-header">Documents ({{ report.documents.count }}) — Total: ${{ report.total_amount }}</div>
     <div class="card-body p-0">
         {% if not report.documents.all %}
-            <p class="p-3 mb-0 text-muted">Todavía no hay documentos.</p>
+            <p class="p-3 mb-0 text-muted">No documents yet.</p>
         {% else %}
             <table class="table mb-0">
                 <thead>
                     <tr>
-                        <th>Tipo</th>
-                        <th>Fecha</th>
-                        <th>Archivo</th>
-                        <th>Monto</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>File</th>
+                        <th>Amount</th>
+                        <th>PDF check</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -40,14 +55,23 @@
                     {% for doc in report.documents.all %}
                         <tr>
                             <td>{{ doc.get_type_display }}</td>
-                            <td>{{ doc.document_date|date:"d/m/Y" }}</td>
+                            <td>{{ doc.document_date|date:"m/d/Y" }}</td>
                             <td><a href="{% url 'reports:download_document' report.pk doc.pk %}">{{ doc.file_name }}</a></td>
                             <td>${{ doc.amount }}</td>
                             <td>
+                                {% if doc.amount_mismatch %}
+                                    <span class="badge bg-warning text-dark" title="PDF shows ${{ doc.extracted_amount }}">Amount mismatch</span>
+                                {% endif %}
+                                {% if doc.type_mismatch %}
+                                    <span class="badge bg-warning text-dark" title="PDF looks like {{ doc.get_detected_type_display }}">Type mismatch</span>
+                                {% endif %}
+                                {% if not doc.amount_mismatch and not doc.type_mismatch %}—{% endif %}
+                            </td>
+                            <td>
                                 {% if report.status == "draft" %}
-                                    <form action="{% url 'reports:delete_document' report.pk doc.pk %}" method="post" onsubmit="return confirm('¿Eliminar este documento?');">
+                                    <form action="{% url 'reports:delete_document' report.pk doc.pk %}" method="post" onsubmit="return confirm('Delete this document?');">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                                     </form>
                                 {% endif %}
                             </td>
@@ -59,40 +83,72 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header">Daily spend vs. $60/day policy</div>
+    <div class="card-body p-0">
+        {% if not daily_totals %}
+            <p class="p-3 mb-0 text-muted">No documents yet.</p>
+        {% else %}
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Daily total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_totals %}
+                        <tr class="{% if day.over_limit %}table-danger{% endif %}">
+                            <td>{{ day.date|date:"m/d/Y" }}</td>
+                            <td>${{ day.total }}</td>
+                            <td>{% if day.over_limit %}⚠ Over $60/day limit{% else %}OK{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div>
+
 {% if report.status == "draft" %}
     <div class="card mb-4">
-        <div class="card-header">Agregar documento de viaje</div>
+        <div class="card-header">Add a travel document</div>
         <div class="card-body">
             <form action="{% url 'reports:upload_document' report.pk %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="form-label">Tipo</label>
+                        <label class="form-label">Type</label>
                         {{ upload_form.type }}
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Fecha del gasto</label>
+                        <label class="form-label">Expense date</label>
                         {{ upload_form.document_date }}
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Monto</label>
+                        <label class="form-label">Amount</label>
                         {{ upload_form.amount }}
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Archivo (PDF, JPG, PNG)</label>
+                        <label class="form-label">File (PDF, JPG, PNG)</label>
                         {{ upload_form.file }}
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary mt-3">Subir documento</button>
+                <div class="form-text mt-2">
+                    PDF receipts are scanned automatically for the amount and expense type as an early check
+                    against company policy — you'll see a warning here if something looks off.
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Upload document</button>
             </form>
         </div>
     </div>
 
-    <form action="{% url 'reports:submit' report.pk %}" method="post" onsubmit="return confirm('¿Enviar este reporte a revisión? Ya no podrás editarlo.');">
+    <form action="{% url 'reports:submit' report.pk %}" method="post" onsubmit="return confirm('Submit this report for review? You will no longer be able to edit it.');">
         {% csrf_token %}
-        <button type="submit" class="btn btn-success" {% if not report.documents.all %}disabled{% endif %}>Enviar a revisión</button>
+        <button type="submit" class="btn btn-success" {% if not report.documents.all %}disabled{% endif %}>Submit for review</button>
         {% if not report.documents.all %}
-            <span class="text-muted ms-2">Agrega al menos un documento para poder enviarlo.</span>
+            <span class="text-muted ms-2">Add at least one document before submitting.</span>
         {% endif %}
     </form>
 {% endif %}

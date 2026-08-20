@@ -1,32 +1,40 @@
-"""Generación del reporte de gastos de viaje en Excel (.xlsx) a partir de un ExpenseReport."""
+"""Builds the .xlsx expense report from an ExpenseReport, including the
+per-day breakdown against the company's $60/day policy and, once approved,
+the CEO approval clause."""
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
+from .models import DAILY_LIMIT_USD
+
 HEADER_FILL = PatternFill("solid", fgColor="D9D9D9")
+VIOLATION_FILL = PatternFill("solid", fgColor="F8D7DA")
 
 
 def build_report_workbook(report) -> Workbook:
     wb = Workbook()
     sheet = wb.active
-    sheet.title = "Reporte de gastos"
+    sheet.title = "Expense report"
 
-    sheet["A1"] = "Reporte de gastos de viaje"
+    sheet["A1"] = "Travel expense report"
     sheet["A1"].font = Font(bold=True, size=14)
 
-    sheet["A3"], sheet["B3"] = "Empleado", report.user.get_full_name() or report.user.email
-    sheet["A4"], sheet["B4"] = "Departamento", report.user.department
-    sheet["A5"], sheet["B5"] = "Título", report.title
-    sheet["A6"], sheet["B6"] = "Estado", report.get_status_display()
-    sheet["A7"], sheet["B7"] = "Fecha de creación", report.created_at.strftime("%Y-%m-%d %H:%M")
+    sheet["A3"], sheet["B3"] = "Employee", report.user.get_full_name() or report.user.email
+    sheet["A4"], sheet["B4"] = "Department", report.user.department
+    sheet["A5"], sheet["B5"] = "Title", report.title
+    sheet["A6"], sheet["B6"] = "Status", report.get_status_display()
+    sheet["A7"], sheet["B7"] = "Created", report.created_at.strftime("%Y-%m-%d %H:%M")
 
     info_rows = 7
     if report.reviewed_at:
-        sheet["A8"], sheet["B8"] = "Revisado", report.reviewed_at.strftime("%Y-%m-%d %H:%M")
-        sheet["A9"], sheet["B9"] = "Nota de revisión", report.review_note
+        sheet["A8"], sheet["B8"] = "Reviewed", report.reviewed_at.strftime("%Y-%m-%d %H:%M")
+        sheet["A9"], sheet["B9"] = "Review note", report.review_note
         info_rows = 9
+        if report.approval_clause:
+            sheet[f"A{info_rows + 1}"], sheet[f"B{info_rows + 1}"] = "Approval clause", report.approval_clause
+            info_rows += 1
 
     header_row = info_rows + 2
-    headers = ["#", "Tipo", "Fecha", "Archivo", "Monto"]
+    headers = ["#", "Type", "Date", "File", "Amount"]
     for col, text in enumerate(headers, start=1):
         cell = sheet.cell(row=header_row, column=col, value=text)
         cell.font = Font(bold=True)
@@ -45,8 +53,27 @@ def build_report_workbook(report) -> Workbook:
 
     sheet.cell(row=row, column=4, value="Total").font = Font(bold=True)
     sheet.cell(row=row, column=5, value=float(total)).font = Font(bold=True)
+    row += 2
+
+    # Daily breakdown against the $60/day policy.
+    sheet.cell(row=row, column=1, value=f"Daily breakdown (policy limit: ${DAILY_LIMIT_USD}/day)").font = Font(bold=True)
+    row += 1
+    daily_header_row = row
+    for col, text in enumerate(["Date", "Daily total", "Over policy limit?"], start=1):
+        cell = sheet.cell(row=daily_header_row, column=col, value=text)
+        cell.font = Font(bold=True)
+        cell.fill = HEADER_FILL
+    row += 1
+    for day in report.daily_totals():
+        sheet.cell(row=row, column=1, value=day["date"].strftime("%Y-%m-%d"))
+        sheet.cell(row=row, column=2, value=float(day["total"]))
+        flag_cell = sheet.cell(row=row, column=3, value="Yes" if day["over_limit"] else "No")
+        if day["over_limit"]:
+            for col in (1, 2, 3):
+                sheet.cell(row=row, column=col).fill = VIOLATION_FILL
+        row += 1
 
     for col in "ABCDE":
-        sheet.column_dimensions[col].width = 24
+        sheet.column_dimensions[col].width = 26
 
     return wb

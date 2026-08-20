@@ -1,20 +1,26 @@
 from django.contrib.auth import login
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
 
 from .forms import SignUpForm
 
 
-def signup(request):
-    if request.user.is_authenticated:
-        return redirect("reports:list")
+class SignUpView(CreateView):
+    """Public self-service registration for employees. Never grants staff
+    access — that's reserved for the seeded admin account (see
+    accounts/migrations/0002_seed_admin.py)."""
 
-    if request.method == "POST":
-        form = SignUpForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
+    form_class = SignUpForm
+    template_name = "accounts/signup.html"
+    success_url = reverse_lazy("reports:list")
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
             return redirect("reports:list")
-    else:
-        form = SignUpForm()
+        return super().dispatch(request, *args, **kwargs)
 
-    return render(request, "accounts/signup.html", {"form": form})
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        login(self.request, self.object)
+        return response

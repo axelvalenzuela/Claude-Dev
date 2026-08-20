@@ -25,14 +25,14 @@ class ExcelReportTests(TestCase):
             username="ana@example.com",
             email="ana@example.com",
             password="x",
-            first_name="Ana Pérez",
-            department="Ventas",
+            first_name="Ana Perez",
+            department="Sales",
         )
-        self.report = ExpenseReport.objects.create(user=self.employee, title="Viaje a CDMX")
+        self.report = ExpenseReport.objects.create(user=self.employee, title="Trip to Mexico City")
         TravelDocument.objects.create(
             expense_report=self.report,
-            file=SimpleUploadedFile("vuelo.pdf", b"x", content_type="application/pdf"),
-            type=TravelDocument.DocType.VUELO,
+            file=SimpleUploadedFile("flight.pdf", b"x", content_type="application/pdf"),
+            type=TravelDocument.DocType.FLIGHT,
             amount="2500.00",
             document_date="2026-08-01",
         )
@@ -55,12 +55,19 @@ class ExcelReportTests(TestCase):
         sheet = loaded.active
 
         values = [cell.value for row in sheet.iter_rows() for cell in row if cell.value is not None]
-        self.assertIn("Ana Pérez", values)
-        self.assertIn("vuelo.pdf", values)
+        self.assertIn("Ana Perez", values)
+        self.assertIn("flight.pdf", values)
         self.assertIn("hotel.pdf", values)
         self.assertIn(4300.0, values)
 
+    def test_includes_daily_breakdown_section(self):
+        workbook = build_report_workbook(self.report)
+        sheet = workbook.active
+
+        values = [cell.value for row in sheet.iter_rows() for cell in row if cell.value is not None]
+        self.assertTrue(any("Daily breakdown" in str(v) for v in values))
+
     def test_generates_workbook_without_documents(self):
-        empty_report = ExpenseReport.objects.create(user=self.employee, title="Sin documentos")
+        empty_report = ExpenseReport.objects.create(user=self.employee, title="No documents")
         workbook = build_report_workbook(empty_report)
         self.assertEqual(len(workbook.worksheets), 1)

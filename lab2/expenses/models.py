@@ -1,5 +1,7 @@
 import os
 import uuid
+from collections import defaultdict
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -8,32 +10,42 @@ from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
+# Company expense policy: daily spend over this amount is flagged for review.
+DAILY_LIMIT_USD = Decimal("60.00")
+
+# Reports must be submitted within this many days of the trip start (flight date).
+SUBMISSION_WINDOW_DAYS = 30
+
+# All approvals are issued under the CEO's delegated authority.
+CEO_NAME = "Steffan Widmer"
+CEO_TITLE = "CEO"
+
 
 def validate_file_size(file):
     max_mb = 10
     if file.size > max_mb * 1024 * 1024:
-        raise ValidationError(f"El archivo excede el tamaño máximo de {max_mb} MB.")
+        raise ValidationError(f"File exceeds the maximum size of {max_mb} MB.")
 
 
 def document_upload_path(instance, filename):
-    # Nombre físico único (evita colisiones/renombrados silenciosos); el
-    # nombre original se conserva aparte en original_filename para mostrarlo.
+    # Unique physical name (avoids silent renames on collision); the original
+    # name is kept separately in original_filename for display/download.
     ext = os.path.splitext(filename)[1]
     return f"uploads/{instance.expense_report.user_id}/{instance.expense_report_id}/{uuid.uuid4().hex}{ext}"
 
 
 class ExpenseReport(models.Model):
     class Status(models.TextChoices):
-        DRAFT = "draft", "Borrador"
-        SUBMITTED = "submitted", "En revisión"
-        APPROVED = "approved", "Aprobado"
-        REJECTED = "rejected", "Rechazado"
+        DRAFT = "draft", "Draft"
+        SUBMITTED = "submitted", "Submitted"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="expense_reports"
     )
-    title = models.CharField("Título", max_length=150)
-    description = models.TextField("Descripción", blank=True)
+    title = models.CharField("Title", max_length=150)
+    description = models.TextField("Description", blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -46,7 +58,11 @@ class ExpenseReport(models.Model):
         on_delete=models.SET_NULL,
         related_name="reviewed_reports",
     )
-    review_note = models.TextField("Nota de revisión", blank=True)
+    review_note = models.TextField("Review note", blank=True)
+
+    # Governance: every approval is issued under the CEO's delegated authority.
+    ceo_authorized = models.BooleanField(default=False)
+    approval_clause = models.CharField(max_length=255, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
@@ -58,30 +74,92 @@ class ExpenseReport(models.Model):
     def total_amount(self) -> Decimal:
         return sum((doc.amount for doc in self.documents.all()), Decimal("0"))
 
-    # --- Reglas de negocio del flujo de aprobación --------------------------
-    # Encapsuladas aquí (no en las vistas) para poder probarlas sin base de datos.
+    # --- Travel window / submission deadline --------------------------------
+
+    @property
+    def trip_start_date(self):
+        """Reference date for the submission deadline: the earliest FLIGHT
+        document's date, or the earliest document of any type if there is no
+        flight on file yet."""
+        flight_dates = [
+            doc.document_date
+            for doc in self.documents.all()
+            if doc.type == TravelDocument.DocType.FLIGHT
+        ]
+        if flight_dates:
+            return min(flight_dates)
+
+        all_dates = [doc.document_date for doc in self.documents.all()]
+        return min(all_dates) if all_dates else None
+
+    @property
+    def submission_deadline(self):
+        start = self.trip_start_date
+        return start + timedelta(days=SUBMISSION_WINDOW_DAYS) if start else None
+
+    @property
+    def is_past_deadline(self) -> bool:
+        deadline = self.submission_deadline
+        return bool(deadline and timezone.now().date() > deadline)
+
+    # --- $60/day expense policy ----------------------------------------------
+
+    def daily_totals(self):
+        """Per-day breakdown of requested expenses, flagging days over the
+        company's daily limit (DAILY_LIMIT_USD)."""
+        totals = defaultdict(lambda: Decimal("0"))
+        for doc in self.documents.all():
+            totals[doc.document_date] += doc.amount
+
+        return [
+            {"date": date, "total": total, "over_limit": total > DAILY_LIMIT_USD}
+            for date, total in sorted(totals.items())
+        ]
+
+    @property
+    def has_policy_violations(self) -> bool:
+        return any(day["over_limit"] for day in self.daily_totals())
+
+    # --- Approval workflow ----------------------------------------------------
+    # Encapsulated here (not in views/admin) so the rules can be tested
+    # without going through HTTP or the Django admin.
 
     def submit(self):
         if self.status != self.Status.DRAFT:
-            raise ValidationError("Solo un reporte en borrador puede enviarse a revisión.")
+            raise ValidationError("Only a draft report can be submitted for review.")
         if not self.documents.exists():
-            raise ValidationError("Agrega al menos un documento antes de enviar el reporte.")
+            raise ValidationError("Add at least one document before submitting the report.")
+        if self.is_past_deadline:
+            raise ValidationError(
+                f"Submission deadline has passed: reports must be submitted within "
+                f"{SUBMISSION_WINDOW_DAYS} days of the flight date "
+                f"({self.submission_deadline:%Y-%m-%d})."
+            )
+
         self.status = self.Status.SUBMITTED
         self.submitted_at = timezone.now()
 
-    def approve(self, reviewer, note=""):
+    def approve(self, reviewer, note="", ceo_clause_ack=False):
         if self.status != self.Status.SUBMITTED:
-            raise ValidationError("Solo un reporte enviado a revisión puede aprobarse.")
+            raise ValidationError("Only a submitted report can be approved.")
+        if not ceo_clause_ack:
+            raise ValidationError(
+                f"You must confirm the CEO approval clause ({CEO_NAME}, {CEO_TITLE}) before approving."
+            )
+
         self.status = self.Status.APPROVED
         self.reviewed_at = timezone.now()
         self.reviewed_by = reviewer
         self.review_note = note
+        self.ceo_authorized = True
+        self.approval_clause = f"Approved under authority delegated by {CEO_NAME}, {CEO_TITLE}."
 
     def reject(self, reviewer, note):
         if self.status != self.Status.SUBMITTED:
-            raise ValidationError("Solo un reporte enviado a revisión puede rechazarse.")
+            raise ValidationError("Only a submitted report can be rejected.")
         if not note or not note.strip():
-            raise ValidationError("Debes indicar un motivo de rechazo.")
+            raise ValidationError("You must provide a reason for rejecting the report.")
+
         self.status = self.Status.REJECTED
         self.reviewed_at = timezone.now()
         self.reviewed_by = reviewer
@@ -90,17 +168,17 @@ class ExpenseReport(models.Model):
 
 class TravelDocument(models.Model):
     class DocType(models.TextChoices):
-        VUELO = "vuelo", "Vuelo"
+        TAXI = "taxi", "Taxi"
+        MEAL = "meal", "Meal"
+        FLIGHT = "flight", "Flight"
         HOTEL = "hotel", "Hotel"
-        TRANSPORTE = "transporte", "Transporte"
-        ALIMENTOS = "alimentos", "Alimentos"
-        OTRO = "otro", "Otro"
+        OTHER = "other", "Other"
 
     expense_report = models.ForeignKey(
         ExpenseReport, on_delete=models.CASCADE, related_name="documents"
     )
     file = models.FileField(
-        "Archivo",
+        "File",
         upload_to=document_upload_path,
         validators=[
             FileExtensionValidator(["pdf", "jpg", "jpeg", "png"]),
@@ -108,10 +186,17 @@ class TravelDocument(models.Model):
         ],
     )
     original_filename = models.CharField(max_length=255, blank=True)
-    type = models.CharField("Tipo", max_length=20, choices=DocType.choices)
-    amount = models.DecimalField("Monto", max_digits=10, decimal_places=2)
-    document_date = models.DateField("Fecha del gasto")
+    type = models.CharField("Type", max_length=20, choices=DocType.choices)
+    amount = models.DecimalField("Amount", max_digits=10, decimal_places=2)
+    document_date = models.DateField("Expense date")
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    # Best-effort PDF content analysis, run at upload time (see
+    # expenses/pdf_analysis.py), to catch mistakes/policy issues early.
+    extracted_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    amount_mismatch = models.BooleanField(default=False)
+    detected_type = models.CharField(max_length=20, choices=DocType.choices, blank=True)
+    type_mismatch = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["document_date"]
@@ -127,3 +212,36 @@ class TravelDocument(models.Model):
     @property
     def file_name(self) -> str:
         return self.original_filename or (os.path.basename(self.file.name) if self.file else "")
+
+
+class ExpenseReportAuditLog(models.Model):
+    """Immutable trail of the key events in a report's lifecycle, for the
+    admin's security/traceability view (who did what, and when)."""
+
+    class Action(models.TextChoices):
+        CREATED = "created", "Created"
+        DOCUMENT_UPLOADED = "document_uploaded", "Document uploaded"
+        DOCUMENT_DELETED = "document_deleted", "Document deleted"
+        SUBMITTED = "submitted", "Submitted"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    report = models.ForeignKey(ExpenseReport, on_delete=models.CASCADE, related_name="audit_log")
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    action = models.CharField(max_length=30, choices=Action.choices)
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Audit log entry"
+        verbose_name_plural = "Audit log entries"
+
+    def __str__(self):
+        return f"{self.report_id} · {self.action} · {self.created_at:%Y-%m-%d %H:%M}"
+
+
+def log_action(report, actor, action, note=""):
+    return ExpenseReportAuditLog.objects.create(report=report, actor=actor, action=action, note=note)

@@ -8,7 +8,7 @@ class ExpenseReportForm(forms.ModelForm):
         model = ExpenseReport
         fields = ["title", "description"]
         widgets = {
-            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ej. Viaje a CDMX - agosto 2026"}),
+            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Mexico City trip - August 2026"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Crear cuenta{% endblock %}
+{% block title %}Sign up{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <h2>Crear cuenta de empleado</h2>
+        <h2>Create an employee account</h2>
         <form method="post">
             {% csrf_token %}
             {% if form.non_field_errors %}
@@ -21,8 +21,8 @@
                     {% endif %}
                 </div>
             {% endfor %}
-            <button type="submit" class="btn btn-primary">Crear cuenta</button>
-            <a href="{% url 'login' %}" class="btn btn-link">Ya tengo cuenta</a>
+            <button type="submit" class="btn btn-primary">Create account</button>
+            <a href="{% url 'login' %}" class="btn btn-link">Already have an account?</a>
         </form>
     </div>
 </div>

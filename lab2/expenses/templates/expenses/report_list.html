@@ -1,22 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Mis reportes{% endblock %}
+{% block title %}My reports{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Mis reportes de gastos</h2>
-    <a class="btn btn-primary" href="{% url 'reports:create' %}">+ Nuevo reporte</a>
+    <h2>My expense reports</h2>
+    <a class="btn btn-primary" href="{% url 'reports:create' %}">+ New report</a>
 </div>
 
 {% if not reports %}
-    <div class="alert alert-info">Todavía no tienes reportes. Crea uno para empezar a subir tus documentos de viaje.</div>
+    <div class="alert alert-info">You don't have any reports yet. Create one to start uploading your travel documents.</div>
 {% else %}
     <table class="table table-striped bg-white">
         <thead>
             <tr>
-                <th>Título</th>
-                <th>Estado</th>
-                <th># Documentos</th>
+                <th>Title</th>
+                <th>Status</th>
+                <th># Documents</th>
                 <th>Total</th>
-                <th>Creado</th>
+                <th>Policy</th>
+                <th>Created</th>
                 <th></th>
             </tr>
         </thead>
@@ -27,8 +28,15 @@
                     <td>{% include "expenses/_status_badge.html" with status=report.status %}</td>
                     <td>{{ report.documents.count }}</td>
                     <td>${{ report.total_amount }}</td>
-                    <td>{{ report.created_at|date:"d/m/Y" }}</td>
-                    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'reports:detail' report.pk %}">Ver</a></td>
+                    <td>
+                        {% if report.has_policy_violations %}
+                            <span class="badge bg-danger">Over $60/day</span>
+                        {% else %}
+                            <span class="badge bg-success">OK</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ report.created_at|date:"m/d/Y" }}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'reports:detail' report.pk %}">View</a></td>
                 </tr>
             {% endfor %}
         </tbody>

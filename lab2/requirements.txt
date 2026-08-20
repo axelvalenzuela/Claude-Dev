@@ -1,2 +1,6 @@
-Django>=5.0,<5.1
-openpyxl>=3.1
+# Pinned to exact versions (best practice: reproducible installs).
+# Regenerate with: pip freeze > requirements.txt (after reviewing new versions).
+Django==5.0.14
+django-environ==0.14.0
+openpyxl==3.1.5
+pypdf==6.16.1

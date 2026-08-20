@@ -5,14 +5,18 @@ from .models import User
 
 
 class LoginForm(AuthenticationForm):
-    username = forms.CharField(label="Correo", widget=forms.TextInput(attrs={"class": "form-control", "autofocus": True}))
-    password = forms.CharField(label="Contraseña", widget=forms.PasswordInput(attrs={"class": "form-control"}))
+    username = forms.CharField(
+        label="Email", widget=forms.TextInput(attrs={"class": "form-control", "autofocus": True})
+    )
+    password = forms.CharField(
+        label="Password", widget=forms.PasswordInput(attrs={"class": "form-control"})
+    )
 
 
 class SignUpForm(UserCreationForm):
-    first_name = forms.CharField(label="Nombre completo", max_length=150)
-    email = forms.EmailField(label="Correo")
-    department = forms.CharField(label="Departamento", max_length=100)
+    first_name = forms.CharField(label="Full name", max_length=150)
+    email = forms.EmailField(label="Email")
+    department = forms.CharField(label="Department", max_length=100)
 
     class Meta:
         model = User
@@ -26,7 +30,7 @@ class SignUpForm(UserCreationForm):
     def clean_email(self):
         email = self.cleaned_data["email"]
         if User.objects.filter(email=email).exists():
-            raise forms.ValidationError("Ya existe una cuenta con ese correo.")
+            raise forms.ValidationError("An account with that email already exists.")
         return email
 
     def save(self, commit=True):

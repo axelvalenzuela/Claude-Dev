@@ -1,6 +1,6 @@
-{% if status == "draft" %}<span class="badge badge-draft">Borrador</span>
-{% elif status == "submitted" %}<span class="badge badge-submitted">En revisión</span>
-{% elif status == "approved" %}<span class="badge badge-approved">Aprobado</span>
-{% elif status == "rejected" %}<span class="badge badge-rejected">Rechazado</span>
+{% if status == "draft" %}<span class="badge badge-draft">Draft</span>
+{% elif status == "submitted" %}<span class="badge badge-submitted">Submitted</span>
+{% elif status == "approved" %}<span class="badge badge-approved">Approved</span>
+{% elif status == "rejected" %}<span class="badge badge-rejected">Rejected</span>
 {% else %}<span class="badge bg-secondary">{{ status }}</span>
 {% endif %}

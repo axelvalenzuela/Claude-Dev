@@ -5,12 +5,12 @@ from . import views
 app_name = "reports"
 
 urlpatterns = [
-    path("", views.report_list, name="list"),
-    path("new/", views.report_create, name="create"),
-    path("<int:pk>/", views.report_detail, name="detail"),
-    path("<int:pk>/upload/", views.upload_document, name="upload_document"),
-    path("<int:pk>/documents/<int:doc_id>/delete/", views.delete_document, name="delete_document"),
-    path("<int:pk>/documents/<int:doc_id>/download/", views.download_document, name="download_document"),
-    path("<int:pk>/submit/", views.submit_report, name="submit"),
-    path("<int:pk>/export/", views.export_excel, name="export_excel"),
+    path("", views.ReportListView.as_view(), name="list"),
+    path("new/", views.ReportCreateView.as_view(), name="create"),
+    path("<int:pk>/", views.ReportDetailView.as_view(), name="detail"),
+    path("<int:pk>/upload/", views.UploadDocumentView.as_view(), name="upload_document"),
+    path("<int:pk>/documents/<int:doc_id>/delete/", views.DeleteDocumentView.as_view(), name="delete_document"),
+    path("<int:pk>/documents/<int:doc_id>/download/", views.DownloadDocumentView.as_view(), name="download_document"),
+    path("<int:pk>/submit/", views.SubmitReportView.as_view(), name="submit"),
+    path("<int:pk>/export/", views.ExportExcelView.as_view(), name="export_excel"),
 ]

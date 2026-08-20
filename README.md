@@ -9,7 +9,7 @@ entorno virtual).
 | Lab | Descripción |
 |-----|-------------|
 | [lab1/](lab1/) | API REST de to-do list con FastAPI + SQLite, panel Streamlit y reporte de actividades por correo. |
-| [lab2/](lab2/) | App de reportes de gastos de viaje (Django + SQLite): portal por empleado para subir documentos y exportar a Excel, panel de administrador (Django Admin) para aprobar/rechazar. |
+| [lab2/](lab2/) | App enterprise de reportes de gastos de viaje (Django + SQLite, vistas basadas en clases): portal por empleado (TAXI/MEAL/FLIGHT/HOTEL) con análisis de PDF, política de $60/día y deadline de envío; panel admin con cláusula de aprobación del CEO y auditoría/trazabilidad de reportes y sesiones. |
 
 Para correr un laboratorio, entra a su carpeta y sigue el README de ese
 proyecto.

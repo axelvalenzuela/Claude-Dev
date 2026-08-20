@@ -22,6 +22,7 @@
                     <a class="btn btn-outline-light btn-sm me-2" href="{% url 'admin:index' %}">Admin panel</a>
                 {% endif %}
                 <a class="btn btn-outline-light btn-sm me-2" href="{% url 'reports:list' %}">My reports</a>
+                <a class="btn btn-outline-light btn-sm me-2" href="{% url 'reports:history' %}">History</a>
                 <form action="{% url 'logout' %}" method="post" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-light btn-sm">Log out</button>
@@ -36,6 +37,17 @@
 <div class="container pb-5">
     {% for message in messages %}
         <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    {% for report in recent_review_notifications %}
+        <div class="alert {% if report.status == 'approved' %}alert-success{% else %}alert-danger{% endif %} d-flex justify-content-between align-items-start">
+            <div>
+                <strong>"{{ report.title }}"</strong> was
+                {% if report.status == "approved" %}approved{% else %}rejected{% endif %}
+                on {{ report.reviewed_at|date:"m/d/Y" }} by {{ report.reviewed_by.get_full_name|default:"the administrator" }}.
+                {% if report.review_note %}<div class="mt-1">Note: {{ report.review_note }}</div>{% endif %}
+            </div>
+            <a class="btn btn-sm btn-outline-dark ms-3" href="{% url 'reports:detail' report.pk %}">View report</a>
+        </div>
     {% endfor %}
     {% block content %}{% endblock %}
 </div>

@@ -38,13 +38,15 @@ erDiagram
         text review_note
         bool ceo_authorized "true once approved under the CEO clause"
         string approval_clause "e.g. 'Approved under authority delegated by Steffan Widmer, CEO.'"
+        string excel_snapshot "generated + saved at submit() time; permanent"
+        string word_snapshot "generated + saved at submit() time; permanent, embeds photo receipts"
     }
 
     TRAVEL_DOCUMENT {
         int id PK
         int expense_report_id FK
-        string file "stored path, unique uuid-based name"
-        string original_filename "name as uploaded, shown to users"
+        string file "stored path while draft; cleared once submitted (see finalize_submission)"
+        string original_filename "name as uploaded, shown to users forever (even after file is gone)"
         string type "taxi, meal, flight, hotel, other (user-selected)"
         decimal amount "user-entered"
         date document_date "expense date; earliest FLIGHT date = trip_start_date"
@@ -161,3 +163,25 @@ audit trail that can be edited after the fact isn't one.
   runs the same scoping to compute the "N reports awaiting your review"
   count shown on the admin dashboard (`templates/admin/index.html`) — both
   are driven by the same two fields, so they can't disagree with each other.
+  `accounts/context_processors.py:approval_chart` reuses the exact same
+  scoping again for the approved-vs-rejected donut chart, and
+  `recent_review_notification` mirrors it on the employee side (filtered to
+  `user=request.user` instead of by department) for the "your report was
+  approved/rejected" banner, note included.
+- **Excel/Word snapshots replace the originals**: `ExpenseReport.excel_snapshot`
+  / `word_snapshot` are generated once, in `expenses/services.py:
+  finalize_submission()`, right after a successful `submit()` (same
+  transaction). Only after both are saved does it clear every
+  `TravelDocument.file` on the report — the row itself (type/amount/date/
+  flags) is untouched, so `daily_totals()`, the admin, and both history
+  views keep working from the DB fields alone. This was a deliberate
+  reversal of an earlier decision to keep originals forever: storing every
+  employee's raw uploads indefinitely wasn't considered sustainable, so the
+  two generated documents (with an embedded thumbnail for photo receipts,
+  captured before deletion) became the report's permanent record instead.
+- **Brute-force lockout**: `accounts/security.py:is_account_locked()` reads
+  `LoginEvent` (no separate lockout field) — 3 consecutive failures for an
+  email blocks the next login outright, even with the right password.
+  `accounts/views.py:PasswordResetConfirmView` writes a synthetic
+  `LoginEvent(success=True)` when a reset completes, which is what actually
+  clears the lockout window.

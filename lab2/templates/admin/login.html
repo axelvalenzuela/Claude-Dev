@@ -56,12 +56,11 @@
     {{ form.password.label_tag }} {{ form.password }}
     <input type="hidden" name="next" value="{{ next }}">
   </div>
-  {% url 'admin_password_reset' as password_reset_url %}
-  {% if password_reset_url %}
+  {# Unified with the employee-facing reset flow (accounts/urls.py) — one #}
+  {# password reset works for any account, admin or not. #}
   <div class="password-reset-link">
-    <a href="{{ password_reset_url }}">{% translate 'Forgotten your password or username?' %}</a>
+    <a href="{% url 'password_reset' %}">{% translate 'Forgotten your password or username?' %}</a>
   </div>
-  {% endif %}
   <div class="submit-row">
     <input type="submit" value="{% translate 'Log in' %}">
   </div>

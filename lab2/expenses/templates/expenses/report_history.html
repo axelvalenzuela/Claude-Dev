@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2>Report history</h2>
+        <p class="text-muted mb-0">Every report you've sent so far — approved and not — sorted alphabetically by title.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'reports:list' %}">Back to my reports</a>
+</div>
+
+{% if not reports %}
+    <div class="alert alert-info">You haven't submitted any reports yet — once you do, they'll show up here.</div>
+{% else %}
+    <table class="table table-striped table-hover bg-white">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Submitted</th>
+                <th>Reviewed</th>
+                <th>Reviewer's note</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for report in reports %}
+                <tr>
+                    <td>{{ report.title }}</td>
+                    <td>{% include "expenses/_status_badge.html" with status=report.status %}</td>
+                    <td>${{ report.total_amount }}</td>
+                    <td>{{ report.submitted_at|date:"m/d/Y"|default:"—" }}</td>
+                    <td>
+                        {% if report.reviewed_at %}
+                            {{ report.reviewed_at|date:"m/d/Y" }} by {{ report.reviewed_by.get_full_name|default:"—" }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if report.status == "rejected" %}
+                            <span class="text-danger">{{ report.review_note|default:"—" }}</span>
+                        {% else %}
+                            {{ report.review_note|default:"—" }}
+                        {% endif %}
+                    </td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'reports:detail' report.pk %}">View</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+{% endblock %}

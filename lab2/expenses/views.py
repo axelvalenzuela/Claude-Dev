@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, ListView
 
@@ -14,7 +13,10 @@ from .excel import build_report_workbook
 from .forms import ExpenseReportForm, TravelDocumentForm
 from .models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_action, validate_trip_span
 from .pdf_analysis import analyze_pdf
-from .services import DocumentUploadError, build_travel_document
+from .services import DocumentUploadError, build_travel_document, finalize_submission
+from .word_export import build_report_document
+
+WORD_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 
 class OwnedReportMixin:
@@ -27,12 +29,34 @@ class OwnedReportMixin:
 
 
 class ReportListView(LoginRequiredMixin, ListView):
+    """The employee's working list: every report regardless of status
+    (draft/submitted/approved/rejected), most recently created first — this
+    is where they go to keep building a draft or check on something they
+    just sent."""
+
     model = ExpenseReport
     template_name = "expenses/report_list.html"
     context_object_name = "reports"
 
     def get_queryset(self):
         return self.request.user.expense_reports.all()
+
+
+class ReportHistoryView(LoginRequiredMixin, ListView):
+    """A separate, alphabetically-sorted archive of everything the employee
+    has ever sent (submitted, approved, or rejected — never drafts, which
+    haven't been sent to anyone yet). Meant for looking something up by
+    name later, not for tracking what's currently in progress — that's
+    what ReportListView is for."""
+
+    template_name = "expenses/report_history.html"
+    context_object_name = "reports"
+
+    def get_queryset(self):
+        return (
+            self.request.user.expense_reports.exclude(status=ExpenseReport.Status.DRAFT)
+            .order_by("title")
+        )
 
 
 class PreviewDocumentView(LoginRequiredMixin, View):
@@ -130,7 +154,12 @@ class ReportCreateView(LoginRequiredMixin, View):
                     report.submit()
                     report.save()
                     log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
-                    messages.success(request, f"Report created and submitted to {report.supervisor_name} for review.")
+                    finalize_submission(report, request.user)
+                    messages.success(
+                        request,
+                        f"Report created and submitted to {report.supervisor_name} for review. "
+                        f"The original files were archived into the Excel/Word exports below.",
+                    )
                 except ValidationError as exc:
                     messages.warning(request, "Saved as a draft instead: " + "; ".join(exc.messages))
             else:
@@ -224,10 +253,16 @@ class SubmitReportView(LoginRequiredMixin, OwnedReportMixin, View):
     def post(self, request, pk):
         report = self.get_report()
         try:
-            report.submit()
-            report.save()
-            log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
-            messages.success(request, f"Report submitted to {report.supervisor_name} for review.")
+            with transaction.atomic():
+                report.submit()
+                report.save()
+                log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
+                finalize_submission(report, request.user)
+            messages.success(
+                request,
+                f"Report submitted to {report.supervisor_name} for review. "
+                f"The original files were archived into the Excel/Word exports below.",
+            )
         except ValidationError as exc:
             messages.error(request, "; ".join(exc.messages))
         return redirect("reports:detail", pk=pk)
@@ -239,7 +274,24 @@ class ExportExcelView(LoginRequiredMixin, OwnedReportMixin, View):
         return _excel_response(report)
 
 
+class ExportWordView(LoginRequiredMixin, OwnedReportMixin, View):
+    def get(self, request, pk):
+        report = self.get_report()
+        return _word_response(report)
+
+
 def _excel_response(report):
+    # Once submitted, the originals are gone and the snapshot generated at
+    # that moment is the permanent record — serve that instead of
+    # regenerating (which would still work for the numbers, but a fresh
+    # Word regeneration couldn't re-embed photos that no longer exist).
+    if report.excel_snapshot:
+        return FileResponse(
+            report.excel_snapshot.open("rb"),
+            as_attachment=True,
+            filename=f"expense-report-{report.pk}.xlsx",
+        )
+
     workbook = build_report_workbook(report)
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -249,11 +301,28 @@ def _excel_response(report):
     return response
 
 
+def _word_response(report):
+    if report.word_snapshot:
+        return FileResponse(
+            report.word_snapshot.open("rb"),
+            as_attachment=True,
+            filename=f"expense-report-{report.pk}.docx",
+        )
+
+    document = build_report_document(report)
+    response = HttpResponse(content_type=WORD_CONTENT_TYPE)
+    response["Content-Disposition"] = f'attachment; filename="expense-report-{report.pk}.docx"'
+    document.save(response)
+    return response
+
+
 class DownloadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
     def get(self, request, pk, doc_id):
         report = self.get_report()
         document = get_object_or_404(TravelDocument, pk=doc_id, expense_report=report)
         if not document.file:
+            # Expected once the report has been submitted — the original
+            # was archived into the Excel/Word exports and removed.
             raise Http404
         return FileResponse(
             document.file.open("rb"), as_attachment=True, filename=os.path.basename(document.file.name)

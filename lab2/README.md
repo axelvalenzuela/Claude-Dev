@@ -2,11 +2,15 @@
 
 Aplicación web para que cada empleado suba sus documentos de viaje (vuelos,
 hoteles, taxis, comidas...), arme un reporte de gastos y lo envíe a revisión.
-El reporte se aprueba (o rechaza) por el admin del **departamento** del
-empleado, o por el admin general de **RH**; el empleado ve el resultado en
-su propio portal. Cualquiera de los dos roles puede descargar el reporte en
-Excel. Toda aprobación final queda sujeta a la cláusula de autoridad
-delegada del CEO, **Steffan Widmer**.
+El reporte se aprueba (o rechaza, con nota) por el admin del
+**departamento** del empleado, o por el admin general de **RH**; el
+empleado ve el resultado como notificación en el portal, con la nota si
+fue rechazado. Al enviar el reporte se generan un **Excel** y un **Word**
+editable con toda la información capturada, y los archivos originales se
+eliminan del servidor. Toda aprobación final queda sujeta a la cláusula de
+autoridad delegada del CEO, **Steffan Widmer**. Incluye protección local
+contra fuerza bruta (bloqueo tras 3 intentos fallidos + reset de
+contraseña).
 
 > La interfaz de la aplicación está **en inglés** (plataforma "enterprise"
 > orientada a un equipo internacional); esta documentación queda en español
@@ -40,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **84 tests**.
+- Test framework de Django (basado en `unittest`): **114 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -251,50 +255,158 @@ que realmente atiende peticiones). Para desactivarlo, pon
   Iris Cortez (RH, general) y Adrian Heymes (ICS) — ver la tabla de
   credenciales más arriba.
 
-### 10. Retención de archivos de viaje — decisión de buena práctica
-Se consideró eliminar los PDFs/fotos de un reporte una vez generado, o
-moverlos a un archivo aparte visible solo para el admin. **Se descartó
-ambas opciones** a favor de mantenerlos donde ya están (ligados al
-`TravelDocument` de su reporte, sin cambios):
-- Un sistema de gastos que borra los recibos originales rompe su propio
-  propósito: esos archivos son el soporte legal/contable del gasto, y
-  deben poder consultarse ante una auditoría o disputa mucho después de
-  aprobado el reporte.
-- Un "archivo aparte" con capturas duplicaría el almacenamiento sin
-  aportar nada — el admin **ya** puede ver todos los recibos de un reporte
-  con solo entrar a ese reporte en `/admin/` (inline de documentos con
-  liga de descarga), que es exactamente el flujo que se pidió ("simplemente
-  tiene que entrar a gestionar el reporte de ese usuario que ya envió").
-- Lo único que se automatiza es el *acceso* (el admin correcto ve el
-  reporte correcto, ver punto 9) y la *auditoría* (`ExpenseReportAuditLog`,
-  punto 12) — no el borrado de evidencia.
+### 10. Excel + Word al enviar, y retención de archivos — decisión de buena práctica
 
-### 11. Auditoría e histórico de reportes (`ExpenseReportAuditLog`)
+Esto cambió de decisión sobre la marcha (documentado aquí para que quede
+claro el porqué): originalmente los archivos originales nunca se borraban.
+Confirmaste explícitamente que preferías generar **Excel + Word** con toda
+la información capturada y, con eso, **sí eliminar los originales** al
+enviar — así se implementó:
+
+- Al enviar un reporte (`ExpenseReport.submit()` desde el portal o al crear
+  y enviar en un solo paso), `expenses/services.py:finalize_submission()`
+  corre **dentro de la misma transacción**:
+  1. Genera el `.xlsx` (`expenses/excel.py`) y el `.docx`
+     (`expenses/word_export.py`) y los guarda permanentemente en
+     `ExpenseReport.excel_snapshot` / `word_snapshot`.
+  2. Solo si ambos se guardaron bien, borra el archivo físico de cada
+     `TravelDocument` del reporte (`document.file.delete()`) — la fila en
+     sí (tipo, monto, fecha, flags de la política) **se conserva**, así que
+     el desglose de $60/día, el historial y la auditoría siguen
+     funcionando exactamente igual sin el archivo original.
+  3. Si algo falla generando los exports, **nada se borra** — todo el
+     `submit()` se revierte (transacción atómica) y el reporte se queda en
+     `draft`.
+- El **Word** (`.docx`, editable) incluye lo mismo que el Excel (datos del
+  empleado, departamento, supervisor, fechas del viaje, tabla de gastos
+  ordenada **alfabéticamente por tipo**, desglose de $60/día) más una
+  sección de **"Receipt captures"**: una miniatura incrustada de cada
+  recibo que sea foto (JPG/PNG) — se embebe *antes* de borrar el original,
+  así que es el respaldo visual permanente de esas fotos. Los PDF solo se
+  listan por nombre (renderizar una página de PDF a imagen necesitaría una
+  dependencia de sistema tipo poppler, no se agregó solo para esto).
+- Una vez enviado, el portal del empleado y el admin muestran los links de
+  descarga de **Excel y Word** (`ExportExcelView`/`ExportWordView` para el
+  empleado; el campo `exports_display` en el admin), y la fila de cada
+  documento indica "(archived)" en vez de un link roto. Mientras el reporte
+  sigue en `draft`, esos exports **todavía no existen** — `ExportExcelView`/
+  `ExportWordView` generan uno al vuelo bajo demanda (útil para revisar
+  antes de enviar), sin guardarlo.
+- Por qué no un "archivo aparte" solo para el admin: el admin **ya** ve
+  todo esto entrando al reporte del usuario en `/admin/` (Excel/Word +
+  documentos con su estado), que es justo el flujo pedido ("simplemente
+  tiene que entrar a gestionar el reporte de ese usuario que ya envió") —
+  un archivo aparte solo hubiera duplicado lo mismo dos veces.
+
+### 11. Ordenado alfabético (portal + archivos generados)
+- **Dentro de Excel/Word**: la tabla de gastos de un reporte se ordena por
+  `type` (Flight/Hotel/Meal/Taxi/Other) y luego por fecha, no por fecha de
+  captura — agrupa por categoría, que es lo que se pidió como "orden
+  alfabético dentro de los archivos".
+- **En el portal**: la vista **History** (empleado) y **Approved reports
+  (history)** (admin) — ver puntos 12 y 13 — están ordenadas
+  alfabéticamente por título del reporte, porque son vistas de "buscar algo
+  que ya pasó", no de "qué necesito hacer hoy". Las colas de trabajo activo
+  (**My reports** del empleado, la bandeja de aprobación del admin) se
+  quedan ordenadas por fecha — para triage, lo más reciente primero es más
+  útil que el orden alfabético.
+
+### 12. Historial del empleado (`ReportHistoryView`, `/reports/history/`)
+- Todo lo que el empleado ha enviado alguna vez (`submitted`/`approved`/
+  `rejected` — nunca borradores, que no se le han mandado a nadie),
+  ordenado alfabéticamente por título.
+- Incluye la **nota del administrador** en la misma fila — si un reporte
+  fue rechazado alguna vez, ese motivo queda visible ahí permanentemente,
+  no solo en el detalle del reporte.
+
+### 13. Historial de aprobados del admin (`ApprovedExpenseReport`, proxy model)
+- Aparece como su propia sección en Django Admin ("Approved reports
+  (history)"), no solo como un filtro sobre la bandeja de trabajo —
+  modelo *proxy* de `ExpenseReport` (misma tabla, sin migraciones nuevas de
+  esquema) registrado por separado en `expenses/admin.py`.
+- Ordenado alfabéticamente por título; de **solo lectura** (no se puede
+  agregar/editar/borrar desde ahí — aprobar/rechazar sigue siendo solo
+  desde la bandeja de trabajo normal); respeta el mismo alcance por
+  departamento que el resto (Adrian Heymes solo ve aprobados de ICS, Iris
+  Cortez ve todos).
+
+### 14. Notificaciones de aprobación/rechazo (lado del empleado)
+- Mientras navega el portal (cualquier página, no solo el detalle del
+  reporte), el empleado ve un banner si alguno de sus reportes fue
+  aprobado o rechazado en los últimos 7 días
+  (`accounts/context_processors.py:recent_review_notification`), con la
+  **nota del administrador** incluida ahí mismo si la hay — no solo un
+  "fue rechazado" sin explicación.
+- Pasados esos 7 días el banner deja de mostrarse (para no acumular avisos
+  viejos), pero el reporte y su nota **siguen disponibles para siempre** en
+  History (punto 12) y en el propio detalle del reporte.
+
+### 15. Gráfica circular de aprobación/rechazo (lado del admin)
+- En el dashboard de `/admin/`, un donut chart (CSS puro,
+  `conic-gradient` — sin librería de gráficas ni JS) muestra qué proporción
+  de lo que ese admin ha revisado fue aprobado vs. rechazado
+  (`accounts/context_processors.py:approval_chart`).
+- Respeta el mismo alcance por departamento que la bandeja y la
+  notificación: Adrian Heymes ve su propio approved/rejected de ICS; Iris
+  Cortez ve el total de la empresa.
+
+### 16. Seguridad local: bloqueo de cuenta tras 3 intentos fallidos
+- `accounts/security.py:is_account_locked()` reusa el propio `LoginEvent`
+  (ver punto 1) en vez de agregar un campo de estado aparte: si los
+  últimos **3** intentos de login para un correo son todos fallidos, la
+  cuenta queda bloqueada — **incluso si el siguiente intento trae la
+  contraseña correcta**, se rechaza igual, con el mensaje "Too many failed
+  login attempts... Reset your password to regain access."
+- Aplica **tanto al login del empleado como al del admin**
+  (`accounts/forms.py:LockoutCheckMixin`, usado por `LoginForm` y por
+  `AdminLoginForm` — este último conectado a Django Admin vía
+  `admin.site.login_form` en `accounts/apps.py`).
+- **Reset de contraseña real**: se agregaron las vistas de Django
+  (`password_reset`, `password_reset_confirm`, etc.) con plantillas de
+  marca; en local, `EMAIL_BACKEND` está configurado a la consola (el
+  correo con el link de reset se imprime en la terminal, no requiere SMTP).
+  El link de "Forgotten your password?" es el mismo en ambos logins
+  (empleado y admin) — una sola cuenta, un solo flujo de reset.
+- Completar el reset **desbloquea la cuenta de inmediato**: `accounts/
+  views.py:PasswordResetConfirmView` registra un `LoginEvent(success=True)`
+  sintético en cuanto se guarda la nueva contraseña, que es justo lo que
+  `is_account_locked()` revisa — sin este paso, resetear la contraseña por
+  sí solo no habría cambiado el historial de intentos.
+- Endurecido adicional en `settings.py` (aplicable en local):
+  `SESSION_COOKIE_HTTPONLY`, `CSRF_COOKIE_HTTPONLY`,
+  `X_FRAME_OPTIONS = "DENY"`, `SECURE_CONTENT_TYPE_NOSNIFF` — además de lo
+  que Django ya trae por default (CSRF en todos los POST, passwords
+  hasheados, validadores de contraseña).
+
+### 17. Generación de Excel (`expenses/excel.py`)
+- Encabezado con empleado, **número de empleado**, departamento, supervisor,
+  **fechas del viaje**, estado y fecha de creación; la cláusula de
+  aprobación del CEO si el reporte fue aprobado; la tabla de documentos
+  (ordenada por tipo, ver punto 11); y el **desglose diario contra la
+  política de $60/día** con las filas fuera de límite resaltadas. Formato
+  pensado para verse como un reporte corporativo real, no una tabla suelta.
+- Ver punto 10 para cuándo se genera y guarda permanentemente vs. cuándo se
+  genera al vuelo.
+
+### 18. Documentos y almacenamiento (`expenses/models.py`)
+- `TravelDocument.file` valida extensión (`.pdf`, `.jpg`, `.jpeg`, `.png`),
+  tamaño máximo (10 MB) y número de páginas (PDFs, máximo 4).
+- Nombre físico único (`uuid4`) bajo `media/uploads/{user_id}/{report_id}/`;
+  se conserva el nombre original (`original_filename`) para mostrarlo,
+  aun después de que el archivo se elimine al enviar (ver punto 10).
+
+### 19. Auditoría e histórico de reportes (`ExpenseReportAuditLog`)
 - Registro inmutable (solo lectura en el admin) de cada evento del ciclo de
-  vida de un reporte: creado, documento subido, documento eliminado,
-  enviado, aprobado, rechazado — con quién (`actor`) y cuándo.
+  vida de un reporte: creado, documento subido, documento eliminado
+  (incluye el borrado en lote al enviar, ver punto 10), enviado, aprobado,
+  rechazado — con quién (`actor`) y cuándo.
 - Se escribe desde las vistas del empleado y desde el admin
   (`ExpenseReportAdmin.save_model`). Es el histórico por usuario que
   pediste, más allá del último estado guardado en `ExpenseReport`.
 - Ver [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) para el diagrama de
   relaciones completo y el porqué de este diseño.
 
-### 10. Generación de Excel (`expenses/excel.py`)
-- Encabezado con empleado, **número de empleado**, departamento, supervisor,
-  **fechas del viaje**, estado y fecha de creación; la cláusula de
-  aprobación del CEO si el reporte fue aprobado; la tabla de documentos; y
-  el **desglose diario contra la política de $60/día** con las filas fuera
-  de límite resaltadas. Formato pensado para verse como un reporte
-  corporativo real, no una tabla suelta.
-
-### 11. Documentos y almacenamiento (`expenses/models.py`)
-- `TravelDocument.file` valida extensión (`.pdf`, `.jpg`, `.jpeg`, `.png`),
-  tamaño máximo (10 MB) y número de páginas (PDFs, máximo 4).
-- Nombre físico único (`uuid4`) bajo `media/uploads/{user_id}/{report_id}/`;
-  se conserva el nombre original (`original_filename`) para mostrarlo y
-  descargarlo.
-
-### 12. Número de empleado (`accounts/models.py`)
+### 20. Número de empleado (`accounts/models.py`)
 - `User.employee_number`: 7 dígitos aleatorios (ej. `2490198`), único,
   asignado automáticamente — nunca lo captura el empleado.
   - Al registrarse (`SignUpForm.save()`), se genera con
@@ -328,6 +440,10 @@ draft --submit()--> submitted --approve(ceo_clause_ack=True)--> approved
   con adjuntos y al agregar un documento nuevo — nunca al guardar el
   modelo directamente, para no romper reportes ya existentes).
 
+`expenses/services.py:finalize_submission()` corre justo después de un
+`submit()` exitoso (misma transacción): genera Excel + Word y solo entonces
+borra los archivos originales — ver módulo 10.
+
 ## Estructura
 
 ```
@@ -335,35 +451,40 @@ lab2/
   manage.py
   .env.example                 # variables de entorno documentadas (copiar a .env)
   docs/DATA_MODEL.md            # diagrama ER y trazabilidad
-  config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding), urls, wsgi/asgi
+  config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding, email/lockout), urls, wsgi/asgi
   accounts/
     models.py                    # User (+ employee_number, supervised_department), LoginEvent
     signals.py                    # graba LoginEvent en cada intento de login
-    context_processors.py         # pending_reports_notification (banner "novedades a revisar")
-    server_lifecycle.py           # apagado automático del runserver a las 12h
-    views.py                      # SignUpView (CBV)
+    security.py                    # is_account_locked() — bloqueo tras 3 fallos
+    context_processors.py          # notificaciones (pendientes, aprobado/rechazado) + donut chart
+    server_lifecycle.py            # apagado automático del runserver a las 12h
+    forms.py                       # LoginForm/AdminLoginForm con LockoutCheckMixin
+    views.py                       # SignUpView, PasswordResetConfirmView (CBVs)
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
     migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
-    tests_org_admins.py            # roles por departamento + notificación
-    tests_server_lifecycle.py      # apagado automático (sin esperar 12h reales)
+    tests_org_admins.py            # roles por departamento, notificaciones, donut chart
+    tests_security.py               # bloqueo de cuenta + reset de contraseña
+    tests_server_lifecycle.py       # apagado automático (sin esperar 12h reales)
   expenses/
-    models.py                  # ExpenseReport, TravelDocument, ExpenseReportAuditLog, validate_trip_span
+    models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog, validate_trip_span
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
-    services.py                  # build_travel_document, compartido por subida individual y en lote
-    views.py                    # CBVs (ListView/CreateView/DetailView/View + mixins) + preview AJAX
-    admin.py                    # panel de aprobación, cláusula CEO, auditoría, alcance por departamento
+    services.py                  # build_travel_document + finalize_submission (exports y borrado de originales)
+    word_export.py                # genera el .docx (con miniaturas de fotos) al enviar
+    views.py                    # CBVs (ListView/CreateView/DetailView/View + mixins), History, exports, preview AJAX
+    admin.py                    # bandeja de aprobación, historial de aprobados (proxy), auditoría
     excel.py
-    tests/                      # test_models, test_excel, test_views, test_pdf_analysis, helpers.py
+    tests/                      # test_models, test_excel, test_word_export, test_services, test_views, test_pdf_analysis, helpers.py
   templates/
-    base.html                    # layout del portal del empleado (en inglés)
+    base.html                    # layout del portal del empleado (en inglés) + banner de notificaciones
     admin/base_site.html          # branding "MHP by Porsche" del panel admin
-    admin/index.html               # banner de reportes pendientes por revisar
+    admin/index.html               # banner de pendientes + donut chart de aprobación
     admin/login.html                # login admin con formato empresarial
+    registration/                   # password_reset_*.html con la marca de la app
   static/css/
     site.css
-    brand.css                     # marca + hover animations compartidas por ambas interfaces
-  media/uploads/                # archivos subidos (no versionado, nunca se eliminan — ver módulo 10)
+    brand.css                     # marca, hover animations y el donut chart, compartidos por ambas interfaces
+  media/uploads/                # archivos subidos (no versionado; se borran al enviar — ver módulo 10)
   requirements.txt
 ```
 
@@ -374,15 +495,20 @@ cd lab2
 python manage.py test
 ```
 
-84 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+114 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día, análisis de PDF (monto y tipo detectados, y el endpoint de
 preview en vivo), creación de reportes con adjuntos múltiples, número de
-empleado (generación y unicidad), generación del Excel, signup/aislamiento
-entre empleados, subida y envío de documentos, auditoría de reportes,
+empleado (generación y unicidad), generación del Excel y del Word (incluida
+la miniatura embebida de fotos), `finalize_submission` (exports guardados +
+borrado de originales + auditoría), signup/aislamiento entre empleados,
+subida y envío de documentos, historial alfabético del empleado (con nota
+de rechazo) y del admin (proxy de aprobados), auditoría de reportes,
 trazabilidad de logins (exitosos y fallidos), roles de administrador por
 departamento (Iris Cortez/RH ve todo, Adrian Heymes solo ICS, sin fugas por
-URL directa), el banner de notificación de pendientes, la lógica de apagado
-automático del servidor a las 12h, y el flujo de aprobación/rechazo a
-través del Django Admin.
+URL directa), las notificaciones de pendientes y de aprobado/rechazado, el
+donut chart de aprobación, el bloqueo de cuenta tras 3 intentos fallidos
+(empleado y admin) más el flujo de reset que lo levanta, la lógica de
+apagado automático del servidor a las 12h, y el flujo de aprobación/rechazo
+a través del Django Admin.

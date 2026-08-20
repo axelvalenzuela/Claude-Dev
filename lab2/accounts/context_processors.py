@@ -33,3 +33,69 @@ def pending_reports_notification(request):
         "pending_reports_count": pending.count(),
         "pending_reports_scoped_to_department": scoped_to_department,
     }
+
+
+def approval_chart(request):
+    """Feeds the circular (donut) approved-vs-rejected chart on the admin
+    dashboard — how much of what this admin has actually decided on was
+    approved vs. sent back, scoped to their department the same way the
+    notification banner and the approval queue are."""
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated or not user.is_staff:
+        return {}
+
+    from expenses.models import ExpenseReport
+
+    reviewed = ExpenseReport.objects.filter(
+        status__in=[ExpenseReport.Status.APPROVED, ExpenseReport.Status.REJECTED]
+    )
+    if not user.is_superuser and user.supervised_department:
+        reviewed = reviewed.filter(user__department=user.supervised_department)
+
+    approved_count = reviewed.filter(status=ExpenseReport.Status.APPROVED).count()
+    rejected_count = reviewed.filter(status=ExpenseReport.Status.REJECTED).count()
+    total = approved_count + rejected_count
+
+    # Percentage boundary for the CSS conic-gradient donut (0 when there's
+    # nothing reviewed yet, so the chart just renders as an empty ring).
+    approved_pct = round((approved_count / total) * 100) if total else 0
+
+    return {
+        "approval_chart_approved": approved_count,
+        "approval_chart_rejected": rejected_count,
+        "approval_chart_total": total,
+        "approval_chart_approved_pct": approved_pct,
+        "approval_chart_rejected_pct": 100 - approved_pct if total else 0,
+    }
+
+
+RECENT_REVIEW_WINDOW_DAYS = 7
+
+
+def recent_review_notification(request):
+    """Feeds the "your report was approved/rejected" notification banner
+    shown to employees across the portal (see templates/base.html) — the
+    rejection note the admin left is included right there, so there's no
+    separate place to go dig it out. Reports reviewed a while ago (see
+    RECENT_REVIEW_WINDOW_DAYS) stop showing here; they're still visible
+    permanently, with their note, on the History page.
+    """
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated or user.is_staff:
+        return {}
+
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from expenses.models import ExpenseReport
+
+    cutoff = timezone.now() - timedelta(days=RECENT_REVIEW_WINDOW_DAYS)
+    recent = list(
+        user.expense_reports.filter(
+            status__in=[ExpenseReport.Status.APPROVED, ExpenseReport.Status.REJECTED],
+            reviewed_at__gte=cutoff,
+        ).order_by("-reviewed_at")
+    )
+
+    return {"recent_review_notifications": recent}

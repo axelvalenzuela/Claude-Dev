@@ -79,6 +79,11 @@ TEMPLATES = [
                 # Powers the "reports to review" notification banner shown to
                 # admins (scoped to their department unless they're HR/superuser).
                 'accounts.context_processors.pending_reports_notification',
+                # Powers the approved-vs-rejected donut chart on the admin dashboard.
+                'accounts.context_processors.approval_chart',
+                # Powers the "your report was approved/rejected" banner shown
+                # to employees, with the reviewer's note.
+                'accounts.context_processors.recent_review_notification',
             ],
         },
     },
@@ -155,6 +160,17 @@ MESSAGE_TAGS = {
 # overrides (see accounts/apps.py, which sets admin.site.site_header/title).
 PORTAL_BRAND_NAME = "MHP"
 PORTAL_BRAND_TAGLINE = "by Porsche"
+
+# Local dev: password-reset emails print to the console instead of being
+# sent for real — no SMTP server needed to exercise the full reset flow.
+EMAIL_BACKEND = env.str("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="no-reply@mhp.local")
+
+# Local security hardening (see README "Local security processes").
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # pypdf logs a warning for every unparsable PDF (e.g. a scanned image with no
 # text layer, or a corrupt upload) — expected/handled in pdf_analysis.py, so

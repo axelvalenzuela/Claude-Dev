@@ -53,7 +53,7 @@ def build_report_workbook(report) -> Workbook:
 
     row = header_row + 1
     total = 0
-    for index, doc in enumerate(report.documents.order_by("document_date"), start=1):
+    for index, doc in enumerate(report.documents.order_by("type", "document_date"), start=1):
         sheet.cell(row=row, column=1, value=index)
         sheet.cell(row=row, column=2, value=doc.get_type_display())
         sheet.cell(row=row, column=3, value=doc.document_date.strftime("%Y-%m-%d"))

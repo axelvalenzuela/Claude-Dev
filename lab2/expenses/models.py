@@ -89,6 +89,13 @@ class ExpenseReport(models.Model):
     ceo_authorized = models.BooleanField(default=False)
     approval_clause = models.CharField(max_length=255, blank=True)
 
+    # Generated once, right when the report is submitted (see
+    # expenses/services.py:finalize_submission), and kept permanently as the
+    # retained record of the expense — see TravelDocument.file below for why
+    # the *original* uploads don't stick around after that point.
+    excel_snapshot = models.FileField(upload_to="reports/%Y/%m", blank=True)
+    word_snapshot = models.FileField(upload_to="reports/%Y/%m", blank=True)
+
     class Meta:
         ordering = ["-created_at"]
 
@@ -212,6 +219,7 @@ class TravelDocument(models.Model):
     file = models.FileField(
         "File",
         upload_to=document_upload_path,
+        blank=True,  # cleared once the report is submitted — see finalize_submission()
         validators=[
             FileExtensionValidator(["pdf", "jpg", "jpeg", "png"]),
             validate_file_size,
@@ -278,3 +286,15 @@ class ExpenseReportAuditLog(models.Model):
 
 def log_action(report, actor, action, note=""):
     return ExpenseReportAuditLog.objects.create(report=report, actor=actor, action=action, note=note)
+
+
+class ApprovedExpenseReport(ExpenseReport):
+    """Proxy model with no fields of its own — same table as ExpenseReport,
+    registered separately in Django Admin (see expenses/admin.py) so the
+    "approved reports history" is its own browsable, read-only section
+    instead of just a filter on the main approval queue."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Approved report (history)"
+        verbose_name_plural = "Approved reports (history)"

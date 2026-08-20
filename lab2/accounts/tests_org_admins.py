@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.context_processors import pending_reports_notification
+from accounts.context_processors import approval_chart, pending_reports_notification, recent_review_notification
 from expenses.models import ExpenseReport
 from .models import User
 
@@ -137,3 +137,150 @@ class PendingReportsNotificationTests(TestCase):
         self.client.login(username="adrian.heymes@mhp.com", password="Adrian#2026Local")
         response = self.client.get(reverse("admin:index"))
         self.assertContains(response, "awaiting your review")
+
+
+class ApprovedReportsHistoryTests(TestCase):
+    """The proxy-model admin (Django Admin "Approved reports (history)")."""
+
+    def setUp(self):
+        self.ics_employee = User.objects.create_user(
+            username="ana@example.com", email="ana@example.com", password="x", department="ICS"
+        )
+        self.sales_employee = User.objects.create_user(
+            username="luis@example.com", email="luis@example.com", password="x", department="Sales"
+        )
+        self.zebra = self._reviewed_report(self.ics_employee, "Zebra trip", ExpenseReport.Status.APPROVED)
+        self.alpha = self._reviewed_report(self.ics_employee, "Alpha trip", ExpenseReport.Status.APPROVED)
+        self.rejected = self._reviewed_report(self.sales_employee, "Rejected trip", ExpenseReport.Status.REJECTED)
+
+    def _reviewed_report(self, user, title, status):
+        report = ExpenseReport.objects.create(user=user, title=title, supervisor_name="Someone")
+        report.documents.create(
+            file=SimpleUploadedFile("r.jpg", b"x", content_type="image/jpeg"),
+            type="hotel",
+            amount="50.00",
+            document_date=TODAY.isoformat(),
+        )
+        report.submit()
+        admin = User.objects.get(email="iris.cortez@mhp.com")
+        if status == ExpenseReport.Status.APPROVED:
+            report.approve(admin, "Looks good", ceo_clause_ack=True)
+        else:
+            report.reject(admin, "Missing receipts")
+        report.save()
+        return report
+
+    def test_only_approved_reports_show_up(self):
+        self.client.login(username="iris.cortez@mhp.com", password="Iris#2026Local")
+        response = self.client.get(reverse("admin:expenses_approvedexpensereport_changelist"))
+
+        self.assertContains(response, "Zebra trip")
+        self.assertContains(response, "Alpha trip")
+        self.assertNotContains(response, "Rejected trip")
+
+    def test_sorted_alphabetically(self):
+        self.client.login(username="iris.cortez@mhp.com", password="Iris#2026Local")
+        response = self.client.get(reverse("admin:expenses_approvedexpensereport_changelist"))
+
+        titles = [obj.title for obj in response.context["cl"].result_list]
+        self.assertEqual(titles, sorted(titles))
+
+    def test_department_admin_only_sees_their_department_in_history(self):
+        self.client.login(username="adrian.heymes@mhp.com", password="Adrian#2026Local")
+        response = self.client.get(reverse("admin:expenses_approvedexpensereport_changelist"))
+
+        self.assertContains(response, "Zebra trip")
+        self.assertContains(response, "Alpha trip")
+
+    def test_history_is_read_only(self):
+        self.client.login(username="iris.cortez@mhp.com", password="Iris#2026Local")
+        url = reverse("admin:expenses_approvedexpensereport_add")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+
+class ApprovalChartTests(TestCase):
+    def setUp(self):
+        self.ics_employee = User.objects.create_user(
+            username="ana@example.com", email="ana@example.com", password="x", department="ICS"
+        )
+        self.adrian = User.objects.get(email="adrian.heymes@mhp.com")
+        self.iris = User.objects.get(email="iris.cortez@mhp.com")
+
+    def _request_for(self, user):
+        request = type("Req", (), {})()
+        request.user = user
+        return request
+
+    def _reviewed(self, status):
+        report = ExpenseReport.objects.create(user=self.ics_employee, title="T", supervisor_name="S")
+        report.documents.create(
+            file=SimpleUploadedFile("r.jpg", b"x", content_type="image/jpeg"),
+            type="hotel",
+            amount="50.00",
+            document_date=TODAY.isoformat(),
+        )
+        report.submit()
+        if status == ExpenseReport.Status.APPROVED:
+            report.approve(self.iris, "ok", ceo_clause_ack=True)
+        else:
+            report.reject(self.iris, "no")
+        report.save()
+
+    def test_no_reviews_yet_gives_zero_total(self):
+        context = approval_chart(self._request_for(self.iris))
+        self.assertEqual(context["approval_chart_total"], 0)
+        self.assertEqual(context["approval_chart_approved_pct"], 0)
+
+    def test_computes_correct_percentages(self):
+        self._reviewed(ExpenseReport.Status.APPROVED)
+        self._reviewed(ExpenseReport.Status.APPROVED)
+        self._reviewed(ExpenseReport.Status.REJECTED)
+
+        context = approval_chart(self._request_for(self.iris))
+
+        self.assertEqual(context["approval_chart_total"], 3)
+        self.assertEqual(context["approval_chart_approved"], 2)
+        self.assertEqual(context["approval_chart_rejected"], 1)
+        self.assertEqual(context["approval_chart_approved_pct"], 67)
+
+
+class RecentReviewNotificationTests(TestCase):
+    def setUp(self):
+        self.employee = User.objects.create_user(
+            username="ana@example.com", email="ana@example.com", password="clave123", department="ICS"
+        )
+        self.iris = User.objects.get(email="iris.cortez@mhp.com")
+
+        self.report = ExpenseReport.objects.create(user=self.employee, title="My trip", supervisor_name="S")
+        self.report.documents.create(
+            file=SimpleUploadedFile("r.jpg", b"x", content_type="image/jpeg"),
+            type="hotel",
+            amount="50.00",
+            document_date=TODAY.isoformat(),
+        )
+        self.report.submit()
+
+    def test_rejected_report_shows_up_with_note(self):
+        self.report.reject(self.iris, "Missing itemized receipt")
+        self.report.save()
+
+        self.client.login(username="ana@example.com", password="clave123")
+        response = self.client.get(reverse("reports:list"))
+
+        self.assertContains(response, "Missing itemized receipt")
+        self.assertContains(response, "rejected")
+
+    def test_approved_report_shows_up(self):
+        self.report.approve(self.iris, "All good", ceo_clause_ack=True)
+        self.report.save()
+
+        self.client.login(username="ana@example.com", password="clave123")
+        response = self.client.get(reverse("reports:list"))
+
+        self.assertContains(response, "approved")
+
+    def test_admin_gets_no_employee_style_notification(self):
+        request = type("Req", (), {})()
+        request.user = self.iris
+        self.assertEqual(recent_review_notification(request), {})

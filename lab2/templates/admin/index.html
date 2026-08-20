@@ -27,6 +27,17 @@
         {% endif %}
     </div>
 {% endif %}
+{% if approval_chart_total %}
+    <div class="approval-donut-wrap">
+        <div class="approval-donut" style="background: conic-gradient(#2e7d32 0% {{ approval_chart_approved_pct }}%, #d5001c {{ approval_chart_approved_pct }}% 100%);"></div>
+        <div class="approval-donut-legend">
+            <div><strong>Your approval history</strong></div>
+            <div class="legend-approved">{{ approval_chart_approved }} approved ({{ approval_chart_approved_pct }}%)</div>
+            <div class="legend-rejected">{{ approval_chart_rejected }} rejected ({{ approval_chart_rejected_pct }}%)</div>
+            <div class="text-muted small mt-1">{{ approval_chart_total }} report{{ approval_chart_total|pluralize }} reviewed in total</div>
+        </div>
+    </div>
+{% endif %}
 <div id="content-main">
   {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
 </div>

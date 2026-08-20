@@ -79,6 +79,61 @@ class ReportFlowTests(TestCase):
             report.audit_log.filter(action=ExpenseReportAuditLog.Action.SUBMITTED).exists()
         )
 
+    def test_submitting_archives_originals_into_excel_and_word(self):
+        report, _ = self._create_report()
+        self.client.post(
+            reverse("reports:upload_document", args=[report.pk]),
+            {
+                "type": "flight",
+                "document_date": TODAY.isoformat(),
+                "amount": "1200.00",
+                "file": SimpleUploadedFile("boarding_pass.pdf", b"content", content_type="application/pdf"),
+            },
+        )
+        document = report.documents.first()
+
+        self.client.post(reverse("reports:submit", args=[report.pk]))
+
+        report.refresh_from_db()
+        document.refresh_from_db()
+        self.assertTrue(report.excel_snapshot)
+        self.assertTrue(report.word_snapshot)
+        self.assertFalse(document.file)
+
+        # The original is gone from the server — downloading it 404s now.
+        response = self.client.get(
+            reverse("reports:download_document", args=[report.pk, document.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_export_word_serves_the_saved_snapshot_after_submission(self):
+        report, _ = self._create_report()
+        self.client.post(
+            reverse("reports:upload_document", args=[report.pk]),
+            {
+                "type": "hotel",
+                "document_date": TODAY.isoformat(),
+                "amount": "150.00",
+                "file": SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
+            },
+        )
+        self.client.post(reverse("reports:submit", args=[report.pk]))
+
+        response = self.client.get(reverse("reports:export_word", args=[report.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+
+    def test_export_word_for_a_draft_generates_on_the_fly(self):
+        report, _ = self._create_report()  # still a draft, no snapshot saved yet
+
+        response = self.client.get(reverse("reports:export_word", args=[report.pk]))
+
+        self.assertEqual(response.status_code, 200)
+
     def test_cannot_submit_without_documents(self):
         report, _ = self._create_report()
 
@@ -327,6 +382,65 @@ class ReportFlowTests(TestCase):
         data = response.json()
         self.assertFalse(data["is_pdf"])
         self.assertIsNone(data["extracted_amount"])
+
+
+HISTORY_MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_history_")
+
+
+@override_settings(MEDIA_ROOT=HISTORY_MEDIA_ROOT)
+class ReportHistoryTests(TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(HISTORY_MEDIA_ROOT, ignore_errors=True)
+
+    def setUp(self):
+        self.employee = User.objects.create_user(
+            username="ana@example.com", email="ana@example.com", password="clave123", department="Sales"
+        )
+        self.client.login(username="ana@example.com", password="clave123")
+
+    def _report(self, title, status=ExpenseReport.Status.DRAFT):
+        report = ExpenseReport.objects.create(user=self.employee, title=title, supervisor_name="Someone")
+        if status != ExpenseReport.Status.DRAFT:
+            report.documents.create(
+                file=SimpleUploadedFile("r.jpg", b"x", content_type="image/jpeg"),
+                type="hotel",
+                amount="10.00",
+                document_date=TODAY.isoformat(),
+            )
+            report.submit()
+            report.status = status
+            report.save()
+        return report
+
+    def test_history_excludes_drafts(self):
+        self._report("Zebra trip", status=ExpenseReport.Status.SUBMITTED)
+        self._report("Draft trip")  # stays a draft
+
+        response = self.client.get(reverse("reports:history"))
+
+        titles = [r.title for r in response.context["reports"]]
+        self.assertEqual(titles, ["Zebra trip"])
+
+    def test_history_is_sorted_alphabetically(self):
+        self._report("Zebra trip", status=ExpenseReport.Status.SUBMITTED)
+        self._report("Alpha trip", status=ExpenseReport.Status.APPROVED)
+        self._report("Mid trip", status=ExpenseReport.Status.REJECTED)
+
+        response = self.client.get(reverse("reports:history"))
+
+        titles = [r.title for r in response.context["reports"]]
+        self.assertEqual(titles, ["Alpha trip", "Mid trip", "Zebra trip"])
+
+    def test_history_shows_rejection_note(self):
+        report = self._report("Rejected trip", status=ExpenseReport.Status.SUBMITTED)
+        report.reject(self.employee, "Missing itemized receipt")
+        report.save()
+
+        response = self.client.get(reverse("reports:history"))
+
+        self.assertContains(response, "Missing itemized receipt")
 
 
 ADMIN_MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_admin_")

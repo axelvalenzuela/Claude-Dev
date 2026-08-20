@@ -7,6 +7,7 @@ from .models import (
     CEO_NAME,
     CEO_TITLE,
     DAILY_LIMIT_USD,
+    ApprovedExpenseReport,
     ExpenseReport,
     ExpenseReportAuditLog,
     TravelDocument,
@@ -75,6 +76,11 @@ class TravelDocumentInline(admin.TabularInline):
     def file_link(self, obj):
         if obj.file:
             return format_html('<a href="{}" target="_blank">{}</a>', obj.file.url, obj.file_name)
+        if obj.file_name:
+            return format_html(
+                '<span title="Original removed after submission">{} (archived — see Excel/Word)</span>',
+                obj.file_name,
+            )
         return "—"
 
     file_link.short_description = "File"
@@ -95,8 +101,45 @@ class AuditLogInline(admin.TabularInline):
         return False
 
 
+class ExpenseReportDisplayMixin:
+    """Read-only display helpers shared by ExpenseReportAdmin (the working
+    approval queue) and ApprovedExpenseReportAdmin (the approved-reports
+    history) — both render the same kind of columns/fields, just with
+    different querysets and permissions."""
+
+    def employee(self, obj):
+        return obj.user.get_full_name() or obj.user.email
+
+    employee.short_description = "Employee"
+
+    def employee_number(self, obj):
+        return obj.user.employee_number or "—"
+
+    employee_number.short_description = "Employee #"
+
+    def department(self, obj):
+        return obj.user.department
+
+    def total_amount_display(self, obj):
+        return f"${obj.total_amount:,.2f}"
+
+    total_amount_display.short_description = "Total"
+
+    def exports_display(self, obj):
+        if not obj.excel_snapshot and not obj.word_snapshot:
+            return "Not generated yet (report is still a draft)."
+        links = []
+        if obj.excel_snapshot:
+            links.append(format_html('<a href="{}" target="_blank">Excel (.xlsx)</a>', obj.excel_snapshot.url))
+        if obj.word_snapshot:
+            links.append(format_html('<a href="{}" target="_blank">Word (.docx)</a>', obj.word_snapshot.url))
+        return mark_safe(" · ".join(links))
+
+    exports_display.short_description = "Archived exports"
+
+
 @admin.register(ExpenseReport)
-class ExpenseReportAdmin(admin.ModelAdmin):
+class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
     """The approval interface: only accounts with /admin/ access (is_staff)
     reach this. Shows only reports that have actually been submitted —
     drafts stay private to the employee — ordered by submission date."""
@@ -133,6 +176,7 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         "trip_start_date",
         "submission_deadline",
         "approval_clause",
+        "exports_display",
     )
     fields = (
         "user",
@@ -154,6 +198,7 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         "reviewed_by",
         "total_amount_display",
         "daily_breakdown_display",
+        "exports_display",
     )
     inlines = [TravelDocumentInline, AuditLogInline]
 
@@ -184,16 +229,6 @@ class ExpenseReportAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return request.user.is_active and request.user.is_staff
 
-    def employee(self, obj):
-        return obj.user.get_full_name() or obj.user.email
-
-    employee.short_description = "Employee"
-
-    def employee_number(self, obj):
-        return obj.user.employee_number or "—"
-
-    employee_number.short_description = "Employee #"
-
     def trip_date_range_display(self, obj):
         trip_range = obj.trip_date_range
         if not trip_range:
@@ -202,14 +237,6 @@ class ExpenseReportAdmin(admin.ModelAdmin):
         return f"{start:%Y-%m-%d} to {end:%Y-%m-%d}"
 
     trip_date_range_display.short_description = "Trip dates"
-
-    def department(self, obj):
-        return obj.user.department
-
-    def total_amount_display(self, obj):
-        return f"${obj.total_amount:,.2f}"
-
-    total_amount_display.short_description = "Total"
 
     def policy_flag(self, obj):
         if obj.has_policy_violations:
@@ -293,6 +320,57 @@ class ExpenseReportAdmin(admin.ModelAdmin):
             log_action(obj, request.user, action, obj.review_note)
 
     def has_add_permission(self, request):
+        return False
+
+
+@admin.register(ApprovedExpenseReport)
+class ApprovedExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
+    """The "approved reports history" the admin can browse — a distinct,
+    read-only section of Django Admin (not just a filter on the working
+    queue), sorted alphabetically by title for quick lookup rather than by
+    date. Approving/rejecting still only happens from ExpenseReportAdmin."""
+
+    ordering = ["title"]
+    list_display = ("title", "employee", "employee_number", "department", "total_amount_display", "reviewed_at")
+    search_fields = ("title", "user__first_name", "user__email", "user__employee_number")
+    readonly_fields = (
+        "user",
+        "employee_number",
+        "title",
+        "description",
+        "supervisor_name",
+        "supervisor_email",
+        "status",
+        "review_note",
+        "approval_clause",
+        "submitted_at",
+        "reviewed_at",
+        "reviewed_by",
+        "total_amount_display",
+        "exports_display",
+    )
+    fields = readonly_fields
+    inlines = [TravelDocumentInline]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request).filter(status=ExpenseReport.Status.APPROVED)
+        if not request.user.is_superuser and request.user.supervised_department:
+            queryset = queryset.filter(user__department=request.user.supervised_department)
+        return queryset
+
+    def has_module_permission(self, request):
+        return request.user.is_active and request.user.is_staff
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_staff
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False
 
 

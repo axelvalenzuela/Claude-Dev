@@ -62,56 +62,68 @@
 {% endif %}
 
 <div class="card mb-4">
-    <div class="card-header">Documents ({{ report.documents.count }}) — Total: ${{ report.total_amount }}</div>
+    <div class="card-header">Documents ({{ report.documents.count }}) — Total: ${{ report.total_amount }} USD</div>
     <div class="card-body p-0">
         {% if not report.documents.all %}
             <p class="p-3 mb-0 text-muted">No documents yet.</p>
         {% else %}
-            <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Date</th>
-                        <th>File</th>
-                        <th>Amount</th>
-                        <th>PDF check</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for doc in report.documents.all %}
+            <div class="table-responsive">
+                <table class="table mb-0 expense-report-table">
+                    <thead>
                         <tr>
-                            <td>{{ doc.get_type_display }}</td>
-                            <td>{{ doc.document_date|date:"m/d/Y" }}</td>
-                            <td>
-                                {% if doc.file %}
-                                    <a href="{% url 'reports:download_document' report.pk doc.pk %}">{{ doc.file_name }}</a>
-                                {% else %}
-                                    <span class="text-muted" title="Archived into the Excel/Word exports">{{ doc.file_name }} (archived)</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ doc.amount }} {{ doc.currency }}{% if doc.currency != "USD" %} <span class="text-muted small">(&asymp;${{ doc.amount_usd }} USD)</span>{% endif %}</td>
-                            <td>
-                                {% if doc.amount_mismatch %}
-                                    <span class="badge bg-warning text-dark" title="PDF shows ${{ doc.extracted_amount }}">Amount mismatch</span>
-                                {% endif %}
-                                {% if doc.type_mismatch %}
-                                    <span class="badge bg-warning text-dark" title="PDF looks like {{ doc.get_detected_type_display }}">Type mismatch</span>
-                                {% endif %}
-                                {% if not doc.amount_mismatch and not doc.type_mismatch %}—{% endif %}
-                            </td>
-                            <td>
-                                {% if report.status == "draft" %}
-                                    <form action="{% url 'reports:delete_document' report.pk doc.pk %}" method="post" onsubmit="return confirm('Delete this document?');">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                    </form>
-                                {% endif %}
-                            </td>
+                            <th>Invoice date</th>
+                            <th>Description</th>
+                            <th>Vendor legal name</th>
+                            <th>Expensed amount<br>in foreign currency</th>
+                            <th>Currency</th>
+                            <th>FX Rate</th>
+                            <th>Backup</th>
+                            <th class="expense-report-usd-col">Amount (USD)</th>
+                            <th>File</th>
+                            <th>PDF check</th>
+                            <th></th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for doc in report.documents.all %}
+                            <tr>
+                                <td>{{ doc.document_date|date:"m/d/Y" }}</td>
+                                <td>{{ doc.get_type_display }}</td>
+                                <td>{{ doc.vendor_name|default:"—" }}</td>
+                                <td>{{ doc.amount }}</td>
+                                <td>{{ doc.currency }}</td>
+                                <td>{% if doc.currency == "USD" %}1.00{% else %}17.00{% endif %}</td>
+                                <td>{{ doc.get_backup_type_display }}</td>
+                                <td class="expense-report-usd-col">${{ doc.amount_usd }}</td>
+                                <td>
+                                    {% if doc.file %}
+                                        <a href="{% url 'reports:download_document' report.pk doc.pk %}">{{ doc.file_name }}</a>
+                                    {% else %}
+                                        <span class="text-muted" title="Archived into the Excel/Word exports">{{ doc.file_name }} (archived)</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if doc.amount_mismatch %}
+                                        <span class="badge bg-warning text-dark" title="PDF shows ${{ doc.extracted_amount }}">Amount mismatch</span>
+                                    {% endif %}
+                                    {% if doc.type_mismatch %}
+                                        <span class="badge bg-warning text-dark" title="PDF looks like {{ doc.get_detected_type_display }}">Type mismatch</span>
+                                    {% endif %}
+                                    {% if not doc.amount_mismatch and not doc.type_mismatch %}—{% endif %}
+                                </td>
+                                <td>
+                                    {% if report.status == "draft" %}
+                                        <form action="{% url 'reports:delete_document' report.pk doc.pk %}" method="post" onsubmit="return confirm('Delete this document?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% endif %}
     </div>
 </div>
@@ -174,6 +186,14 @@
                     <div class="col-md-4">
                         <label class="form-label">File (PDF, JPG, PNG)</label>
                         {{ upload_form.file }}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Vendor legal name</label>
+                        {{ upload_form.vendor_name }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Backup</label>
+                        {{ upload_form.backup_type }}
                     </div>
                 </div>
                 <div class="form-text mt-2">

@@ -226,6 +226,10 @@ class TravelDocument(models.Model):
         USD = "USD", "USD"
         MXN = "MXN", "MXN"
 
+    class BackupType(models.TextChoices):
+        INVOICE = "invoice", "Invoice"
+        NO_INVOICE = "no_invoice", "No invoice"
+
     expense_report = models.ForeignKey(
         ExpenseReport, on_delete=models.CASCADE, related_name="documents"
     )
@@ -247,6 +251,14 @@ class TravelDocument(models.Model):
     # `amount_usd` below does the conversion, and only for the one thing
     # that needs a single common currency (the $60/day policy check).
     currency = models.CharField("Currency", max_length=3, choices=Currency.choices, default=Currency.USD)
+    # Matches the company's real Advance & Expense Report format (vendor +
+    # backup type per line item) — blank=True so existing rows from before
+    # this field existed don't need backfilling; TravelDocumentForm makes
+    # both required for new uploads (see forms.py).
+    vendor_name = models.CharField("Vendor legal name", max_length=255, blank=True)
+    backup_type = models.CharField(
+        "Backup", max_length=20, choices=BackupType.choices, default=BackupType.INVOICE, blank=True
+    )
     document_date = models.DateField("Expense date")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 

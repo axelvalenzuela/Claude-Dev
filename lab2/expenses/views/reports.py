@@ -76,6 +76,8 @@ class ReportCreateView(LoginRequiredMixin, View):
         doc_dates = request.POST.getlist("doc_date")
         doc_amounts = request.POST.getlist("doc_amount")
         doc_currencies = request.POST.getlist("doc_currency")
+        doc_vendors = request.POST.getlist("doc_vendor")
+        doc_backups = request.POST.getlist("doc_backup")
 
         documents, errors = [], []
         for index, file in enumerate(files):
@@ -87,6 +89,8 @@ class ReportCreateView(LoginRequiredMixin, View):
                         doc_dates[index] if index < len(doc_dates) else "",
                         doc_amounts[index] if index < len(doc_amounts) else "",
                         currency=doc_currencies[index] if index < len(doc_currencies) else "USD",
+                        vendor_name=doc_vendors[index] if index < len(doc_vendors) else "",
+                        backup_type=doc_backups[index] if index < len(doc_backups) else "invoice",
                     )
                 )
             except DocumentUploadError as exc:

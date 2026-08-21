@@ -18,14 +18,21 @@ class DocumentUploadError(Exception):
         super().__init__(message)
 
 
-def build_travel_document(file, doc_type, document_date, amount, currency="USD"):
+def build_travel_document(file, doc_type, document_date, amount, currency="USD", vendor_name="", backup_type="invoice"):
     """Validate and build an unsaved TravelDocument for `file`, running the
     best-effort PDF analysis. Caller is responsible for setting
-    `expense_report` and calling `.save()`. `currency` defaults to USD for
-    callers that don't ask the employee to choose (matches
-    TravelDocument.currency's own model default)."""
+    `expense_report` and calling `.save()`. `currency`/`vendor_name`/
+    `backup_type` default to values matching TravelDocument's own model
+    defaults, for callers that don't ask the employee to choose."""
     form = TravelDocumentForm(
-        data={"type": doc_type, "document_date": document_date, "amount": amount, "currency": currency},
+        data={
+            "type": doc_type,
+            "document_date": document_date,
+            "amount": amount,
+            "currency": currency,
+            "vendor_name": vendor_name,
+            "backup_type": backup_type,
+        },
         files={"file": file},
     )
     if not form.is_valid():

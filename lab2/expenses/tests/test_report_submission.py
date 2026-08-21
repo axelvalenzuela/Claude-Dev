@@ -54,6 +54,7 @@ class ReportSubmissionTests(TestCase):
                 "type": "flight",
                 "document_date": TODAY.isoformat(),
                 "amount": "1200.00",
+                "vendor_name": "United Airlines",
                 "file": SimpleUploadedFile("boarding_pass.pdf", b"content", content_type="application/pdf"),
             },
         )
@@ -77,6 +78,7 @@ class ReportSubmissionTests(TestCase):
                 "type": "flight",
                 "document_date": TODAY.isoformat(),
                 "amount": "1200.00",
+                "vendor_name": "United Airlines",
                 "file": SimpleUploadedFile("boarding_pass.pdf", b"content", content_type="application/pdf"),
             },
         )
@@ -115,6 +117,7 @@ class ReportSubmissionTests(TestCase):
                 "type": "flight",
                 "document_date": old_date,
                 "amount": "1200.00",
+                "vendor_name": "United Airlines",
                 "file": SimpleUploadedFile("boarding_pass.pdf", b"content", content_type="application/pdf"),
             },
         )
@@ -134,6 +137,7 @@ class ReportSubmissionTests(TestCase):
                 "type": "hotel",
                 "document_date": TODAY.isoformat(),
                 "amount": "50.00",
+                "vendor_name": "Marriott",
                 "file": SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
             },
         )
@@ -145,6 +149,7 @@ class ReportSubmissionTests(TestCase):
                 "type": "taxi",
                 "document_date": far_date.isoformat(),
                 "amount": "20.00",
+                "vendor_name": "Uber",
                 "file": SimpleUploadedFile("taxi.jpg", b"fake-image", content_type="image/jpeg"),
             },
             follow=True,

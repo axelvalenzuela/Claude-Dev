@@ -65,6 +65,7 @@ class ExportTests(TestCase):
                 "type": "hotel",
                 "document_date": TODAY.isoformat(),
                 "amount": "150.00",
+                "vendor_name": "Marriott",
                 "file": SimpleUploadedFile("hotel.jpg", b"fake-image", content_type="image/jpeg"),
             },
         )

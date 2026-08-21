@@ -69,18 +69,33 @@
 
     <h2 class="dashboard-section-title">Expenses</h2>
     <div class="pending-reports-table-wrap">
-        <table class="pending-reports-table">
-            <thead><tr><th>Type</th><th>Date</th><th>File</th><th>Amount</th></tr></thead>
+        <table class="pending-reports-table expense-report-table">
+            <thead>
+                <tr>
+                    <th>Invoice date</th>
+                    <th>Description</th>
+                    <th>Vendor legal name</th>
+                    <th>Expensed amount<br>in foreign currency</th>
+                    <th>Currency</th>
+                    <th>FX Rate</th>
+                    <th>Backup</th>
+                    <th class="expense-report-usd-col">Amount (USD)</th>
+                </tr>
+            </thead>
             <tbody>
                 {% for doc in original.documents.all %}
                     <tr>
-                        <td>{{ doc.get_type_display }}</td>
                         <td>{{ doc.document_date }}</td>
-                        <td>{{ doc.file_name }}</td>
-                        <td>{{ doc.amount }} {{ doc.currency }}{% if doc.currency != "USD" %} <span class="text-muted">(&asymp;${{ doc.amount_usd }} USD)</span>{% endif %}</td>
+                        <td>{{ doc.get_type_display }}</td>
+                        <td>{{ doc.vendor_name|default:"—" }}</td>
+                        <td>{{ doc.amount }}</td>
+                        <td>{{ doc.currency }}</td>
+                        <td>{% if doc.currency == "USD" %}1.00{% else %}17.00{% endif %}</td>
+                        <td>{{ doc.get_backup_type_display }}</td>
+                        <td class="expense-report-usd-col">${{ doc.amount_usd }}</td>
                     </tr>
                 {% endfor %}
-                <tr class="summary-total-row"><td colspan="3">Total</td><td>${{ original.total_amount }}</td></tr>
+                <tr class="summary-total-row"><td colspan="7">Total (USD)</td><td class="expense-report-usd-col">${{ original.total_amount }}</td></tr>
             </tbody>
         </table>
     </div>

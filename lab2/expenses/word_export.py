@@ -12,11 +12,25 @@ once that happens there's nothing left to embed a thumbnail from.
 """
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from docx.shared import Inches, Pt
 
-from .policies import DAILY_LIMIT_USD
+from .policies import DAILY_LIMIT_USD, USD_MXN_RATE
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")
+# Same green the company's real Advance & Expense Report spreadsheet uses
+# to highlight its own totals column.
+USD_SHADE = "C6EFCE"
+
+
+def _shade_cell(cell, hex_color: str) -> None:
+    """Sets a table cell's background color — python-docx has no shading
+    API of its own, so this edits the cell's XML directly (the documented
+    way to do it)."""
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), hex_color)
+    cell._tc.get_or_add_tcPr().append(shading)
 
 
 def build_report_document(report) -> Document:
@@ -53,24 +67,40 @@ def build_report_document(report) -> Document:
             row = info_table.add_row().cells
             row[0].text, row[1].text = "Approval clause", report.approval_clause
 
+    # Column layout mirrors the company's real Advance & Expense Report
+    # spreadsheet (Invoice date / Description / Vendor legal name / FX
+    # Rate / ... ), with "Amount (USD)" replacing that sheet's "Total MXN"
+    # column since this app's policy and totals are USD-based.
     document.add_heading("Expenses", level=2)
-    expense_table = document.add_table(rows=1, cols=6)
+    headers = [
+        "#", "Invoice date", "Description", "Vendor legal name",
+        "Expensed amount\nin foreign currency", "Currency", "FX Rate",
+        "Backup", "File", "Amount (USD)",
+    ]
+    expense_table = document.add_table(rows=1, cols=len(headers))
     expense_table.style = "Light Grid Accent 1"
     header_cells = expense_table.rows[0].cells
-    for cell, text in zip(header_cells, ["#", "Type", "Date", "File", "Amount", "USD equivalent"]):
+    for cell, text in zip(header_cells, headers):
         cell.text = text
         cell.paragraphs[0].runs[0].bold = True
+        if text == "Amount (USD)":
+            _shade_cell(cell, USD_SHADE)
 
     total_usd = 0
     # Alphabetically by expense type, then chronologically within each type.
     for index, doc in enumerate(report.documents.order_by("type", "document_date"), start=1):
         row = expense_table.add_row().cells
         row[0].text = str(index)
-        row[1].text = doc.get_type_display()
-        row[2].text = doc.document_date.strftime("%Y-%m-%d")
-        row[3].text = doc.file_name
-        row[4].text = f"{doc.amount:.2f} {doc.currency}"
-        row[5].text = f"${doc.amount_usd:.2f}"
+        row[1].text = doc.document_date.strftime("%Y-%m-%d")
+        row[2].text = doc.get_type_display()
+        row[3].text = doc.vendor_name or "—"
+        row[4].text = f"{doc.amount:.2f}"
+        row[5].text = doc.currency
+        row[6].text = "1.00" if doc.currency == "USD" else f"{USD_MXN_RATE:.2f}"
+        row[7].text = doc.get_backup_type_display()
+        row[8].text = doc.file_name
+        row[9].text = f"${doc.amount_usd:.2f}"
+        _shade_cell(row[9], USD_SHADE)
         total_usd += doc.amount_usd
 
     total_paragraph = document.add_paragraph()

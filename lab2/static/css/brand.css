@@ -264,6 +264,19 @@
 .summary-info-table th {
     width: 160px;
 }
+/* Expenses table styled after the company's real Advance & Expense Report
+   spreadsheet — the "Amount (USD)" column highlighted green the same way
+   that sheet highlights its own total column. Shared with the equivalent
+   table on the employee portal side (see the Bootstrap section below);
+   only the highlight color needs to match, since the two use different
+   base table styles. */
+.expense-report-table th {
+    white-space: nowrap;
+}
+.expense-report-usd-col {
+    background-color: #d5f5dd;
+    font-weight: 700;
+}
 
 /* "Empleados" tab: search box + one card-style row per employee (see
    templates/admin/index.html's inline script for the client-side filter).
@@ -526,6 +539,20 @@ a.employee-row-action.button-muted:hover {
 }
 
 /* ---- Employee portal (Bootstrap-based templates) ------------------------ */
+
+/* Expense table styled after the company's real Advance & Expense Report
+   spreadsheet (Invoice date / Description / Vendor / FX Rate / ... ) — the
+   "Amount (USD)" column highlighted green the same way that sheet
+   highlights its own total column. */
+.expense-report-table th {
+    font-size: 0.82rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+.expense-report-usd-col {
+    background-color: #d5f5dd;
+    font-weight: 700;
+}
 
 .brand-navbar {
     background-color: var(--brand-black) !important;

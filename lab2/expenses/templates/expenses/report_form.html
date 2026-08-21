@@ -84,6 +84,19 @@
                     </select>
                 </div>
             </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-8">
+                    <label class="form-label small">Vendor legal name</label>
+                    <input type="text" name="doc_vendor" class="form-control form-control-sm doc-vendor" placeholder="e.g. United Airlines, INC">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small">Backup</label>
+                    <select name="doc_backup" class="form-select form-select-sm doc-backup">
+                        <option value="invoice" selected>Invoice</option>
+                        <option value="no_invoice">No invoice</option>
+                    </select>
+                </div>
+            </div>
         </div>
     </div>
 </template>

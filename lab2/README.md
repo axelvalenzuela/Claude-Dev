@@ -188,6 +188,20 @@ que realmente atiende peticiones). Para desactivarlo, pon
   cual se capturó. `ExpenseReport.total_amount` también suma en
   `amount_usd`, no en `amount`, por la misma razón — el total de un reporte
   que mezcla monedas no tiene sentido si no se convierten primero.
+- **Formato de tabla igual al Advance & Expense Report real de la empresa**:
+  la tabla de gastos (portal del empleado, tab Summary del admin, Excel y
+  Word) usa las mismas columnas que esa planilla — Invoice date,
+  Description, Vendor legal name, Expensed amount in foreign currency,
+  Currency, FX Rate, Backup, y "Amount (USD)" en vez de "Total MXN" (porque
+  la política de esta app es en dólares, no en pesos) — con esa última
+  columna resaltada en verde igual que en el Excel original.
+  `TravelDocument.vendor_name` y `backup_type` (Invoice/No invoice) son
+  campos nuevos que el empleado captura al subir cada documento
+  (`expenses/forms.py:TravelDocumentForm`); `vendor_name` es obligatorio
+  para subidas nuevas pero `blank=True` a nivel de modelo para no romper
+  documentos que ya existían antes de este campo. No se agregó "Account
+  Number" (el código contable interno) porque no hay forma confiable de
+  inferirlo automáticamente sin datos reales de contabilidad.
 - **Excepción de vuelos/hoteles**: un día con un documento tipo `FLIGHT` u
   `HOTEL` casi siempre va a superar los $60 por sí solo — eso no es una
   falta a la política, es lo esperado. `daily_totals()` marca esos días con

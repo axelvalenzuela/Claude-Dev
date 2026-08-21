@@ -23,11 +23,21 @@ class ExpenseReportForm(forms.ModelForm):
 class TravelDocumentForm(forms.ModelForm):
     class Meta:
         model = TravelDocument
-        fields = ["type", "document_date", "amount", "currency", "file"]
+        fields = ["type", "document_date", "amount", "currency", "vendor_name", "backup_type", "file"]
         widgets = {
             "type": forms.Select(attrs={"class": "form-select"}),
             "document_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "amount": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
             "currency": forms.Select(attrs={"class": "form-select"}),
+            "vendor_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. United Airlines, INC"}),
+            "backup_type": forms.Select(attrs={"class": "form-select"}),
             "file": forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".pdf,.jpg,.jpeg,.png"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # `vendor_name` is blank=True at the model level (so existing rows
+        # from before this field existed don't need backfilling), but every
+        # new upload should still name a vendor — matches the company's
+        # real Advance & Expense Report format, which never leaves it out.
+        self.fields["vendor_name"].required = True

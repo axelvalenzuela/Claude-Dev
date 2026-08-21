@@ -50,6 +50,8 @@ erDiagram
         string type "taxi, meal, flight, hotel, other (user-selected)"
         decimal amount "user-entered, in its original currency"
         string currency "USD or MXN, user-selected; USD default"
+        string vendor_name "e.g. 'United Airlines, INC' — matches the company's real expense report format"
+        string backup_type "invoice or no_invoice — same"
         date document_date "expense date; earliest FLIGHT date = trip_start_date"
         decimal extracted_amount "nullable, from PDF text analysis"
         bool amount_mismatch "extracted_amount vs amount differ by > $1"

@@ -79,6 +79,7 @@ class ReportCreationTests(TestCase):
                 "doc_type": ["hotel"],
                 "doc_date": [TODAY.isoformat()],
                 "doc_amount": ["150.00"],
+                "doc_vendor": ["Marriott"],
             },
         )
 
@@ -106,6 +107,7 @@ class ReportCreationTests(TestCase):
                 "doc_type": ["hotel"],
                 "doc_date": [TODAY.isoformat()],
                 "doc_amount": ["150.00"],
+                "doc_vendor": ["Marriott"],
             },
         )
 
@@ -128,6 +130,7 @@ class ReportCreationTests(TestCase):
                 "doc_type": ["hotel"],
                 "doc_date": [TODAY.isoformat()],
                 "doc_amount": ["not-a-number"],
+                "doc_vendor": ["Marriott"],
             },
         )
 
@@ -148,6 +151,7 @@ class ReportCreationTests(TestCase):
                 "doc_type": ["hotel"],
                 "doc_date": [TODAY.isoformat()],
                 "doc_amount": ["50.00"],
+                "doc_vendor": ["Marriott"],
             },
         )
 
@@ -173,6 +177,7 @@ class ReportCreationTests(TestCase):
                 "doc_type": ["hotel", "hotel"],
                 "doc_date": [march_date.isoformat(), june_date.isoformat()],
                 "doc_amount": ["50.00", "60.00"],
+                "doc_vendor": ["Marriott", "Marriott"],
             },
         )
 
@@ -198,6 +203,7 @@ class ReportCreationTests(TestCase):
                 "doc_type": ["hotel", "hotel"],
                 "doc_date": [start.isoformat(), end.isoformat()],
                 "doc_amount": ["50.00", "60.00"],
+                "doc_vendor": ["Marriott", "Marriott"],
             },
         )
 

@@ -65,6 +65,8 @@ class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
                 request.POST.get("document_date"),
                 request.POST.get("amount"),
                 currency=request.POST.get("currency", "USD"),
+                vendor_name=request.POST.get("vendor_name", ""),
+                backup_type=request.POST.get("backup_type", "invoice"),
             )
         except DocumentUploadError as exc:
             messages.error(request, f"Couldn't upload the document: {exc.message}")

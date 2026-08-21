@@ -667,6 +667,10 @@ a.employee-row-action.button-muted:hover {
     display: inline-flex;
     align-items: baseline;
     gap: 0.5rem;
+    transition: opacity 0.15s ease;
+}
+.brand-navbar .navbar-brand:hover {
+    opacity: 0.85;
 }
 .brand-navbar .navbar-brand .brand-name {
     font-weight: 800;
@@ -730,4 +734,125 @@ a.employee-row-action.button-muted:hover {
 }
 tr:hover .badge {
     transform: scale(1.05);
+}
+
+/* ---- Employee portal: card-row list for "My reports" / "History" -------
+   Same card-row interaction pattern as the admin's Employees tab: the whole
+   row lifts on hover and the action link's arrow shifts, so it reads as
+   clickable before the cursor even reaches the button, instead of a flat
+   table with a tiny "View" cell. */
+.portal-row-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.portal-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 20px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--brand-gray-border);
+    background: var(--brand-white);
+    transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.portal-row:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: var(--brand-red);
+}
+.portal-row-main {
+    flex: 1 1 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.portal-row-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--brand-black);
+    transition: color 0.15s ease;
+}
+.portal-row:hover .portal-row-title {
+    color: var(--brand-red-dark);
+}
+.portal-row-meta {
+    color: #666;
+    font-size: 0.82rem;
+}
+.portal-row-note {
+    color: #a30016;
+    font-size: 0.82rem;
+    font-style: italic;
+}
+.portal-row-stats {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.portal-row-total {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--brand-black);
+}
+.portal-row:hover .badge {
+    transform: scale(1.08);
+}
+.portal-row-action {
+    flex: 0 0 auto;
+    margin-left: auto;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.portal-row-arrow {
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+.portal-row:hover .portal-row-arrow {
+    transform: translateX(4px);
+}
+
+/* Remove-attachment control on the new-report upload rows — lets someone
+   drop a single file they picked by mistake without re-selecting the whole
+   batch. */
+.document-row {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.document-row:hover {
+    border-color: var(--brand-red);
+}
+.remove-row {
+    border: none;
+    background: transparent;
+    color: #999;
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.remove-row:hover {
+    color: var(--brand-white);
+    background-color: var(--brand-red);
+    transform: scale(1.08);
+}
+
+/* File-picker drop zone gets an obvious hover/drag affordance instead of
+   looking like a static input. */
+.file-drop-zone {
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+    cursor: pointer;
+}
+.file-drop-zone:hover {
+    border-color: var(--brand-red);
+    background-color: #fff5f6;
+}
+.file-drop-zone.file-drop-zone-active {
+    border-color: var(--brand-red);
+    background-color: #fff0f1;
 }

@@ -5,41 +5,28 @@
     <h2>My expense reports</h2>
     <a class="btn btn-brand" href="{% url 'reports:create' %}">+ New report</a>
 </div>
-
 {% if not reports %}
     <div class="alert alert-info">You don't have any reports yet. Create one to start uploading your travel documents.</div>
 {% else %}
-    <table class="table table-striped table-hover bg-white">
-        <thead>
-            <tr>
-                <th>Title</th>
-                <th>Status</th>
-                <th># Documents</th>
-                <th>Total</th>
-                <th>Policy</th>
-                <th>Created</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for report in reports %}
-                <tr>
-                    <td>{{ report.title }}</td>
-                    <td>{% include "expenses/_status_badge.html" with status=report.status %}</td>
-                    <td>{{ report.documents.count }}</td>
-                    <td>${{ report.total_amount }}</td>
-                    <td>
-                        {% if report.has_policy_violations %}
-                            <span class="badge bg-danger">Over $60/day</span>
-                        {% else %}
-                            <span class="badge bg-success">OK</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ report.created_at|date:"m/d/Y" }}</td>
-                    <td><a class="btn btn-sm btn-outline-primary" href="{% url 'reports:detail' report.pk %}">View</a></td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="portal-row-list">
+        {% for report in reports %}
+            <a class="portal-row" href="{% url 'reports:detail' report.pk %}" style="text-decoration:none;">
+                <div class="portal-row-main">
+                    <span class="portal-row-title">{{ report.title }}</span>
+                    <span class="portal-row-meta">{{ report.documents.count }} document{{ report.documents.count|pluralize }} &middot; created {{ report.created_at|date:"m/d/Y" }}</span>
+                </div>
+                <div class="portal-row-stats">
+                    <span class="portal-row-total">${{ report.total_amount }}</span>
+                    {% include "expenses/_status_badge.html" with status=report.status %}
+                    {% if report.has_policy_violations %}
+                        <span class="badge bg-danger">Over $60/day</span>
+                    {% else %}
+                        <span class="badge bg-success">OK</span>
+                    {% endif %}
+                </div>
+                <span class="portal-row-action btn btn-sm btn-outline-primary">View <span class="portal-row-arrow">&rarr;</span></span>
+            </a>
+        {% endfor %}
+    </div>
 {% endif %}
 {% endblock %}

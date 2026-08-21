@@ -32,11 +32,15 @@
     <div class="card mb-4">
         <div class="card-header">Attach receipts (PDF or photo)</div>
         <div class="card-body">
-            <input type="file" id="file-picker" name="files" multiple accept=".pdf,.jpg,.jpeg,.png" class="form-control">
+            <label for="file-picker" id="file-drop-zone" class="file-drop-zone d-block text-center border rounded p-4 mb-0">
+                <div class="fw-semibold">Drag files here, or click to browse</div>
+                <div class="text-muted small mt-1">PDF, JPG or PNG — you can attach several at once.</div>
+            </label>
+            <input type="file" id="file-picker" name="files" multiple accept=".pdf,.jpg,.jpeg,.png" class="form-control visually-hidden">
             <div class="form-text mt-2">
                 PDF receipts are analyzed automatically as soon as you attach them — the amount and expense
                 type shown below are a live preview so you can double check before creating the report.
-                Photos (JPG/PNG) need the type and amount entered manually.
+                Photos (JPG/PNG) need the type and amount entered manually. Hover a row below to remove it.
             </div>
             <div id="document-rows" class="mt-3"></div>
         </div>
@@ -57,7 +61,10 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start">
                 <strong class="file-name"></strong>
-                <span class="badge bg-secondary preview-status">Photo — enter details manually</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary preview-status">Photo — enter details manually</span>
+                    <button type="button" class="remove-row" title="Remove this file">&times; Remove</button>
+                </div>
             </div>
             <div class="row g-2 mt-1">
                 <div class="col-md-3">
@@ -104,6 +111,7 @@
 <script>
 (function () {
     const filePicker = document.getElementById("file-picker");
+    const dropZone = document.getElementById("file-drop-zone");
     const rowsContainer = document.getElementById("document-rows");
     const rowTemplate = document.getElementById("document-row-template");
     const previewUrl = "{% url 'reports:preview_document' %}";
@@ -115,10 +123,39 @@
         Array.from(filePicker.files).forEach((file, index) => addRow(file, index));
     });
 
+    ["dragenter", "dragover"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropZone.classList.add("file-drop-zone-active");
+        });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropZone.classList.remove("file-drop-zone-active");
+        });
+    });
+    dropZone.addEventListener("drop", (event) => {
+        if (!event.dataTransfer || !event.dataTransfer.files.length) return;
+        filePicker.files = event.dataTransfer.files;
+        filePicker.dispatchEvent(new Event("change"));
+    });
+
+    function removeFileAt(index) {
+        const dataTransfer = new DataTransfer();
+        Array.from(filePicker.files).forEach((file, i) => {
+            if (i !== index) dataTransfer.items.add(file);
+        });
+        filePicker.files = dataTransfer.files;
+        rowsContainer.innerHTML = "";
+        Array.from(filePicker.files).forEach((file, i) => addRow(file, i));
+    }
+
     function addRow(file, index) {
         const row = rowTemplate.content.firstElementChild.cloneNode(true);
         row.querySelector(".file-name").textContent = file.name;
         row.querySelector(".doc-date").value = today;
+        row.querySelector(".remove-row").addEventListener("click", () => removeFileAt(index));
         rowsContainer.appendChild(row);
 
         const isPdf = file.name.toLowerCase().endsWith(".pdf");

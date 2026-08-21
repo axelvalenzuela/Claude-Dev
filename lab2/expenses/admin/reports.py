@@ -52,29 +52,31 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
         "trip_start_date",
         "submission_deadline",
         "approval_clause",
-        "exports_display",
     )
-    fields = (
-        "user",
-        "employee_number",
-        "title",
-        "description",
-        "supervisor_name",
-        "supervisor_email",
-        "status",
-        "review_note",
-        "ceo_clause_ack",
-        "approval_clause",
-        "created_at",
-        "submitted_at",
-        "trip_date_range_display",
-        "trip_start_date",
-        "submission_deadline",
-        "reviewed_at",
-        "reviewed_by",
-        "total_amount_display",
-        "daily_breakdown_display",
-        "exports_display",
+    # Split into two fieldsets — not just for visual grouping, but because
+    # templates/admin/expenses/expensereport/change_form.html classifies
+    # each rendered <fieldset> into a tab by its <h2> title text ("Cuenta"
+    # / "Revisión"), same as it does for the two inlines below ("Travel
+    # documents" -> Documentos, "Audit log entries" -> Historial). The
+    # Excel/Word download links used to be a field here (exports_display);
+    # they're now a highlighted panel above the tabs instead, rendered
+    # straight from `original` in that same template — important enough to
+    # not be one tab click away.
+    fieldsets = (
+        ("Cuenta", {
+            "fields": (
+                "user", "employee_number", "title", "description",
+                "supervisor_name", "supervisor_email", "created_at",
+            ),
+        }),
+        ("Revisión", {
+            "fields": (
+                "status", "review_note", "ceo_clause_ack", "approval_clause",
+                "trip_date_range_display", "trip_start_date", "submission_deadline",
+                "submitted_at", "reviewed_at", "reviewed_by",
+                "total_amount_display", "daily_breakdown_display",
+            ),
+        }),
     )
     inlines = [TravelDocumentInline, AuditLogInline]
 

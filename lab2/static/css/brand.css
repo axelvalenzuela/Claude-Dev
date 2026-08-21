@@ -160,6 +160,44 @@
     font-style: italic;
 }
 
+/* Highlighted Excel/Word download panel at the top of a report's change
+   form (see templates/admin/expenses/expensereport/change_form.html) —
+   always visible above the tabs, since downloading the generated exports
+   is important enough not to hide behind a tab click. */
+.exports-highlight {
+    margin: 16px 0 20px;
+    padding: 16px 20px;
+    background: #e3f3e5;
+    border: 1px solid #2e7d32;
+    border-radius: 8px;
+}
+.exports-highlight-pending {
+    background: var(--brand-gray-bg);
+    border-color: var(--brand-gray-border);
+}
+.exports-highlight-title {
+    font-weight: 800;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+.exports-highlight p {
+    margin: 0 0 10px;
+    color: #444;
+}
+.exports-highlight-buttons .button {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    margin-right: 10px;
+}
+
+/* Tabs on a report's change form (Cuenta / Revisión / Documentos /
+   Historial) reuse .admin-tabs/.admin-tab-btn from the dashboard, just
+   with a little more room above since they sit right under the object
+   tools / breadcrumbs instead of the page's first element. */
+.change-form-tabs {
+    margin-top: 8px;
+}
+
 /* Pending-review-expenses table on the Dashboard tab — an actual data
    table of what's waiting, not just a link to the changelist. */
 .pending-reports-table-wrap {

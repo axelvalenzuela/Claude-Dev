@@ -1,7 +1,7 @@
 """Read-only inlines shown on a report's admin change page: its documents
 (with the PDF-analysis flags) and its audit trail."""
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
 from ..models import ExpenseReportAuditLog, TravelDocument
 
@@ -15,10 +15,7 @@ class TravelDocumentInline(admin.TabularInline):
         "document_date",
         "amount",
         "file_link",
-        "extracted_amount",
-        "amount_mismatch",
-        "detected_type",
-        "type_mismatch",
+        "verification_display",
         "uploaded_at",
     )
     readonly_fields = fields
@@ -41,6 +38,31 @@ class TravelDocumentInline(admin.TabularInline):
         return "—"
 
     file_link.short_description = "File"
+
+    def verification_display(self, obj):
+        # Replaces four raw columns (extracted_amount/amount_mismatch/
+        # detected_type/type_mismatch) that meant nothing to a reader who
+        # isn't the one who wrote pdf_analysis.py — one human-readable note
+        # per mismatch, in the same red used for "over $60/day" elsewhere,
+        # or a plain OK when the PDF's own analysis agrees with what the
+        # employee entered.
+        notes = []
+        if obj.amount_mismatch:
+            notes.append(
+                f"Amount: PDF shows ${obj.extracted_amount}, entered ${obj.amount}"
+            )
+        if obj.type_mismatch:
+            notes.append(
+                f"Type: PDF looks like {obj.get_detected_type_display()}, selected {obj.get_type_display()}"
+            )
+        if not notes:
+            return format_html('<span style="color:#2e7d32;">&#10003; OK</span>')
+        return format_html(
+            '<span style="color:#b02a37;font-weight:bold;">&#9888; {}</span>',
+            format_html_join("", "<div>{}</div>", ((note,) for note in notes)),
+        )
+
+    verification_display.short_description = "Verification"
 
     def has_add_permission(self, request, obj=None):
         return False

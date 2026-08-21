@@ -1,0 +1,88 @@
+{% extends "admin/change_form.html" %}
+{#
+  Adds two things on top of Django's default change form, without
+  touching how the form itself submits (approve/reject still goes through
+  the exact same POST -> ExpenseReportAdmin.save_model as before):
+
+  1. A highlighted panel with the Excel/Word download buttons, always
+     visible above the tabs — these used to be just another readonly
+     field (exports_display) buried in the form, easy to miss.
+  2. Tabs (Cuenta / Revisión / Documentos / Historial) built by classifying
+     the fieldsets Django already renders (both the ModelAdmin's own
+     fieldsets and the two inlines are rendered as sibling <fieldset>
+     elements) by their <h2> heading text, then toggling which ones are
+     visible with plain CSS. Every field stays in the DOM at all times —
+     only display:none changes — so nothing about the inline formsets'
+     management-form data or field values is affected by which tab is
+     showing when the form is submitted.
+#}
+
+{% block form_top %}
+{{ block.super }}
+{% if original %}
+<div class="exports-highlight {% if not original.excel_snapshot and not original.word_snapshot %}exports-highlight-pending{% endif %}">
+    <div class="exports-highlight-title">&#128193; Excel &amp; Word</div>
+    {% if original.excel_snapshot or original.word_snapshot %}
+        <p>Generados automáticamente a partir de los documentos enviados en este reporte.</p>
+        <div class="exports-highlight-buttons">
+            {% if original.excel_snapshot %}
+                <a class="button" href="{{ original.excel_snapshot.url }}" target="_blank">&#128202; Descargar Excel</a>
+            {% endif %}
+            {% if original.word_snapshot %}
+                <a class="button" href="{{ original.word_snapshot.url }}" target="_blank">&#128196; Descargar Word</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p>Se generarán automáticamente al aprobar este reporte.</p>
+    {% endif %}
+</div>
+
+<div class="admin-tabs change-form-tabs">
+    <button type="button" class="admin-tab-btn active" data-cf-tab="cuenta">Cuenta</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="revision">Revisión</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="documentos">Documentos</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="historial">Historial</button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block after_related_objects %}
+{{ block.super }}
+<script>
+(function () {
+    var tabButtons = document.querySelectorAll(".change-form-tabs .admin-tab-btn");
+    if (!tabButtons.length) return;
+
+    var HEADING_TO_TAB = {
+        "Cuenta": "cuenta",
+        "Revisión": "revision",
+        "Travel documents": "documentos",
+        "Audit log entries": "historial",
+    };
+
+    var fieldsets = document.querySelectorAll("#content-main fieldset.module");
+    fieldsets.forEach(function (fieldset) {
+        var heading = fieldset.querySelector("h2");
+        var text = heading ? heading.textContent.trim() : "";
+        fieldset.dataset.cfPanel = HEADING_TO_TAB[text] || "cuenta";
+    });
+
+    function activate(tab) {
+        tabButtons.forEach(function (btn) {
+            btn.classList.toggle("active", btn.dataset.cfTab === tab);
+        });
+        fieldsets.forEach(function (fieldset) {
+            fieldset.style.display = fieldset.dataset.cfPanel === tab ? "" : "none";
+        });
+    }
+
+    tabButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            activate(btn.dataset.cfTab);
+        });
+    });
+
+    activate("cuenta");
+})();
+</script>
+{% endblock %}

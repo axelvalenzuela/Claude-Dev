@@ -48,5 +48,5 @@ def noop(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("accounts", "0008_seed_axel_mhp_admin")]
+    dependencies = [("accounts", "0008_seed_axel_mhp_employee")]
     operations = [migrations.RunPython(seed_karen_admin, noop)]

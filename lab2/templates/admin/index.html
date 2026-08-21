@@ -58,23 +58,78 @@
                 {% endif %}
             </div>
 
-            <h2 class="dashboard-section-title">Pending review expenses</h2>
-            {% if pending_reports_list %}
-                <div class="employee-directory-list">
-                    {% for report in pending_reports_list %}
-                        <div class="employee-row employee-row-pending">
-                            <div class="report-row-main">
-                                <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_change' report.pk %}">{{ report.title }}</a>
-                                <span class="report-row-meta">{{ report.user.get_full_name|default:report.user.email }} &middot; {{ report.user.department|default:"—" }} &middot; ${{ report.total_amount }} &middot; submitted {{ report.submitted_at|date:"M j" }}</span>
-                            </div>
-                            <span class="report-row-badge">Review</span>
-                            <a class="employee-row-action button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">Access &rarr;</a>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="dashboard-empty">No pending review expenses right now.</p>
-            {% endif %}
+            <h2 class="dashboard-section-title">Expense reports</h2>
+            <p class="dashboard-subtitle">Who has a report waiting on you, and who's already been approved — filter between the two instead of opening the full Reports list.</p>
+            <div class="dashboard-subtabs">
+                <button type="button" class="dashboard-subtab-btn active" data-subtab="pending">Pending ({{ pending_reports_count }})</button>
+                <button type="button" class="dashboard-subtab-btn" data-subtab="approved">Approved ({{ approved_reports_list|length }})</button>
+            </div>
+
+            <div class="dashboard-subtab-panel" data-subpanel="pending">
+                {% if pending_reports_list %}
+                    <div class="pending-reports-table-wrap">
+                        <table class="pending-reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Report</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Amount</th>
+                                    <th>Submitted</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in pending_reports_list %}
+                                    <tr>
+                                        <td><a href="{% url 'admin:expenses_expensereport_change' report.pk %}">{{ report.title }}</a></td>
+                                        <td>{{ report.user.get_full_name|default:report.user.email }}</td>
+                                        <td>{{ report.user.department|default:"—" }}</td>
+                                        <td>${{ report.total_amount }}</td>
+                                        <td>{{ report.submitted_at|date:"M j" }}</td>
+                                        <td><a class="button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">Access &rarr;</a></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="dashboard-empty">No pending review expenses right now.</p>
+                {% endif %}
+            </div>
+
+            <div class="dashboard-subtab-panel" data-subpanel="approved" hidden>
+                {% if approved_reports_list %}
+                    <div class="pending-reports-table-wrap">
+                        <table class="pending-reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Report</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Amount</th>
+                                    <th>Approved</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for report in approved_reports_list %}
+                                    <tr>
+                                        <td><a href="{% url 'admin:expenses_expensereport_change' report.pk %}">{{ report.title }}</a></td>
+                                        <td>{{ report.user.get_full_name|default:report.user.email }}</td>
+                                        <td>{{ report.user.department|default:"—" }}</td>
+                                        <td>${{ report.total_amount }}</td>
+                                        <td>{{ report.reviewed_at|date:"M j" }}</td>
+                                        <td><a class="button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">View</a></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="dashboard-empty">No approved reports yet.</p>
+                {% endif %}
+            </div>
         {% endif %}
 
         <details class="dashboard-recent-actions">
@@ -186,6 +241,10 @@
             <h3>Account lockout</h3>
             <p>3 consecutive failed login attempts on an email locks that account out, even with the correct password afterward. A password reset lifts the lockout.</p>
         </div>
+        <div class="policy-card">
+            <h3>Signup is open — admin access is not self-service</h3>
+            <p>Any employee can create their own account at <code>/accounts/signup/</code>, no invitation needed — that's by design, so onboarding doesn't bottleneck on an admin. Admin access is different: there's no self-service "request admin" button on purpose. An employee who needs it asks personally — Iris Cortez, Adrian Heymes, Karen Plascencia, or Steffan Widmer (CEO) — and one of them grants it from the Users &amp; Groups tab (<code>is_staff</code>, and either <code>is_superuser</code> or a <code>supervised_department</code>).</p>
+        </div>
     </div>
 
     <div class="admin-tab-panel" data-panel="help" hidden>
@@ -224,6 +283,10 @@
             <div class="faq-question">Where can I see a report's full history — who did what, and when?</div>
             <div class="faq-answer">Open the report → <strong>History</strong> tab (the last one) — every action (created, documents uploaded, submitted, approved/rejected) with who did it and when.</div>
         </div>
+        <div class="faq-item">
+            <div class="faq-question">Someone new needs admin access — where's the "make admin" button?</div>
+            <div class="faq-answer">There isn't one on purpose. Have them ask Iris Cortez, Adrian Heymes, Karen Plascencia, or Steffan Widmer (CEO) personally, then grant it yourself from <strong>Users &amp; Groups</strong> → open their account → check <code>is_staff</code>, and set either <code>is_superuser</code> (general admin) or <code>supervised_department</code> (department admin) — never both.</div>
+        </div>
     </div>
 
 </div>
@@ -238,6 +301,19 @@
             btn.classList.add("active");
             panels.forEach(function (panel) {
                 panel.hidden = panel.dataset.panel !== btn.dataset.tab;
+            });
+        });
+    });
+})();
+(function () {
+    const subButtons = document.querySelectorAll(".dashboard-subtab-btn");
+    const subPanels = document.querySelectorAll(".dashboard-subtab-panel");
+    subButtons.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            subButtons.forEach(function (b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+            subPanels.forEach(function (panel) {
+                panel.hidden = panel.dataset.subpanel !== btn.dataset.subtab;
             });
         });
     });

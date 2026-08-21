@@ -155,6 +155,35 @@
     margin: 24px 0 10px;
     color: var(--brand-black);
 }
+
+/* Pending/Approved filter toggle above the Dashboard's expense-reports
+   table — a lighter-weight pill toggle than the page's main .admin-tabs,
+   since it's filtering within one section, not switching sections. */
+.dashboard-subtabs {
+    display: flex;
+    gap: 8px;
+    margin: 4px 0 14px;
+}
+.dashboard-subtab-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--brand-gray-border);
+    border-radius: 999px;
+    background: var(--brand-white);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.dashboard-subtab-btn:hover {
+    border-color: var(--brand-blue);
+    color: var(--brand-blue-dark);
+}
+.dashboard-subtab-btn.active {
+    background: var(--brand-blue);
+    border-color: var(--brand-blue);
+    color: var(--brand-white);
+}
 .dashboard-empty {
     color: #777;
     font-style: italic;

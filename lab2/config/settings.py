@@ -93,6 +93,9 @@ TEMPLATES = [
                 # Powers the "reports to review" notification banner shown to
                 # admins (scoped to their department unless they're HR/superuser).
                 'accounts.context_processors.pending_reports_notification',
+                # Powers the "Approved" filter of the Dashboard's expense-reports
+                # table (the "Pending" filter reuses pending_reports_list above).
+                'accounts.context_processors.approved_reports_table',
                 # Powers the approved-vs-rejected donut chart on the admin dashboard.
                 'accounts.context_processors.approval_chart',
                 # Powers the "your report was approved/rejected" banner shown

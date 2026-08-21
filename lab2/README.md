@@ -81,7 +81,7 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 
 ### Cuentas admin (sembradas automáticamente)
 
-Cinco cuentas con acceso a `/admin/`, cada una representando un rol
+Cuatro cuentas con acceso a `/admin/`, cada una representando un rol
 distinto del organigrama:
 
 | Rol | Correo | Password | Alcance |
@@ -89,13 +89,25 @@ distinto del organigrama:
 | Admin general (RH) | `iris.cortez@mhp.com` | `Iris#2026Local` | **Iris Cortez** — ve y aprueba reportes de **todos** los departamentos (`is_superuser`). Es la aprobadora final por defecto. |
 | Admin general (RH) | `karen.plascencia@mhp.com` | *(ver nota abajo — password aleatorio, solo en tu `.env` local)* | **Karen Plascencia** — mismo alcance que Iris Cortez (`is_superuser`), segunda admin general. |
 | Admin de departamento (ICS) | `adrian.heymes@mhp.com` | `Adrian#2026Local` | **Adrian Heymes** — ve y aprueba **solo** reportes de empleados con `department="ICS"`. |
-| Admin general | `axel.valenzuela@mhp.com` | *(ver nota abajo — no committeado)* | **Axel Valenzuela**, identidad de dominio MHP — mismo alcance que Iris/Karen (`is_superuser`). |
 | Bootstrap (dev) | `axel.valenzuela@uabc.edu.mx` | `Admin#2026Local` | Cuenta genérica de arranque local, configurable vía `ADMIN_SEED_*`; independiente del organigrama. |
 
-Un empleado de ICS (p. ej. tú, registrado con `department="ICS"`) solo
-aparece en la bandeja de aprobación de **Adrian Heymes**; cualquiera de
-las admin generales (**Iris Cortez**, **Karen Plascencia**, **Axel
-Valenzuela**) ve ese mismo reporte y el de cualquier otro departamento.
+Y una cuenta de **empleado regular, sin acceso a `/admin/`**:
+
+| Correo | Password | Departamento |
+|---|---|---|
+| `axel.valenzuela@mhp.com` | *(ver nota abajo — no committeado)* | ICS |
+
+**`axel.valenzuela@mhp.com` es intencionalmente NO admin** — es la
+identidad de dominio MHP para probar el lado del empleado (subir recibos,
+enviar un reporte, esperar a que alguno de los admins de arriba lo
+apruebe), separada de la cuenta bootstrap (`@uabc.edu.mx`) para no tener
+que cerrar sesión de admin cada vez que se quiere probar el flujo de
+empleado.
+
+Un empleado de ICS (p. ej. `axel.valenzuela@mhp.com`, con
+`department="ICS"`) solo aparece en la bandeja de aprobación de **Adrian
+Heymes**; cualquiera de las admin generales (**Iris Cortez**, **Karen
+Plascencia**) ve ese mismo reporte y el de cualquier otro departamento.
 Ver la sección de "Roles de administrador" más abajo.
 
 > Contraseñas de desarrollo local únicamente. Cámbialas editando `.env` (o
@@ -106,9 +118,9 @@ Ver la sección de "Roles de administrador" más abajo.
 > excepción**: a diferencia de las demás cuentas de esta tabla, sus
 > passwords reales **no** están hardcodeados como default en la migración
 > ni en este README — viven solo en tu `.env` local (gitignored,
-> `AXEL_MHP_ADMIN_PASSWORD` / `KAREN_ADMIN_PASSWORD`), precisamente porque
-> uno de los dos es un password personal real que no debe quedar en el
-> historial de git. El default committeado en la migración
+> `AXEL_MHP_EMPLOYEE_PASSWORD` / `KAREN_ADMIN_PASSWORD`), precisamente
+> porque uno de los dos es un password personal real que no debe quedar en
+> el historial de git. El default committeado en la migración
 > (`ChangeMe#2026Local`) solo aplica si tu `.env` no define esa variable.
 >
 > **Login por número de empleado**: cualquier cuenta (admin o empleado)
@@ -357,9 +369,10 @@ todas las superficies quedan sincronizadas automáticamente.
   alcance que `ExpenseReportAdmin.get_queryset` — nunca pueden quedar
   desincronizados.
 - **Organigrama sembrado** (`accounts/migrations/0007_seed_org_admins.py`,
-  `0008_seed_axel_mhp_admin.py`, `0009_seed_karen_admin.py`): Iris Cortez
-  (RH, general), Adrian Heymes (ICS), Axel Valenzuela (identidad MHP, RH) y
-  Karen Plascencia (RH) — ver la tabla de credenciales más arriba.
+  `0009_seed_karen_admin.py`): Iris Cortez (RH, general), Adrian Heymes
+  (ICS) y Karen Plascencia (RH) — ver la tabla de credenciales más arriba.
+  `0008_seed_axel_mhp_employee.py` siembra la identidad MHP de Axel
+  Valenzuela como **empleado**, no admin — no forma parte del organigrama.
 - **Badge "signed in as ..."**: hasta ahora la única forma de notar la
   diferencia entre un admin de RH y uno de departamento era indirecta (qué
   reportes le aparecen en la cola). Se agregó un badge junto al logo, visible
@@ -726,7 +739,7 @@ lab2/
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
     migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
-    migrations/0008_seed_axel_mhp_admin.py  # Axel Valenzuela, identidad de dominio MHP (RH)
+    migrations/0008_seed_axel_mhp_employee.py  # Axel Valenzuela, identidad de dominio MHP (empleado, no admin)
     migrations/0009_seed_karen_admin.py     # Karen Plascencia (RH)
     tests/                          # un archivo por concepto: signup, security, org_admin_seed,
                                      # department_scoping, notifications, approval_chart, server_lifecycle,

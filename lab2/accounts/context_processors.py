@@ -46,6 +46,29 @@ def pending_reports_notification(request):
     }
 
 
+DASHBOARD_APPROVED_TABLE_LIMIT = 25
+
+
+def approved_reports_table(request):
+    """Feeds the "Approved" side of the Dashboard's expense-reports table
+    (see templates/admin/index.html) — pending_reports_notification above
+    already provides the "Pending" side (pending_reports_list); this is the
+    same idea for reports that have already been approved, with the same
+    department scoping, so an admin can filter between the two right on
+    the Dashboard instead of opening the full Reports changelist."""
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated or not user.is_staff:
+        return {}
+
+    from expenses.models import ExpenseReport
+
+    approved = ExpenseReport.objects.filter(status=ExpenseReport.Status.APPROVED).select_related("user")
+    if not user.is_superuser and user.supervised_department:
+        approved = approved.filter(user__department=user.supervised_department)
+
+    return {"approved_reports_list": list(approved.order_by("-reviewed_at")[:DASHBOARD_APPROVED_TABLE_LIMIT])}
+
+
 def approval_chart(request):
     """Feeds the circular (donut) approved-vs-rejected chart on the admin
     dashboard — how much of what this admin has actually decided on was

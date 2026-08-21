@@ -56,7 +56,7 @@ class PendingReportsNotificationTests(TestCase):
     def test_admin_dashboard_shows_the_banner(self):
         self.client.login(username="adrian.heymes@mhp.com", password="Adrian#2026Local")
         response = self.client.get(reverse("admin:index"))
-        self.assertContains(response, "awaiting your review")
+        self.assertContains(response, "pending review expense")
 
 
 class RecentReviewNotificationTests(TestCase):

@@ -23,14 +23,14 @@ def pending_reports_notification(request):
     # module load time (expenses doesn't depend on accounts.context_processors).
     from expenses.models import ExpenseReport
 
-    pending = ExpenseReport.objects.filter(status=ExpenseReport.Status.SUBMITTED)
+    pending = ExpenseReport.objects.filter(status=ExpenseReport.Status.SUBMITTED).select_related("user")
     scoped_to_department = None
 
     if not user.is_superuser and user.supervised_department:
         pending = pending.filter(user__department=user.supervised_department)
         scoped_to_department = user.supervised_department
 
-    pending = list(pending)
+    pending = list(pending.order_by("-submitted_at"))
 
     return {
         "pending_reports_count": len(pending),
@@ -38,6 +38,9 @@ def pending_reports_notification(request):
         # $ waiting on this admin's desk right now — feeds the dashboard
         # stat cards alongside the banner (see templates/admin/index.html).
         "pending_reports_amount_total": sum((r.total_amount for r in pending), Decimal("0")),
+        # The actual rows, for the "pending review expenses" table on the
+        # Dashboard tab — same scoping as the count/amount above.
+        "pending_reports_list": pending,
     }
 
 

@@ -111,6 +111,85 @@
     vertical-align: middle;
 }
 
+/* Centers the whole admin dashboard in a readable column instead of
+   stretching it edge-to-edge — colM (no sidebar) otherwise leaves a lot of
+   empty space on wide screens. */
+.admin-dashboard-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Dashboard / Reportes / Cuentas y permisos tabs on the admin index page —
+   keeps the approval workflow (Dashboard, Reportes) visually separate from
+   account/permission management, instead of one long stacked page. */
+.admin-tabs {
+    display: flex;
+    gap: 4px;
+    margin: 0 0 20px;
+    border-bottom: 2px solid var(--brand-gray-border);
+}
+.admin-tab-btn {
+    padding: 10px 18px;
+    border: none;
+    background: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.admin-tab-btn:hover {
+    color: var(--brand-blue-dark);
+}
+.admin-tab-btn.active {
+    color: var(--brand-blue-dark);
+    border-bottom-color: var(--brand-blue);
+}
+.dashboard-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 24px 0 10px;
+    color: var(--brand-black);
+}
+.dashboard-empty {
+    color: #777;
+    font-style: italic;
+}
+
+/* Pending-review-expenses table on the Dashboard tab — an actual data
+   table of what's waiting, not just a link to the changelist. */
+.pending-reports-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+.pending-reports-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--brand-white);
+    border: 1px solid var(--brand-gray-border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.pending-reports-table th, .pending-reports-table td {
+    padding: 9px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--brand-gray-border);
+    font-size: 0.88rem;
+}
+.pending-reports-table th {
+    background: var(--brand-gray-bg);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    color: #555;
+}
+.pending-reports-table tbody tr:hover {
+    background: #e8f2fb;
+}
+
 /* "Reports to review" notification banner on the admin dashboard. */
 .pending-reports-banner {
     margin: 0 0 16px;

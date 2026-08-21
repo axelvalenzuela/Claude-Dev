@@ -160,14 +160,19 @@ audit trail that can be edited after the fact isn't one.
   separate per-model Permission objects.) The HR admin (`is_superuser=True`)
   has no `supervised_department` and sees everything.
   `accounts/context_processors.py:pending_reports_notification`
-  runs the same scoping to compute the "N reports awaiting your review"
-  count shown on the admin dashboard (`templates/admin/index.html`) — both
-  are driven by the same two fields, so they can't disagree with each other.
-  `accounts/context_processors.py:approval_chart` reuses the exact same
-  scoping again for the approved-vs-rejected donut chart, and
-  `recent_review_notification` mirrors it on the employee side (filtered to
-  `user=request.user` instead of by department) for the "your report was
-  approved/rejected" banner, note included.
+  runs the same scoping to compute the "N pending review expenses" count
+  (and their $ total, and the actual row list for the Dashboard tab's
+  table) shown on the admin dashboard (`templates/admin/index.html`) —
+  both are driven by the same two fields, so they can't disagree with each
+  other. `accounts/context_processors.py:approval_chart` reuses the exact
+  same scoping again for the approved-vs-rejected donut chart (and the
+  historical approved $ total), and `recent_review_notification` mirrors
+  it on the employee side (filtered to `user=request.user` instead of by
+  department) for the "your report was approved/rejected" banner, note
+  included. The dashboard is organized into three tabs (Dashboard /
+  Reportes / Cuentas y permisos, via `accounts/templatetags/admin_extras.py:
+  apps_in`) so account/permission management stays visually separate from
+  the approval workflow.
 - **Excel/Word snapshots replace the originals, once approved**:
   `ExpenseReport.excel_snapshot` / `word_snapshot` are generated once, in
   `expenses/services.py:finalize_approval()`, right after a successful

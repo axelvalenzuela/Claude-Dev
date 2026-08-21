@@ -1,103 +1,172 @@
-# Deployment (intranet server)
+# Despliegue (servidor de intranet)
 
-This app was built and is tested as a local Django dev-server project. This
-document covers what changed to make it deployable on a company intranet
-server, and how to actually run it there. **Before this pass, none of this
-existed** — no `Dockerfile`, no `STATIC_ROOT`, no production WSGI server, no
-CI pipeline. All of it is new.
+Esta app se construyó y se prueba como servidor de desarrollo local. Este
+documento cubre cómo queda la infraestructura para correrla en un servidor
+de intranet de la empresa, y los pasos para prepararlo. **Antes de este
+trabajo nada de esto existía** — no había `Dockerfile`, ni `STATIC_ROOT`, ni
+servidor WSGI de producción, ni pipeline de CI. Todo es nuevo.
 
-## Why containers, not a bare-metal install
+## Por qué contenedores y no una instalación directa
 
-For a small internal tool like this, running it as a container is the more
-prudent choice over installing Python/Django directly on a Windows or Linux
-server:
+Para una herramienta interna de este tamaño, correrla como contenedor es la
+opción más prudente frente a instalar Python/Django directamente en un
+servidor Windows o Linux:
 
-- **Reproducibility.** The image pins the exact Python version and every
-  dependency (`requirements.txt`). "Works on my machine" stops being a
-  question — the container that passed CI is the same one that runs on the
-  server.
-- **Clean updates and rollbacks.** Shipping a new version is rebuilding the
-  image and restarting the container; going back is running the previous
-  image tag. There's no in-place `pip install --upgrade` on a live server to
-  get wrong.
-- **Isolation.** The app's Python environment can't drift from — or collide
-  with — whatever else IT already runs on that server.
-- **No local Python install to maintain on the server itself.** Only Docker
-  (or another OCI runtime) needs to be present; IT doesn't need to keep a
-  Python installation patched and separately secured.
+- **Reproducibilidad.** La imagen fija la versión exacta de Python y cada
+  dependencia (`requirements.txt`). "En mi máquina funciona" deja de ser un
+  problema — el contenedor que pasó CI es el mismo que corre en el
+  servidor.
+- **Actualizaciones y rollbacks limpios.** Publicar una versión nueva es
+  reconstruir la imagen y reiniciar el contenedor; regresar a la anterior
+  es correr la etiqueta de imagen previa. No hay un `pip install --upgrade`
+  a medias en un servidor vivo que se pueda hacer mal.
+- **Aislamiento.** El entorno de Python de la app no puede desalinearse ni
+  chocar con lo que TI ya tenga corriendo en ese servidor.
+- **Nada de Python que mantener directamente en el servidor.** Solo hace
+  falta Docker (o un runtime OCI equivalente); TI no tiene que mantener
+  parchada y asegurada por separado una instalación de Python.
 
-The trade-off is that whoever runs the server needs Docker available. On a
-company intranet server that's normally a one-time setup, so it's a good
-trade for a tool that will be redeployed more than once.
+El costo es que quien administra el servidor necesita Docker disponible. En
+un servidor de intranet de la empresa eso normalmente es una configuración
+de una sola vez, así que vale la pena para una herramienta que se va a
+volver a desplegar más de una vez.
 
-## What's in the image
+## Infraestructura
 
-- `Dockerfile`: a single-stage `python:3.12-slim` image. It installs
-  `requirements.txt` (now including `gunicorn`, the production WSGI server,
-  and `whitenoise`, which serves the collected static files directly from
-  the app process — no separate nginx needed in front), runs
-  `collectstatic` at build time, and drops to a non-root user before
-  starting. On container start it applies migrations (safe to repeat — a
-  no-op once the DB is current) and then starts `gunicorn`.
-- `docker-compose.yml`: runs that image as a single service, publishing
-  port 8000, loading secrets from a local `.env` file (never committed —
-  see `.env.example`), and persisting the SQLite database and uploaded/
-  generated files in a named Docker volume (`app_data`, mounted at `/data`)
-  — so a rebuild or redeploy never touches real data.
-- `.dockerignore`: keeps the local venv, `.env`, the dev SQLite DB, and
-  local media out of the build context/image.
+Un único contenedor resuelve toda la app — no hace falta nginx ni un
+servidor de aplicación separado en frente, porque WhiteNoise (dentro del
+mismo proceso) ya sirve los archivos estáticos:
 
-## Running it
+```
+┌──────────────────────────┐        ┌────────────────────────────────────┐
+│  Navegador (empleados y   │  HTTP  │  Servidor de intranet               │
+│  admins), dentro de la    │───────▶│  ┌────────────────────────────┐    │
+│  red de la empresa        │  :8000 │  │ Contenedor "web"            │    │
+└──────────────────────────┘        │  │ gunicorn + Django + WhiteNoise│   │
+                                     │  └───────────────┬────────────┘    │
+                                     │                  │ lee/escribe      │
+                                     │                  ▼                  │
+                                     │  ┌────────────────────────────┐    │
+                                     │  │ Volumen "app_data" (/data)  │    │
+                                     │  │  db.sqlite3 + media/        │    │
+                                     │  └────────────────────────────┘    │
+                                     └────────────────────────────────────┘
+```
 
-1. Install Docker (and Docker Compose, which ships with modern Docker
-   installs) on the target machine.
-2. Copy `.env.example` to `.env` next to `docker-compose.yml` and fill in
-   real values — at minimum a strong, random `DJANGO_SECRET_KEY` (the
-   default in `.env.example` is a local-dev placeholder and must not be
-   used anywhere reachable by anyone but you) and
-   `DJANGO_ALLOWED_HOSTS` set to the server's intranet hostname/IP.
+- **Un solo contenedor** (`web` en `docker-compose.yml`): corre `gunicorn`
+  (servidor WSGI de producción) sirviendo Django, con WhiteNoise sirviendo
+  los archivos estáticos (CSS/JS/Bootstrap vendorizado) desde el mismo
+  proceso.
+- **Un volumen con nombre** (`app_data`, montado en `/data` dentro del
+  contenedor): ahí viven la base de datos SQLite y los archivos subidos/
+  generados (`media/`). Al estar fuera del código de la app, un rebuild o
+  redeploy nunca los toca.
+- **Sin base de datos aparte que administrar**: SQLite es un archivo, no un
+  servicio — ver la sección de base de datos más abajo.
+- **TLS/HTTPS es opcional y externo** a este contenedor (ver más abajo) —
+  `gunicorn` no termina TLS por sí mismo.
+
+## Preparar el ambiente
+
+Requisitos en el servidor de intranet:
+
+1. **Docker Engine** (con el plugin de Compose, que ya viene incluido en
+   instalaciones modernas de Docker). Es el único requisito de software —
+   no se necesita Python, pip, ni ninguna dependencia de la app instalada
+   directamente en el servidor.
+2. **Acceso a la red interna** en el puerto que se vaya a usar (por
+   default, 8000) desde donde los empleados vayan a acceder.
+3. **Espacio en disco**: la imagen es del orden de unos cientos de MB; los
+   datos (SQLite + archivos subidos/generados) crecen con el uso pero para
+   una herramienta interna de este tipo no se esperan tamaños grandes —
+   unos pocos GB son un margen cómodo para empezar.
+4. Copiar el repositorio al servidor (`git clone`, o copiar el directorio
+   `lab2/` si no se quiere exponer el repo completo).
+
+## Instalación de dependencias
+
+**En el contenedor (cómo se despliega): automática.** El `Dockerfile` ya
+instala todo (`pip install -r requirements.txt`, incluyendo `gunicorn` y
+`whitenoise`) como parte del build de la imagen — no hay un paso manual de
+"instalar dependencias" separado en el servidor; sucede solo al correr
+`docker compose up --build`.
+
+**Fuera de un contenedor (solo si en algún momento se corre directo en una
+máquina, sin Docker):** los mismos pasos que en desarrollo local — ver la
+sección de instalación en el `README.md` principal (`python -m venv .venv`,
+`pip install -r requirements.txt`). No es la ruta recomendada para el
+servidor (ver la sección de arriba sobre por qué contenedores), pero el
+`requirements.txt` es el mismo en ambos casos.
+
+## Levantarlo
+
+1. Con Docker ya instalado en el servidor:
+2. Copiar `.env.example` a `.env` junto a `docker-compose.yml` y llenarlo
+   con valores reales — como mínimo, un `DJANGO_SECRET_KEY` fuerte y
+   aleatorio (el valor por default en `.env.example` es un placeholder de
+   desarrollo local y no debe usarse en ningún lugar accesible por nadie
+   más que uno mismo) y `DJANGO_ALLOWED_HOSTS` con el hostname/IP de
+   intranet del servidor.
 3. `docker compose up -d --build`
-4. The app is now on `http://<server>:8000/`. The three seeded accounts
-   from `.env` (HR admin, ICS admin, bootstrap admin) work exactly as they
-   do locally — see the main `README.md` credentials table.
-5. To update after a code change: `git pull && docker compose up -d --build`.
-6. To back up: back up the `app_data` Docker volume (it holds the SQLite
-   database and every uploaded/generated file) — e.g.
+4. La app queda en `http://<servidor>:8000/`. Las tres cuentas sembradas
+   desde `.env` (admin de RH, admin de ICS, admin de arranque) funcionan
+   igual que en local — ver la tabla de credenciales del `README.md`
+   principal.
+5. Para actualizar tras un cambio de código: `git pull && docker compose up -d --build`.
+6. Para respaldar: respaldar el volumen `app_data` de Docker (ahí vive la
+   base de datos SQLite y cada archivo subido/generado) — p. ej.
    `docker run --rm -v lab2_app_data:/data -v $(pwd):/backup alpine tar czf /backup/app_data.tar.gz -C /data .`
+
+## Características del servidor — base de datos
+
+- **SQLite por default**: es un archivo (`db.sqlite3` dentro del volumen
+  `/data`), no un servicio aparte que administrar, respaldar o parchear
+  por separado. Para una herramienta interna de bajo tráfico (reportes de
+  viáticos de una empresa, no un servicio público) esto es apropiado — la
+  limitación real de SQLite es la concurrencia de **escrituras**
+  simultáneas (un escritor a la vez), no de lecturas, y el volumen de uso
+  esperado aquí está muy por debajo de donde eso empieza a importar.
+- **Cuándo migrar a un motor con servidor** (Postgres, típicamente): si el
+  uso crece a varios admins/empleados escribiendo simultáneamente de forma
+  frecuente, o si la empresa ya tiene un servidor de base de datos
+  corporativo que prefiere usar. El cambio no requiere tocar código: basta
+  con definir `DATABASE_URL` en `.env` (sintaxis de `django-environ`, p.
+  ej. `postgres://usuario:clave@host:5432/nombre_db`) y agregar el driver
+  correspondiente (`psycopg`) a `requirements.txt`. `config/settings.py`
+  ya lee esa variable.
+- **CPU/RAM del servidor**: nada fuera de lo común — un servidor pequeño
+  (1-2 vCPU, 1-2 GB de RAM) es más que suficiente para este volumen de uso;
+  la app no hace procesamiento pesado salvo el análisis de texto de PDFs al
+  subir un documento, que es puntual y ligero.
 
 ## HTTPS
 
-`gunicorn` itself does not terminate TLS. Two supported options:
+`gunicorn` no termina TLS por sí mismo. Dos opciones soportadas:
 
-- **Stay on plain HTTP** for a first internal rollout — the default. Leave
-  `DJANGO_HTTPS_ENABLED` unset (`False`).
-- **Put a reverse proxy in front** (nginx, Caddy, or the company's existing
-  intranet load balancer) that terminates TLS and forwards to port 8000,
-  then set `DJANGO_HTTPS_ENABLED=True` in `.env`. This turns on
-  `SECURE_SSL_REDIRECT`, secure cookies, and HSTS together (see
-  `config/settings.py`) — deliberately all-or-nothing, since HSTS in front
-  of plain HTTP just locks users out.
+- **Quedarse en HTTP plano** para un primer despliegue interno — es el
+  comportamiento por default. Dejar `DJANGO_HTTPS_ENABLED` sin definir
+  (`False`).
+- **Poner un reverse proxy en frente** (nginx, Caddy, o el balanceador de
+  intranet que ya tenga la empresa) que termine TLS y reenvíe al puerto
+  8000, y entonces sí poner `DJANGO_HTTPS_ENABLED=True` en `.env`. Esto
+  activa juntos `SECURE_SSL_REDIRECT`, cookies seguras y HSTS (ver
+  `config/settings.py`) — deliberadamente todo o nada, porque HSTS sin TLS
+  real solo bloquearía el acceso.
 
-If a reverse proxy is added, also set `DJANGO_CSRF_TRUSTED_ORIGINS` to the
-public URL(s) it's reached at (e.g. `https://expenses.intranet.mhp.local`).
+Si se agrega un reverse proxy, también hay que definir
+`DJANGO_CSRF_TRUSTED_ORIGINS` con la(s) URL(s) pública(s) por las que se
+accede (p. ej. `https://viaticos.intranet.mhp.local`).
 
-## Database
+## Pipeline de CI
 
-SQLite is the default and is fine for this app's expected load (an internal
-tool, not a public-facing service). If usage grows enough to need a real
-database server, set `DATABASE_URL` in `.env` (django-environ syntax, e.g.
-`postgres://user:pass@host:5432/dbname`) — `config/settings.py` already
-reads it, no code change needed. Only a driver package (`psycopg`) would
-need to be added to `requirements.txt`.
-
-## CI pipeline
-
-`.github/workflows/lab2-ci.yml` runs on every push/PR touching `lab2/`:
-installs dependencies, runs `manage.py check`, runs the full test suite,
-runs `manage.py check --deploy` under production-like settings (catches
-config regressions like a forgotten env var before they reach the server),
-and does a `docker build` to confirm the image still builds. It's a
-starting template — the comments at the top of that file list the next
-things worth adding (a linter, a dependency-vulnerability scan, pushing the
-built image to a registry the server pulls from) once the team decides on
-those tools.
+`.github/workflows/lab2-ci.yml` corre en cada push/PR que toque `lab2/`:
+instala dependencias, corre `manage.py check`, corre toda la suite de
+tests, corre `manage.py check --deploy` bajo configuración similar a
+producción (detecta regresiones de configuración, como una variable de
+entorno olvidada, antes de que lleguen al servidor), y hace un
+`docker build` para confirmar que la imagen sigue construyéndose. Es una
+plantilla inicial — los comentarios al principio de ese archivo listan lo
+siguiente que valdría la pena agregar (un linter, un escaneo de
+vulnerabilidades de dependencias, publicar la imagen construida en un
+registry del que el servidor la descargue) una vez que el equipo decida
+esas herramientas.

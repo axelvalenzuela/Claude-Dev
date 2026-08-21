@@ -45,7 +45,7 @@ erDiagram
     TRAVEL_DOCUMENT {
         int id PK
         int expense_report_id FK
-        string file "stored path while draft; cleared once submitted (see finalize_submission)"
+        string file "stored path while draft/submitted; cleared once approved (see finalize_approval)"
         string original_filename "name as uploaded, shown to users forever (even after file is gone)"
         string type "taxi, meal, flight, hotel, other (user-selected)"
         decimal amount "user-entered"
@@ -168,17 +168,27 @@ audit trail that can be edited after the fact isn't one.
   `recent_review_notification` mirrors it on the employee side (filtered to
   `user=request.user` instead of by department) for the "your report was
   approved/rejected" banner, note included.
-- **Excel/Word snapshots replace the originals**: `ExpenseReport.excel_snapshot`
-  / `word_snapshot` are generated once, in `expenses/services.py:
-  finalize_submission()`, right after a successful `submit()` (same
-  transaction). Only after both are saved does it clear every
-  `TravelDocument.file` on the report — the row itself (type/amount/date/
-  flags) is untouched, so `daily_totals()`, the admin, and both history
-  views keep working from the DB fields alone. This was a deliberate
-  reversal of an earlier decision to keep originals forever: storing every
-  employee's raw uploads indefinitely wasn't considered sustainable, so the
-  two generated documents (with an embedded thumbnail for photo receipts,
-  captured before deletion) became the report's permanent record instead.
+- **Excel/Word snapshots replace the originals, once approved**:
+  `ExpenseReport.excel_snapshot` / `word_snapshot` are generated once, in
+  `expenses/services.py:finalize_approval()`, right after a successful
+  `approve()` (same transaction, triggered from
+  `ExpenseReportAdmin.save_model`) — not at submission. While a report is
+  only submitted and pending review, the original files are still there
+  (an admin or the employee may need to check them before deciding), and
+  the Excel/Word download links generate a preview on the fly instead of
+  serving a saved snapshot. Only after both are saved as part of approval
+  does it clear every `TravelDocument.file` on the report — the row itself
+  (type/amount/date/flags) is untouched, so `daily_totals()`, the admin,
+  and both history views keep working from the DB fields alone. A rejected
+  report is untouched by this: there's no resubmission flow, so its
+  originals stay available indefinitely. This was a deliberate reversal of
+  an earlier decision to keep originals forever: storing every employee's
+  raw uploads indefinitely wasn't considered sustainable, so the two
+  generated documents (with an embedded thumbnail for photo receipts,
+  captured before deletion) became an approved report's permanent record
+  instead. The two files are named per RH's convention — employee name,
+  submission date, employee number, and an `APROBADO` marker (see
+  `expenses/naming.py:export_basename()`).
 - **Brute-force lockout**: `accounts/security.py:is_account_locked()` reads
   `LoginEvent` (no separate lockout field) — 3 consecutive failures for an
   email blocks the next login outright, even with the right password.

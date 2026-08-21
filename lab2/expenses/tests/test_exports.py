@@ -1,6 +1,7 @@
-"""ExportExcelView / ExportWordView (expenses/views/exports.py): a
-still-draft report generates a preview on the fly; a submitted one serves
-the permanent snapshot saved by services.finalize_submission."""
+"""ExportExcelView / ExportWordView (expenses/views/exports.py): a draft or
+a submitted-but-not-yet-approved report generates a preview on the fly; an
+approved report serves the permanent, RH-named snapshot saved by
+services.finalize_approval."""
 import shutil
 import tempfile
 
@@ -25,7 +26,11 @@ class ExportTests(TestCase):
 
     def setUp(self):
         self.employee = User.objects.create_user(
-            username="ana@example.com", email="ana@example.com", password="clave123", department="Sales"
+            username="ana@example.com",
+            email="ana@example.com",
+            password="clave123",
+            department="Sales",
+            employee_number="1234567",
         )
         self.client.login(username="ana@example.com", password="clave123")
 
@@ -52,7 +57,7 @@ class ExportTests(TestCase):
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
 
-    def test_export_word_serves_the_saved_snapshot_after_submission(self):
+    def test_export_word_for_a_submitted_but_unapproved_report_generates_on_the_fly(self):
         report, _ = self._create_report()
         self.client.post(
             reverse("reports:upload_document", args=[report.pk]),
@@ -72,6 +77,16 @@ class ExportTests(TestCase):
             response["Content-Type"],
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
+        report.refresh_from_db()
+        self.assertFalse(report.word_snapshot)  # still not saved anywhere — only a preview
+
+    def test_export_excel_filename_follows_rh_naming_convention(self):
+        report, _ = self._create_report()
+
+        response = self.client.get(reverse("reports:export_excel", args=[report.pk]))
+
+        self.assertIn(self.employee.employee_number, response["Content-Disposition"])
+        self.assertIn(".xlsx", response["Content-Disposition"])
 
     def test_export_word_for_a_draft_generates_on_the_fly(self):
         report, _ = self._create_report()  # still a draft, no snapshot saved yet

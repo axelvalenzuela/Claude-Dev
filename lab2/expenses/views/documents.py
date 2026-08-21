@@ -1,7 +1,7 @@
 """Views for individual documents on a report: adding one, removing one,
 downloading the original (while it still exists — see
-services.finalize_submission for why it might not), and the live AJAX
-preview used while composing a report."""
+services.finalize_approval for why it might not, once the report is
+approved), and the live AJAX preview used while composing a report."""
 import os
 
 from django.contrib import messages
@@ -121,7 +121,7 @@ class DownloadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
         report = self.get_report()
         document = get_object_or_404(TravelDocument, pk=doc_id, expense_report=report)
         if not document.file:
-            # Expected once the report has been submitted — the original
+            # Expected once the report has been approved — the original
             # was archived into the Excel/Word exports and removed.
             raise Http404
         return FileResponse(

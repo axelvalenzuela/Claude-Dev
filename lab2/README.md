@@ -268,28 +268,41 @@ que realmente atiende peticiones). Para desactivarlo, pon
   administrator" (`accounts/context_processors.py:admin_scope_badge`,
   `templates/admin/base_site.html`).
 
-### 10. Excel + Word al enviar, y retención de archivos — decisión de buena práctica
+### 10. Excel + Word al aprobar, y retención de archivos — decisión de buena práctica
 
-Esto cambió de decisión sobre la marcha (documentado aquí para que quede
-claro el porqué): originalmente los archivos originales nunca se borraban.
-Confirmaste explícitamente que preferías generar **Excel + Word** con toda
-la información capturada y, con eso, **sí eliminar los originales** al
-enviar — así se implementó:
+Esto cambió de decisión sobre la marcha, dos veces (documentado aquí para
+que quede claro el porqué): originalmente los archivos originales nunca se
+borraban. Luego se cambió a generar **Excel + Word** y borrar los
+originales **al enviar** el reporte. La versión actual mueve ese punto de
+corte a **cuando el admin aprueba**, no al enviar — mientras un reporte
+sigue en revisión (`submitted`), el empleado o el admin todavía pueden
+necesitar ver los archivos originales antes de decidir, así que se
+conservan hasta entonces:
 
-- Al enviar un reporte (`ExpenseReport.submit()` desde el portal o al crear
-  y enviar en un solo paso), `expenses/services.py:finalize_submission()`
-  corre **dentro de la misma transacción**:
+- Al aprobar un reporte desde el admin (`ExpenseReportAdmin.save_model`,
+  que llama a `ExpenseReport.approve()` y luego a
+  `expenses/services.py:finalize_approval()`), **dentro de la misma
+  transacción** (Django admin ya envuelve todo el POST del changeform en
+  una):
   1. Genera el `.xlsx` (`expenses/excel.py`) y el `.docx`
-     (`expenses/word_export.py`) y los guarda permanentemente en
-     `ExpenseReport.excel_snapshot` / `word_snapshot`.
+     (`expenses/word_export.py`) — en este punto el reporte ya está
+     aprobado, así que el archivo incluye quién revisó, la nota y la
+     cláusula del CEO — y los guarda permanentemente en
+     `ExpenseReport.excel_snapshot` / `word_snapshot`, **nombrados con la
+     convención de RH**: nombre del empleado, fecha de envío, número de
+     empleado y el sufijo `APROBADO` (`expenses/naming.py:
+     export_basename()`) — p. ej. `Ana_Lopez_2026-08-15_1234567_APROBADO.xlsx`.
   2. Solo si ambos se guardaron bien, borra el archivo físico de cada
      `TravelDocument` del reporte (`document.file.delete()`) — la fila en
      sí (tipo, monto, fecha, flags de la política) **se conserva**, así que
      el desglose de $60/día, el historial y la auditoría siguen
      funcionando exactamente igual sin el archivo original.
-  3. Si algo falla generando los exports, **nada se borra** — todo el
-     `submit()` se revierte (transacción atómica) y el reporte se queda en
-     `draft`.
+  3. Si algo falla generando los exports, **nada se borra** — toda la
+     aprobación se revierte (transacción atómica) y el reporte se queda en
+     `submitted`.
+- **Un reporte rechazado no se toca**: no existe flujo de reenvío, así que
+  sus archivos originales se conservan indefinidamente junto con el motivo
+  del rechazo — solo la aprobación dispara el borrado.
 - El **Word** (`.docx`, editable) incluye lo mismo que el Excel (datos del
   empleado, departamento, supervisor, fechas del viaje, tabla de gastos
   ordenada **alfabéticamente por tipo**, desglose de $60/día) más una
@@ -298,13 +311,15 @@ enviar — así se implementó:
   así que es el respaldo visual permanente de esas fotos. Los PDF solo se
   listan por nombre (renderizar una página de PDF a imagen necesitaría una
   dependencia de sistema tipo poppler, no se agregó solo para esto).
-- Una vez enviado, el portal del empleado y el admin muestran los links de
-  descarga de **Excel y Word** (`ExportExcelView`/`ExportWordView` para el
-  empleado; el campo `exports_display` en el admin), y la fila de cada
-  documento indica "(archived)" en vez de un link roto. Mientras el reporte
-  sigue en `draft`, esos exports **todavía no existen** — `ExportExcelView`/
-  `ExportWordView` generan uno al vuelo bajo demanda (útil para revisar
-  antes de enviar), sin guardarlo.
+- Mientras el reporte está en `draft` o `submitted` (pendiente de
+  revisión), los links de descarga de **Excel y Word**
+  (`ExportExcelView`/`ExportWordView` para el empleado; el campo
+  `exports_display` en el admin) generan una vista previa al vuelo, sin
+  guardarla, ya con el mismo nombre base (empleado, fecha, número de
+  empleado, sin el sufijo `APROBADO` todavía). Una vez aprobado, esos
+  mismos links sirven el archivo permanente guardado en el paso anterior.
+  La fila de cada documento indica "(archived)" en vez de un link roto una
+  vez que el original ya no está.
 - Por qué no un "archivo aparte" solo para el admin: el admin **ya** ve
   todo esto entrando al reporte del usuario en `/admin/` (Excel/Word +
   documentos con su estado), que es justo el flujo pedido ("simplemente
@@ -453,9 +468,9 @@ draft --submit()--> submitted --approve(ceo_clause_ack=True)--> approved
   con adjuntos y al agregar un documento nuevo — nunca al guardar el
   modelo directamente, para no romper reportes ya existentes).
 
-`expenses/services.py:finalize_submission()` corre justo después de un
-`submit()` exitoso (misma transacción): genera Excel + Word y solo entonces
-borra los archivos originales — ver módulo 10.
+`expenses/services.py:finalize_approval()` corre justo después de un
+`approve()` exitoso (misma transacción): genera Excel + Word con el nombre
+de RH y solo entonces borra los archivos originales — ver módulo 10.
 
 ## Organización del código y convenciones
 
@@ -538,8 +553,9 @@ lab2/
     policies.py                 # DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
     validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
-    services.py                  # build_travel_document + finalize_submission (exports y borrado de originales)
-    word_export.py                # genera el .docx (con miniaturas de fotos) al enviar
+    services.py                  # build_travel_document + finalize_approval (exports y borrado de originales, al aprobar)
+    naming.py                     # export_basename() — convención de nombre de RH (empleado, fecha, número, APROBADO)
+    word_export.py                # genera el .docx (con miniaturas de fotos) al aprobar
     views/                       # reports.py, documents.py, exports.py, mixins.py — ver arriba
     admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py
     excel.py
@@ -566,14 +582,15 @@ cd lab2
 python manage.py test
 ```
 
-114 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+118 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día, análisis de PDF (monto y tipo detectados, y el endpoint de
 preview en vivo), creación de reportes con adjuntos múltiples, número de
 empleado (generación y unicidad), generación del Excel y del Word (incluida
-la miniatura embebida de fotos), `finalize_submission` (exports guardados +
-borrado de originales + auditoría), signup/aislamiento entre empleados,
+la miniatura embebida de fotos), `finalize_approval` (exports guardados con
+el nombre de RH + borrado de originales + auditoría, disparado al aprobar
+—no al enviar— y no al rechazar), signup/aislamiento entre empleados,
 subida y envío de documentos, historial alfabético del empleado (con nota
 de rechazo) y del admin (proxy de aprobados), auditoría de reportes,
 trazabilidad de logins (exitosos y fallidos), roles de administrador por

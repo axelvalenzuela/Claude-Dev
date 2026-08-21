@@ -28,7 +28,7 @@ class ExpenseReportDisplayMixin:
 
     def exports_display(self, obj):
         if not obj.excel_snapshot and not obj.word_snapshot:
-            return "Not generated yet (report is still a draft)."
+            return "Not generated yet (only saved once the report is approved)."
         links = []
         if obj.excel_snapshot:
             links.append(format_html('<a href="{}" target="_blank">Excel (.xlsx)</a>', obj.excel_snapshot.url))

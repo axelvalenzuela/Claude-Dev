@@ -65,10 +65,12 @@ class ExpenseReport(models.Model):
     ceo_authorized = models.BooleanField(default=False)
     approval_clause = models.CharField(max_length=255, blank=True)
 
-    # Generated once, right when the report is submitted (see
-    # expenses/services.py:finalize_submission), and kept permanently as the
-    # retained record of the expense — see TravelDocument.file below for why
-    # the *original* uploads don't stick around after that point.
+    # Generated once, right when the report is approved (see
+    # expenses/services.py:finalize_approval), named per RH's convention
+    # (employee, date, employee number — expenses/naming.py), and kept
+    # permanently as the retained record of the expense — see
+    # TravelDocument.file below for why the *original* uploads don't stick
+    # around past that point.
     excel_snapshot = models.FileField(upload_to="reports/%Y/%m", blank=True)
     word_snapshot = models.FileField(upload_to="reports/%Y/%m", blank=True)
 
@@ -195,7 +197,7 @@ class TravelDocument(models.Model):
     file = models.FileField(
         "File",
         upload_to=document_upload_path,
-        blank=True,  # cleared once the report is submitted — see finalize_submission()
+        blank=True,  # cleared once the report is approved — see services.finalize_approval()
         validators=[
             FileExtensionValidator(["pdf", "jpg", "jpeg", "png"]),
             validate_file_size,

@@ -7,6 +7,7 @@ from django.utils.safestring import mark_safe
 
 from ..models import ExpenseReport, ExpenseReportAuditLog, log_action
 from ..policies import DAILY_LIMIT_USD
+from ..services import finalize_approval
 from .forms import ExpenseReportAdminForm
 from .inlines import AuditLogInline, TravelDocumentInline
 from .mixins import ExpenseReportDisplayMixin
@@ -192,6 +193,15 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
                 else ExpenseReportAuditLog.Action.REJECTED
             )
             log_action(obj, request.user, action, obj.review_note)
+
+            if obj.status == ExpenseReport.Status.APPROVED:
+                # Generates the final, RH-named Excel/Word exports and
+                # removes the original receipt files — see
+                # services.finalize_approval. Runs inside the same
+                # transaction as this save (Django admin wraps the whole
+                # changeform POST in one), so a failure here rolls the
+                # approval back too, rather than leaving it half-done.
+                finalize_approval(obj, request.user)
 
     def has_add_permission(self, request):
         return False

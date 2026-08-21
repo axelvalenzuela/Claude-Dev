@@ -13,9 +13,15 @@
     </div>
 </div>
 
-{% if report.status != "draft" %}
+{% if report.status == "submitted" %}
     <div class="alert alert-info">
-        This report was submitted — the original receipt files were archived into the Excel/Word exports
+        This report was submitted and is awaiting review. The original receipt files stay available until
+        it's approved — once approved, they'll be replaced by the Excel/Word exports above (renamed to
+        show the approved status).
+    </div>
+{% elif report.status == "approved" %}
+    <div class="alert alert-info">
+        This report was approved — the original receipt files were archived into the Excel/Word exports
         above and removed from the server (they're no longer stored individually).
     </div>
 {% endif %}
@@ -213,7 +219,7 @@
     })();
     </script>
 
-    <form action="{% url 'reports:submit' report.pk %}" method="post" onsubmit="return confirm('Submit this report for review? You will no longer be able to edit it, and the original receipt files will be archived into Excel/Word and removed from the server.');">
+    <form action="{% url 'reports:submit' report.pk %}" method="post" onsubmit="return confirm('Submit this report for review? You will no longer be able to edit it. The original receipt files stay available until an admin approves the report, at which point they are archived into Excel/Word and removed from the server.');">
         {% csrf_token %}
         <button type="submit" class="btn btn-success" {% if not report.documents.all %}disabled{% endif %}>Submit for review</button>
         {% if not report.documents.all %}

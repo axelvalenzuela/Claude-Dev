@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from expenses.models import ExpenseReport, ExpenseReportAuditLog
+from expenses.models import ExpenseReport, ExpenseReportAuditLog, TravelDocument
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_admin_approval_")
 TODAY = timezone.now().date()
@@ -25,7 +25,13 @@ class AdminApprovalFlowTests(TestCase):
 
     def setUp(self):
         self.employee = User.objects.create_user(
-            username="ana@example.com", email="ana@example.com", password="clave123", department="Sales"
+            username="ana@example.com",
+            email="ana@example.com",
+            password="clave123",
+            first_name="Ana",
+            last_name="Lopez",
+            department="Sales",
+            employee_number="1234567",
         )
         self.admin = User.objects.create_superuser(
             username="admin@example.com", email="admin@example.com", password="clave123"
@@ -107,6 +113,57 @@ class AdminApprovalFlowTests(TestCase):
         self.assertTrue(
             self.report.audit_log.filter(action=ExpenseReportAuditLog.Action.APPROVED).exists()
         )
+
+    def test_approving_deletes_originals_and_names_exports_per_rh_convention(self):
+        self.client.login(username="admin@example.com", password="clave123")
+        document = self.report.documents.first()
+
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        self.client.post(
+            url,
+            {
+                "status": "approved",
+                "review_note": "Looks good",
+                "ceo_clause_ack": "on",
+                "_save": "Save",
+                **self._inline_management_data(),
+            },
+        )
+
+        self.report.refresh_from_db()
+        document.refresh_from_db()
+
+        self.assertTrue(self.report.excel_snapshot)
+        self.assertTrue(self.report.word_snapshot)
+        submitted_date = self.report.submitted_at.date().isoformat()
+        expected_stem = f"Ana_Lopez_{submitted_date}_1234567_APROBADO"
+        self.assertIn(expected_stem, self.report.excel_snapshot.name)
+        self.assertIn(expected_stem, self.report.word_snapshot.name)
+
+        # The original receipt is gone now that the report is approved.
+        self.assertFalse(document.file)
+        self.assertEqual(TravelDocument.objects.get(pk=document.pk).amount, document.amount)
+
+    def test_rejecting_leaves_originals_and_exports_untouched(self):
+        self.client.login(username="admin@example.com", password="clave123")
+        document = self.report.documents.first()
+
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        self.client.post(
+            url,
+            {
+                "status": "rejected",
+                "review_note": "Missing itemized receipt",
+                "_save": "Save",
+                **self._inline_management_data(),
+            },
+        )
+
+        self.report.refresh_from_db()
+        document.refresh_from_db()
+        self.assertFalse(self.report.excel_snapshot)
+        self.assertFalse(self.report.word_snapshot)
+        self.assertTrue(document.file)
 
     def test_admin_reject_requires_note(self):
         self.client.login(username="admin@example.com", password="clave123")

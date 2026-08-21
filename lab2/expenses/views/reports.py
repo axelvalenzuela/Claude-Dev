@@ -18,7 +18,7 @@ from django.views.generic import DetailView, ListView
 from ..forms import ExpenseReportForm, TravelDocumentForm
 from ..models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_action
 from ..policies import validate_trip_span
-from ..services import DocumentUploadError, build_travel_document, finalize_submission
+from ..services import DocumentUploadError, build_travel_document
 from .mixins import OwnedReportMixin
 
 
@@ -117,11 +117,10 @@ class ReportCreateView(LoginRequiredMixin, View):
                     report.submit()
                     report.save()
                     log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
-                    finalize_submission(report, request.user)
                     messages.success(
                         request,
                         f"Report created and submitted to {report.supervisor_name} for review. "
-                        f"The original files were archived into the Excel/Word exports below.",
+                        f"The original files stay available until the report is approved.",
                     )
                 except ValidationError as exc:
                     messages.warning(request, "Saved as a draft instead: " + "; ".join(exc.messages))
@@ -153,11 +152,10 @@ class SubmitReportView(LoginRequiredMixin, OwnedReportMixin, View):
                 report.submit()
                 report.save()
                 log_action(report, request.user, ExpenseReportAuditLog.Action.SUBMITTED)
-                finalize_submission(report, request.user)
             messages.success(
                 request,
                 f"Report submitted to {report.supervisor_name} for review. "
-                f"The original files were archived into the Excel/Word exports below.",
+                f"The original files stay available until the report is approved.",
             )
         except ValidationError as exc:
             messages.error(request, "; ".join(exc.messages))

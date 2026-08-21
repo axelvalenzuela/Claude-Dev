@@ -1,7 +1,7 @@
 """Builds the .docx (editable Word) expense report from an ExpenseReport.
 
-This is the second permanent record generated at submission time, alongside
-the .xlsx from expenses/excel.py — see expenses/services.py:finalize_submission.
+This is the second permanent record generated at approval time, alongside
+the .xlsx from expenses/excel.py — see expenses/services.py:finalize_approval.
 It captures the same structured data as the Excel export, plus an embedded
 thumbnail of every photo receipt (JPG/PNG). PDF receipts are listed by name
 only (rendering a PDF page to an image would need a system-level dependency

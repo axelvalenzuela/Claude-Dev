@@ -1,6 +1,8 @@
 """Adding documents to a draft (UploadDocumentView) and submitting it
-(SubmitReportView) — including the deadline/trip-span guards and
-services.finalize_submission's file archival, which both views trigger."""
+(SubmitReportView) — including the deadline/trip-span guards. File
+archival (services.finalize_approval) is triggered by admin approval, not
+by submission — see test_admin_approval.py — so a submitted report's
+original documents are expected to still be there."""
 import shutil
 import tempfile
 from datetime import timedelta
@@ -67,7 +69,7 @@ class ReportSubmissionTests(TestCase):
             report.audit_log.filter(action=ExpenseReportAuditLog.Action.SUBMITTED).exists()
         )
 
-    def test_submitting_archives_originals_into_excel_and_word(self):
+    def test_submitting_keeps_the_originals_until_approval(self):
         report, _ = self._create_report()
         self.client.post(
             reverse("reports:upload_document", args=[report.pk]),
@@ -84,15 +86,16 @@ class ReportSubmissionTests(TestCase):
 
         report.refresh_from_db()
         document.refresh_from_db()
-        self.assertTrue(report.excel_snapshot)
-        self.assertTrue(report.word_snapshot)
-        self.assertFalse(document.file)
+        # No snapshot yet — that's only generated once an admin approves.
+        self.assertFalse(report.excel_snapshot)
+        self.assertFalse(report.word_snapshot)
+        self.assertTrue(document.file)
 
-        # The original is gone from the server — downloading it 404s now.
+        # The original is still on the server — downloading it still works.
         response = self.client.get(
             reverse("reports:download_document", args=[report.pk, document.pk])
         )
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
 
     def test_cannot_submit_without_documents(self):
         report, _ = self._create_report()

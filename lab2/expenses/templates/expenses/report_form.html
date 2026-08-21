@@ -46,8 +46,9 @@
     <button type="submit" name="action" value="submit" class="btn btn-success">Create &amp; submit for review</button>
     <a href="{% url 'reports:list' %}" class="btn btn-link">Cancel</a>
     <div class="form-text mt-2">
-        Submitting archives the attached files into Excel/Word exports and removes the originals from the
-        server — saving as a draft keeps everything as-is so you can still edit it.
+        Submitting sends the report for review — the attached files stay available until an admin
+        approves it, at which point they're archived into Excel/Word exports and removed from the server.
+        Saving as a draft keeps everything as-is so you can still edit it.
     </div>
 </form>
 

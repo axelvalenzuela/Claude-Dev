@@ -69,6 +69,29 @@ def approval_chart(request):
     }
 
 
+def admin_scope_badge(request):
+    """Feeds the "signed in as" role badge shown on every Django Admin page
+    (see templates/admin/base_site.html branding block) — the only place in
+    the UI that visually distinguishes the HR/general admin (is_superuser,
+    sees every department) from a department-scoped admin (supervised_
+    department set, sees only their own). Without it, the difference between
+    the two admin roles is only observable indirectly, from which reports
+    happen to show up in the queue.
+    """
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated or not user.is_staff:
+        return {}
+
+    if user.is_superuser:
+        label = "HR administrator — all departments"
+    elif user.supervised_department:
+        label = f"{user.supervised_department} department administrator"
+    else:
+        label = "Administrator"
+
+    return {"admin_scope_label": label}
+
+
 RECENT_REVIEW_WINDOW_DAYS = 7
 
 

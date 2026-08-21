@@ -1,0 +1,20 @@
+# Runs the whole app as a single container for an intranet server — see
+# docs/DEPLOYMENT.md. The database and uploaded/generated files live in the
+# `app_data` named volume (mounted at /data), outside the app code the image
+# ships, so a rebuild/redeploy never touches them.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite:////data/db.sqlite3
+      DJANGO_MEDIA_ROOT: /data/media
+    volumes:
+      - app_data:/data
+
+volumes:
+  app_data:

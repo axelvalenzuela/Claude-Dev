@@ -165,6 +165,12 @@ que realmente atiende peticiones). Para desactivarlo, pon
 - **Enviar a revisión**: exige al menos un documento y respeta la **fecha
   límite de envío** (ver política de deadline abajo).
 - **Descarga a Excel** con el desglose diario de gastos.
+- **Front-end**: Bootstrap 5 vendorizado localmente (`static/vendor/bootstrap/`,
+  no CDN) — necesario para que la app funcione sin salida a internet en un
+  servidor de intranet, y de paso elimina un punto único de falla. El menú
+  ahora tiene un toggler funcional en pantallas angostas (antes no colapsaba,
+  solo se desbordaba) y resalta el link de la página activa (**My reports**
+  / **History**).
 
 ### 3. Política de $60/día (`ExpenseReport.daily_totals()`)
 - Agrupa los documentos por `document_date` y suma el gasto de cada día.
@@ -254,6 +260,13 @@ que realmente atiende peticiones). Para desactivarlo, pon
 - **Organigrama sembrado** (`accounts/migrations/0007_seed_org_admins.py`):
   Iris Cortez (RH, general) y Adrian Heymes (ICS) — ver la tabla de
   credenciales más arriba.
+- **Badge "signed in as ..."**: hasta ahora la única forma de notar la
+  diferencia entre un admin de RH y uno de departamento era indirecta (qué
+  reportes le aparecen en la cola). Se agregó un badge junto al logo, visible
+  en **todas** las páginas del admin (no solo el dashboard), que dice
+  explícitamente "HR administrator — all departments" o "ICS department
+  administrator" (`accounts/context_processors.py:admin_scope_badge`,
+  `templates/admin/base_site.html`).
 
 ### 10. Excel + Word al enviar, y retención de archivos — decisión de buena práctica
 
@@ -499,8 +512,12 @@ divide por responsabilidad, nunca por tamaño arbitrario.**
 ```
 lab2/
   manage.py
+  Dockerfile                    # imagen para desplegar en servidor de intranet — ver docs/DEPLOYMENT.md
+  docker-compose.yml             # levanta la imagen con datos persistentes en un volumen
+  .dockerignore
   .env.example                 # variables de entorno documentadas (copiar a .env)
   docs/DATA_MODEL.md            # diagrama ER y trazabilidad
+  docs/DEPLOYMENT.md             # contenedores, HTTPS, base de datos, CI — despliegue en intranet
   config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding, email/lockout), urls, wsgi/asgi
   accounts/
     models.py                    # User (+ employee_number, supervised_department), LoginEvent
@@ -535,8 +552,10 @@ lab2/
     registration/                   # password_reset_*.html con la marca de la app
   static/css/
     site.css
-    brand.css                     # marca, hover animations y el donut chart, compartidos por ambas interfaces
+    brand.css                     # marca, hover animations, donut chart y badge de rol admin, compartidos por ambas interfaces
+  static/vendor/bootstrap/       # Bootstrap 5 vendorizado (no CDN) — necesario para funcionar sin internet
   media/uploads/                # archivos subidos (no versionado; se borran al enviar — ver módulo 10)
+  staticfiles/                   # salida de `collectstatic` (no versionado; solo se usa en producción)
   requirements.txt
 ```
 
@@ -564,3 +583,19 @@ donut chart de aprobación, el bloqueo de cuenta tras 3 intentos fallidos
 (empleado y admin) más el flujo de reset que lo levanta, la lógica de
 apagado automático del servidor a las 12h, y el flujo de aprobación/rechazo
 a través del Django Admin.
+
+Lo que estos tests **no** cubren (y por qué): el render visual del front-end
+(nav responsive, estado "active" de los links, el badge de rol admin) — son
+cambios de plantilla/CSS, no de lógica de negocio, así que se verificaron
+manualmente (servidor local + smoke test) en vez de con aserciones
+automatizadas sobre HTML.
+
+## Despliegue en servidor de intranet
+
+La app se documenta y prueba como servidor de desarrollo local. Para
+correrla en un servidor de intranet de la empresa se agregó soporte para
+contenedores (`Dockerfile`, `docker-compose.yml`) y un pipeline de CI de
+ejemplo (`.github/workflows/lab2-ci.yml`) — ver
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) para el cómo y el porqué
+(incluye por qué se eligió contenedores sobre una instalación directa en el
+servidor).

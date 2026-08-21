@@ -6,7 +6,10 @@ __pycache__/
 *.sqlite3
 media/*
 !media/.gitkeep
-.env
-# `manage.py collectstatic` output (container build step) — generated, not source.
 staticfiles/*
 !staticfiles/.gitkeep
+.env
+.git/
+.github/
+docs/
+README.md

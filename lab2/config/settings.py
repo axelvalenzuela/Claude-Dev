@@ -30,6 +30,10 @@ SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-key-change-me")
 DEBUG = env.bool("DJANGO_DEBUG", default=True)
 
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+# Needed once the app sits behind a hostname (e.g. an intranet DNS entry) and
+# is reached over HTTPS — Django checks the Origin header against this list
+# for any unsafe (POST/PUT/DELETE) request, separately from ALLOWED_HOSTS.
+CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 
 # Local-dev convenience: `python manage.py runserver` kills its own process
 # after this many hours so a forgotten server doesn't run forever on a dev
@@ -55,6 +59,11 @@ AUTH_USER_MODEL = 'accounts.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serves collected static files directly from the app process (no nginx
+    # needed in front) — this is what lets the Docker image in Dockerfile
+    # be a single self-contained container. Inert in local dev, where
+    # runserver already serves static files itself.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -84,6 +93,9 @@ TEMPLATES = [
                 # Powers the "your report was approved/rejected" banner shown
                 # to employees, with the reviewer's note.
                 'accounts.context_processors.recent_review_notification',
+                # Powers the "signed in as ..." role badge on every Django
+                # Admin page (HR/general admin vs. a department admin).
+                'accounts.context_processors.admin_scope_badge',
             ],
         },
     },
@@ -95,11 +107,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# SQLite by default (fine for an internal, low-concurrency tool). Set
+# DATABASE_URL (django-environ syntax, e.g. postgres://user:pass@host/db) to
+# point at a real database server instead — no code change needed, only a
+# driver install (e.g. psycopg) if switching engines.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
 }
 
 
@@ -139,9 +152,26 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+# Where `manage.py collectstatic` gathers files for WhiteNoise to serve in
+# production/containers; unused by `runserver` in local dev.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# The hashed/manifest storage requires `collectstatic` to have already run
+# (it looks up a manifest file for every {% static %} reference), which
+# local dev and the test suite never do — so it's only turned on when
+# DEBUG is off, i.e. in the container image (see Dockerfile).
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        if not DEBUG
+        else "django.contrib.staticfiles.storage.StaticFilesStorage"
+    },
+}
 
 MEDIA_URL = 'media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Overridable so a container can point this at a mounted volume, outside the
+# app code directory that gets replaced on every deploy (see docker-compose.yml).
+MEDIA_ROOT = Path(env.str('DJANGO_MEDIA_ROOT', default=str(BASE_DIR / 'media')))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -166,11 +196,26 @@ PORTAL_BRAND_TAGLINE = "by Porsche"
 EMAIL_BACKEND = env.str("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="no-reply@mhp.local")
 
-# Local security hardening (see README "Local security processes").
+# Local security hardening (see README "Local security processes"), on
+# regardless of environment.
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# HTTPS-dependent hardening — left off by default because local dev and a
+# first bare-HTTP intranet rollout don't have TLS. Set DJANGO_HTTPS_ENABLED=
+# True once the app is served over HTTPS (see docs/DEPLOYMENT.md) to turn
+# all of this on together; there's no safe middle ground; e.g. HSTS on top
+# of plain HTTP just breaks the site for anyone whose browser cached it.
+HTTPS_ENABLED = env.bool("DJANGO_HTTPS_ENABLED", default=False)
+if HTTPS_ENABLED:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = env.int("DJANGO_HSTS_SECONDS", default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # pypdf logs a warning for every unparsable PDF (e.g. a scanned image with no
 # text layer, or a corrupt upload) — expected/handled in pdf_analysis.py, so

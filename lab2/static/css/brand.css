@@ -87,6 +87,23 @@
 }
 .brand-mark:hover .brand-name { color: var(--brand-red) !important; }
 
+/* "Signed in as ..." role badge next to the admin wordmark — the only
+   always-visible indicator of HR/general vs. department-scoped access. */
+.admin-scope-badge {
+    display: inline-block;
+    margin-left: 14px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: var(--brand-white);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+}
+
 /* "Reports to review" notification banner on the admin dashboard. */
 .pending-reports-banner {
     margin: 0 0 16px;
@@ -230,6 +247,13 @@
 }
 .navbar .btn:hover, .navbar a.btn:hover {
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+/* Highlights whichever nav link matches the current page (My reports /
+   History), so it's obvious where you are without reading the URL. */
+.navbar a.btn.active {
+    background-color: var(--brand-red);
+    border-color: var(--brand-red);
+    color: var(--brand-white);
 }
 .badge {
     transition: transform 0.12s ease;

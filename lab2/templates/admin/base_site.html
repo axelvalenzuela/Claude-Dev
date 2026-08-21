@@ -14,6 +14,9 @@
         <span class="brand-name">MHP</span><span class="brand-tagline">by Porsche</span>
         <span class="brand-suffix">— Expense Approvals</span>
     </a>
+    {% if admin_scope_label %}
+        <span class="admin-scope-badge">{{ admin_scope_label }}</span>
+    {% endif %}
 </div>
 {% if user.is_anonymous %}
   {% include "admin/color_theme_toggle.html" %}

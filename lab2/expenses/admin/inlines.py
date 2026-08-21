@@ -25,10 +25,17 @@ class TravelDocumentInline(admin.TabularInline):
 
     def file_link(self, obj):
         if obj.file:
-            return format_html('<a href="{}" target="_blank">{}</a>', obj.file.url, obj.file_name)
+            # Opens the raw file directly in a new tab — PDFs/images render
+            # natively in the browser, so this is the "preview" of the
+            # original receipt while it's still on the server (only until
+            # the report is approved — see services.finalize_approval).
+            return format_html(
+                '{} <a class="button" href="{}" target="_blank">&#128065; Preview</a>',
+                obj.file_name, obj.file.url,
+            )
         if obj.file_name:
             return format_html(
-                '<span title="Original removed after submission">{} (archived — see Excel/Word)</span>',
+                '<span title="Original removed after approval">{} (archived — see Excel/Word above)</span>',
                 obj.file_name,
             )
         return "—"

@@ -96,6 +96,9 @@ TEMPLATES = [
                 # Powers the "signed in as ..." role badge on every Django
                 # Admin page (HR/general admin vs. a department admin).
                 'accounts.context_processors.admin_scope_badge',
+                # Powers the searchable "Empleados" table on the admin
+                # Dashboard tab (one row per employee, not per report).
+                'accounts.context_processors.employee_directory',
             ],
         },
     },

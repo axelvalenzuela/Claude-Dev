@@ -81,6 +81,40 @@ def approval_chart(request):
     }
 
 
+def employee_directory(request):
+    """Feeds the searchable "Empleados" table on the admin Dashboard tab —
+    one row per employee who has at least one non-draft expense report
+    (scoped by department like everything else here), with how many they
+    have and the status/date of the most recent one. Lets an admin find
+    someone by name and jump straight to reviewing their reports, instead
+    of hunting through the raw report changelist one row per report.
+    """
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated or not user.is_staff:
+        return {}
+
+    from expenses.models import ExpenseReport
+
+    reports = ExpenseReport.objects.exclude(status=ExpenseReport.Status.DRAFT).select_related("user")
+    if not user.is_superuser and user.supervised_department:
+        reports = reports.filter(user__department=user.supervised_department)
+
+    by_employee = {}
+    for report in reports.order_by("-submitted_at"):
+        entry = by_employee.setdefault(report.user_id, {"employee": report.user, "reports": []})
+        entry["reports"].append(report)
+
+    directory = sorted(
+        by_employee.values(),
+        key=lambda entry: (entry["employee"].get_full_name() or entry["employee"].email).lower(),
+    )
+    for entry in directory:
+        entry["report_count"] = len(entry["reports"])
+        entry["latest_report"] = entry["reports"][0]  # already ordered by -submitted_at above
+
+    return {"employee_directory": directory}
+
+
 def admin_scope_badge(request):
     """Feeds the "signed in as" role badge shown on every Django Admin page
     (see templates/admin/base_site.html branding block) — the only place in

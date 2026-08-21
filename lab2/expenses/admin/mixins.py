@@ -31,9 +31,13 @@ class ExpenseReportDisplayMixin:
             return "Not generated yet (only saved once the report is approved)."
         links = []
         if obj.excel_snapshot:
-            links.append(format_html('<a href="{}" target="_blank">Excel (.xlsx)</a>', obj.excel_snapshot.url))
+            links.append(
+                format_html('<a class="button" href="{}" target="_blank">&#128202; Excel (.xlsx)</a>', obj.excel_snapshot.url)
+            )
         if obj.word_snapshot:
-            links.append(format_html('<a href="{}" target="_blank">Word (.docx)</a>', obj.word_snapshot.url))
-        return mark_safe(" · ".join(links))
+            links.append(
+                format_html('<a class="button" href="{}" target="_blank">&#128196; Word (.docx)</a>', obj.word_snapshot.url)
+            )
+        return mark_safe(" &nbsp; ".join(links))
 
     exports_display.short_description = "Archived exports"

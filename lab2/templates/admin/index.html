@@ -41,23 +41,55 @@
                     <div class="stat-value">{{ pending_reports_count }}</div>
                     <div class="stat-label">Pending review expenses</div>
                 </div>
-                <div class="stat-card stat-card-pending">
-                    <div class="stat-value">${{ pending_reports_amount_total|floatformat:2 }}</div>
-                    <div class="stat-label">Pending review amount</div>
-                </div>
                 <div class="stat-card">
                     <div class="stat-value">{{ approval_chart_approved }}</div>
                     <div class="stat-label">Approved (all time)</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${{ approval_chart_approved_amount|floatformat:2 }}</div>
-                    <div class="stat-label">Approved amount</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value">{{ approval_chart_rejected }}</div>
                     <div class="stat-label">Rejected (all time)</div>
                 </div>
             </div>
+
+            <h2 class="dashboard-section-title">Empleados</h2>
+            {% if employee_directory %}
+                <input type="text" id="employee-search" class="employee-search-input"
+                       placeholder="Buscar por nombre o departamento…">
+                <div class="pending-reports-table-wrap">
+                    <table class="pending-reports-table" id="employee-directory-table">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Departamento</th>
+                                <th># Reportes</th>
+                                <th>Último estatus</th>
+                                <th>Última fecha</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in employee_directory %}
+                                <tr>
+                                    <td>{{ entry.employee.get_full_name|default:entry.employee.email }}</td>
+                                    <td>{{ entry.employee.department|default:"—" }}</td>
+                                    <td>{{ entry.report_count }}</td>
+                                    <td>
+                                        <span class="status-pill status-{{ entry.latest_report.status }}">
+                                            {{ entry.latest_report.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ entry.latest_report.submitted_at|date:"Y-m-d"|default:"—" }}</td>
+                                    <td>
+                                        <a class="button" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">Ver reportes</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="dashboard-empty">Ningún empleado ha enviado un reporte de gastos todavía.</p>
+            {% endif %}
 
             <h2 class="dashboard-section-title">Pending review expenses</h2>
             {% if pending_reports_list %}
@@ -149,6 +181,17 @@
             panels.forEach(function (panel) {
                 panel.hidden = panel.dataset.panel !== btn.dataset.tab;
             });
+        });
+    });
+})();
+(function () {
+    const input = document.getElementById("employee-search");
+    if (!input) return;
+    const rows = document.querySelectorAll("#employee-directory-table tbody tr");
+    input.addEventListener("input", function () {
+        const query = input.value.toLowerCase();
+        rows.forEach(function (row) {
+            row.style.display = row.textContent.toLowerCase().includes(query) ? "" : "none";
         });
     });
 })();

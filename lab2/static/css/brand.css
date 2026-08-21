@@ -111,12 +111,14 @@
     vertical-align: middle;
 }
 
-/* Centers the whole admin dashboard in a readable column instead of
-   stretching it edge-to-edge — colM (no sidebar) otherwise leaves a lot of
-   empty space on wide screens. */
-.admin-dashboard-wrap {
-    max-width: 1100px;
+/* Centers every admin page (dashboard, changelists, change forms) in a
+   readable column instead of sitting flush to the left with empty space
+   on the right — #content is Django admin's own top-level content wrapper
+   on every page, so this applies everywhere, not just the dashboard. */
+#content {
+    max-width: 1200px;
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 /* Dashboard / Reportes / Cuentas y permisos tabs on the admin index page —
@@ -189,6 +191,38 @@
 .pending-reports-table tbody tr:hover {
     background: #e8f2fb;
 }
+
+/* Search box above the "Empleados" table (client-side filter, see
+   templates/admin/index.html's inline script). */
+.employee-search-input {
+    width: 100%;
+    max-width: 360px;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+    border: 1px solid var(--brand-gray-border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+.employee-search-input:focus {
+    outline: none;
+    border-color: var(--brand-blue);
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+}
+
+/* Status pill in the Empleados table — same semantics as the employee
+   portal's status badge, reimplemented here since Bootstrap isn't loaded
+   in the Django Admin. */
+.status-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.status-pill.status-draft { background: #eee; color: #555; }
+.status-pill.status-submitted { background: #e8f2fb; color: var(--brand-blue-dark); }
+.status-pill.status-approved { background: #e3f3e5; color: #2e7d32; }
+.status-pill.status-rejected { background: #fde8ea; color: var(--brand-red); }
 
 /* "Reports to review" notification banner on the admin dashboard. */
 .pending-reports-banner {

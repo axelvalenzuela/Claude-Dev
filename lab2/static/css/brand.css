@@ -192,37 +192,101 @@
     background: #e8f2fb;
 }
 
-/* Search box above the "Empleados" table (client-side filter, see
-   templates/admin/index.html's inline script). */
+/* "Empleados" tab: search box + one card-style row per employee (see
+   templates/admin/index.html's inline script for the client-side filter).
+   Cards instead of a cramped table — a wide row gives the action button
+   room to breathe, and its own background color is what actually tells
+   "needs attention" apart from "nothing to do", not a tiny status pill. */
+.dashboard-subtitle {
+    color: #666;
+    font-size: 0.88rem;
+    margin: -4px 0 16px;
+}
 .employee-search-input {
     width: 100%;
-    max-width: 360px;
-    padding: 8px 12px;
-    margin: 0 0 12px;
+    max-width: 480px;
+    padding: 10px 14px;
+    margin: 0 0 16px;
     border: 1px solid var(--brand-gray-border);
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
 }
 .employee-search-input:focus {
     outline: none;
     border-color: var(--brand-blue);
     box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
 }
-
-/* Status pill in the Empleados table — same semantics as the employee
-   portal's status badge, reimplemented here since Bootstrap isn't loaded
-   in the Django Admin. */
-.status-pill {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
+.employee-directory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
-.status-pill.status-draft { background: #eee; color: #555; }
-.status-pill.status-submitted { background: #e8f2fb; color: var(--brand-blue-dark); }
-.status-pill.status-approved { background: #e3f3e5; color: #2e7d32; }
-.status-pill.status-rejected { background: #fde8ea; color: var(--brand-red); }
+.employee-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 20px;
+    padding: 16px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--brand-gray-border);
+    background: var(--brand-white);
+    transition: box-shadow 0.15s ease;
+}
+.employee-row:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+.employee-row-pending {
+    background: #fff6e8;
+    border-color: #e2960f;
+}
+.employee-row-name {
+    flex: 1 1 220px;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--brand-black);
+    text-decoration: none;
+}
+.employee-row-name:hover {
+    color: var(--brand-blue-dark);
+    text-decoration: underline;
+}
+.employee-row-department, .employee-row-count {
+    flex: 0 0 auto;
+    min-width: 110px;
+    color: #666;
+    font-size: 0.85rem;
+}
+.employee-row-action {
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+a.employee-row-action.button {
+    white-space: nowrap;
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+.employee-row-pending a.employee-row-action.button {
+    background: #e2960f;
+    border-color: #e2960f;
+}
+.employee-row-pending a.employee-row-action.button:hover {
+    background: #bf7c0a;
+}
+a.employee-row-action.button-muted {
+    background: #8c8c8c;
+    border-color: #8c8c8c;
+}
+a.employee-row-action.button-muted:hover {
+    background: #6e6e6e;
+}
+.employee-row-none {
+    flex: 0 0 auto;
+    margin-left: auto;
+    color: #999;
+    font-size: 0.85rem;
+    font-style: italic;
+}
 
 /* "Reports to review" notification banner on the admin dashboard. */
 .pending-reports-banner {

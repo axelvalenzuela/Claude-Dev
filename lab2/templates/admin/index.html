@@ -16,6 +16,7 @@
 
     <div class="admin-tabs">
         <button type="button" class="admin-tab-btn active" data-tab="dashboard">Dashboard</button>
+        <button type="button" class="admin-tab-btn" data-tab="employees">Empleados</button>
         <button type="button" class="admin-tab-btn" data-tab="reports">Reportes</button>
         <button type="button" class="admin-tab-btn" data-tab="accounts">Cuentas y permisos</button>
     </div>
@@ -50,46 +51,6 @@
                     <div class="stat-label">Rejected (all time)</div>
                 </div>
             </div>
-
-            <h2 class="dashboard-section-title">Empleados</h2>
-            {% if employee_directory %}
-                <input type="text" id="employee-search" class="employee-search-input"
-                       placeholder="Buscar por nombre o departamento…">
-                <div class="pending-reports-table-wrap">
-                    <table class="pending-reports-table" id="employee-directory-table">
-                        <thead>
-                            <tr>
-                                <th>Empleado</th>
-                                <th>Departamento</th>
-                                <th># Reportes</th>
-                                <th>Último estatus</th>
-                                <th>Última fecha</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for entry in employee_directory %}
-                                <tr>
-                                    <td>{{ entry.employee.get_full_name|default:entry.employee.email }}</td>
-                                    <td>{{ entry.employee.department|default:"—" }}</td>
-                                    <td>{{ entry.report_count }}</td>
-                                    <td>
-                                        <span class="status-pill status-{{ entry.latest_report.status }}">
-                                            {{ entry.latest_report.get_status_display }}
-                                        </span>
-                                    </td>
-                                    <td>{{ entry.latest_report.submitted_at|date:"Y-m-d"|default:"—" }}</td>
-                                    <td>
-                                        <a class="button" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">Ver reportes</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="dashboard-empty">Ningún empleado ha enviado un reporte de gastos todavía.</p>
-            {% endif %}
 
             <h2 class="dashboard-section-title">Pending review expenses</h2>
             {% if pending_reports_list %}
@@ -160,6 +121,42 @@
         {% endif %}
     </div>
 
+    <div class="admin-tab-panel" data-panel="employees" hidden>
+        <h2 class="dashboard-section-title">Empleados</h2>
+        <p class="dashboard-subtitle">Busca a cualquier empleado registrado en la plataforma. Los que tienen un reporte pendiente de revisión aparecen resaltados.</p>
+        <input type="text" id="employee-search" class="employee-search-input"
+               placeholder="Buscar por nombre o departamento…" autofocus>
+        {% if employee_directory %}
+            <div class="employee-directory-list" id="employee-directory-list">
+                {% for entry in employee_directory %}
+                    <div class="employee-row {% if entry.has_pending %}employee-row-pending{% else %}employee-row-clear{% endif %}" data-search="{{ entry.employee.get_full_name|default:entry.employee.email }} {{ entry.employee.department }}">
+                        {% if entry.has_pending %}
+                            <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_change' entry.latest_report.pk %}">
+                                {{ entry.employee.get_full_name|default:entry.employee.email }}
+                            </a>
+                        {% else %}
+                            <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">
+                                {{ entry.employee.get_full_name|default:entry.employee.email }}
+                            </a>
+                        {% endif %}
+                        <span class="employee-row-department">{{ entry.employee.department|default:"—" }}</span>
+                        <span class="employee-row-count">{{ entry.report_count }} reporte{{ entry.report_count|pluralize }}</span>
+                        {% if entry.has_pending %}
+                            <a class="employee-row-action button" href="{% url 'admin:expenses_expensereport_change' entry.latest_report.pk %}">Consultar reporte pendiente</a>
+                        {% elif entry.report_count %}
+                            <a class="employee-row-action button button-muted" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">Ver historial</a>
+                        {% else %}
+                            <span class="employee-row-action employee-row-none">Sin reportes</span>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="dashboard-empty" id="employee-directory-no-results" hidden>Sin resultados para esa búsqueda.</p>
+        {% else %}
+            <p class="dashboard-empty">Ningún empleado registrado todavía.</p>
+        {% endif %}
+    </div>
+
     <div class="admin-tab-panel" data-panel="reports" hidden>
         {% include "admin/app_list.html" with app_list=app_list|apps_in:"expenses" show_changelinks=True %}
     </div>
@@ -187,12 +184,17 @@
 (function () {
     const input = document.getElementById("employee-search");
     if (!input) return;
-    const rows = document.querySelectorAll("#employee-directory-table tbody tr");
+    const rows = document.querySelectorAll("#employee-directory-list .employee-row");
+    const noResults = document.getElementById("employee-directory-no-results");
     input.addEventListener("input", function () {
         const query = input.value.toLowerCase();
+        let visibleCount = 0;
         rows.forEach(function (row) {
-            row.style.display = row.textContent.toLowerCase().includes(query) ? "" : "none";
+            const matches = row.dataset.search.toLowerCase().includes(query);
+            row.style.display = matches ? "" : "none";
+            if (matches) visibleCount += 1;
         });
+        if (noResults) noResults.hidden = visibleCount !== 0;
     });
 })();
 </script>

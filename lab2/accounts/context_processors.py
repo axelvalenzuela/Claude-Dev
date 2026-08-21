@@ -1,6 +1,8 @@
 """Template context processors shared across the whole site."""
 from decimal import Decimal
 
+from django.db.models import Q
+
 
 def pending_reports_notification(request):
     """Feeds the "reports to review" notification banner shown to staff
@@ -82,35 +84,52 @@ def approval_chart(request):
 
 
 def employee_directory(request):
-    """Feeds the searchable "Empleados" table on the admin Dashboard tab —
-    one row per employee who has at least one non-draft expense report
-    (scoped by department like everything else here), with how many they
-    have and the status/date of the most recent one. Lets an admin find
-    someone by name and jump straight to reviewing their reports, instead
-    of hunting through the raw report changelist one row per report.
+    """Feeds the searchable "Empleados" tab in the admin — every employee
+    registered on the platform (scoped by department like everything else
+    here), whether or not they've ever submitted a report, so RH can look
+    someone up before they've done anything, not only after. Each entry
+    also carries their report count and most recent report (if any), so the
+    template can tell apart "has a pending review expense" (needs
+    attention) from "only resolved/no reports" (nothing to do) without
+    querying again.
     """
     user = getattr(request, "user", None)
     if not user or not user.is_authenticated or not user.is_staff:
         return {}
 
+    from .models import User
     from expenses.models import ExpenseReport
 
     reports = ExpenseReport.objects.exclude(status=ExpenseReport.Status.DRAFT).select_related("user")
     if not user.is_superuser and user.supervised_department:
         reports = reports.filter(user__department=user.supervised_department)
 
-    by_employee = {}
+    by_employee_reports = {}
     for report in reports.order_by("-submitted_at"):
-        entry = by_employee.setdefault(report.user_id, {"employee": report.user, "reports": []})
-        entry["reports"].append(report)
+        by_employee_reports.setdefault(report.user_id, []).append(report)
 
-    directory = sorted(
-        by_employee.values(),
-        key=lambda entry: (entry["employee"].get_full_name() or entry["employee"].email).lower(),
-    )
-    for entry in directory:
-        entry["report_count"] = len(entry["reports"])
-        entry["latest_report"] = entry["reports"][0]  # already ordered by -submitted_at above
+    # "Employee" here means anyone who isn't themselves an approver — a
+    # regular (non-staff) account, or a staff/superuser account that
+    # happens to have submitted a report of their own (e.g. a bootstrap
+    # admin account used for personal testing).
+    employees = User.objects.filter(Q(is_staff=False) | Q(pk__in=by_employee_reports.keys())).distinct()
+    if not user.is_superuser and user.supervised_department:
+        employees = employees.filter(department=user.supervised_department)
+
+    directory = []
+    for employee in employees:
+        employee_reports = by_employee_reports.get(employee.pk, [])
+        latest_report = employee_reports[0] if employee_reports else None
+        directory.append(
+            {
+                "employee": employee,
+                "report_count": len(employee_reports),
+                "latest_report": latest_report,
+                "has_pending": bool(latest_report and latest_report.status == ExpenseReport.Status.SUBMITTED),
+            }
+        )
+
+    directory.sort(key=lambda entry: (entry["employee"].get_full_name() or entry["employee"].email).lower())
 
     return {"employee_directory": directory}
 

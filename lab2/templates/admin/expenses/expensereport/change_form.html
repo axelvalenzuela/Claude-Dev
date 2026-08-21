@@ -32,7 +32,7 @@
 <div class="tab-panel-summary" data-cf-panel="summary">
     <div class="exports-highlight {% if not original.excel_snapshot and not original.word_snapshot %}exports-highlight-pending{% endif %}">
         {% if original.excel_snapshot or original.word_snapshot %}
-            <p>Auto-generated from the documents submitted with this report.</p>
+            <p>Final Excel &amp; Word, generated from the documents submitted with this report — permanent, won't change.</p>
             <div class="exports-highlight-buttons">
                 {% if original.excel_snapshot %}
                     <a class="button" href="{{ original.excel_snapshot.url }}" target="_blank">&#128202; Download Excel</a>
@@ -42,7 +42,11 @@
                 {% endif %}
             </div>
         {% else %}
-            <p>Will be generated automatically once this report is approved.</p>
+            <p>Live preview, generated from what's been submitted so far — the final version is saved once this report is approved.</p>
+            <div class="exports-highlight-buttons">
+                <a class="button" href="{% url 'admin:expenses_expensereport_preview_excel' original.pk %}" target="_blank">&#128202; Preview Excel</a>
+                <a class="button" href="{% url 'admin:expenses_expensereport_preview_word' original.pk %}" target="_blank">&#128196; Preview Word</a>
+            </div>
         {% endif %}
     </div>
 

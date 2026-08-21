@@ -192,6 +192,12 @@
 .change-form-tabs {
     margin-top: 8px;
 }
+/* Django's own "History" object-tool (Django's built-in LogEntry-based
+   change log) is redundant with our own Audit Log tab and note-taking, and
+   was rendering as an unstyled black link — dropped rather than themed. */
+.historylink {
+    display: none;
+}
 
 /* Pending-review-expenses table on the Dashboard tab — an actual data
    table of what's waiting, not just a link to the changelist. */
@@ -284,6 +290,7 @@
 }
 .employee-row:hover {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
 }
 .employee-row-pending {
     background: #fff6e8;
@@ -315,6 +322,36 @@ a.employee-row-action.button {
     padding: 10px 20px;
     font-size: 0.85rem;
     line-height: 1.2;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.18s ease;
+}
+.employee-row:hover a.employee-row-action.button {
+    transform: translateX(3px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Same card-row treatment for the Dashboard's "Pending review expenses"
+   list (title + meta line, a "Review" status badge, and a properly-sized
+   "Access" button) instead of a cramped table with a tiny button cell. */
+.report-row-main {
+    flex: 1 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.report-row-meta {
+    color: #666;
+    font-size: 0.82rem;
+}
+.report-row-badge {
+    flex: 0 0 auto;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #e2960f;
+    color: var(--brand-white);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 .employee-row-pending a.employee-row-action.button {
     background: #e2960f;
@@ -354,24 +391,56 @@ a.employee-row-action.button-muted:hover {
     color: var(--brand-black);
 }
 .pending-reports-banner a {
+    display: inline-block;
     color: var(--brand-blue-dark);
     font-weight: 600;
+    transition: transform 0.15s ease;
 }
 .pending-reports-banner a:hover {
     text-decoration: underline;
+    transform: translateX(3px);
 }
 
-/* Quick-glance dashboard stat cards (pending count/amount, approved/
-   rejected totals) on the admin index page, above the approval queue
-   table — blue-accented to match the rest of the approval interface. */
+/* "Recent actions" collapses behind <details> — native, no JS — so the
+   Dashboard tab reads as a one-screen "what needs attention" overview by
+   default, with the day-to-day admin-log noise a click away instead of
+   always taking up scroll space. */
+.dashboard-recent-actions {
+    margin-top: 8px;
+}
+.dashboard-recent-actions summary {
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--brand-black);
+    padding: 8px 0;
+}
+.dashboard-recent-actions summary:hover {
+    color: var(--brand-blue-dark);
+}
+.dashboard-recent-actions[open] summary {
+    margin-bottom: 8px;
+}
+
+/* Dashboard tab, "at a glance" row: stat cards + the donut side by side
+   instead of stacked full-width sections — keeps the tab a one-screen
+   overview (notifications + numbers) instead of a long scroll, with the
+   actionable "Pending review expenses" list as the one thing below it. */
+.dashboard-overview {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px;
+    margin: 0 0 24px;
+}
 .dashboard-stats {
+    flex: 2 1 320px;
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    margin: 0 0 20px;
 }
 .stat-card {
-    flex: 1 1 150px;
+    flex: 1 1 120px;
     padding: 14px 16px;
     background: var(--brand-white);
     border: 1px solid var(--brand-gray-border);
@@ -381,7 +450,7 @@ a.employee-row-action.button-muted:hover {
 }
 .stat-card:hover {
     box-shadow: 0 4px 14px rgba(0, 120, 212, 0.15);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
 }
 .stat-card-pending {
     background: #e8f2fb;
@@ -401,10 +470,10 @@ a.employee-row-action.button-muted:hover {
 /* Approved-vs-rejected donut chart on the admin dashboard — pure CSS
    (conic-gradient), no chart library/JS dependency. */
 .approval-donut-wrap {
+    flex: 1 1 260px;
     display: flex;
     align-items: center;
     gap: 20px;
-    margin: 0 0 20px;
     padding: 16px;
     background: var(--brand-gray-bg);
     border: 1px solid var(--brand-gray-border);

@@ -2,10 +2,15 @@
 admin (department-scoped or HR/general) uses to review and approve/reject
 submitted reports."""
 from django.contrib import admin
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.urls import path
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from ..exporters import excel_exporter, word_exporter
 from ..models import ExpenseReport, ExpenseReportAuditLog, log_action
+from ..naming import export_basename
 from ..policies import DAILY_LIMIT_USD
 from ..services import finalize_approval
 from .decorators import staff_permission
@@ -80,6 +85,46 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
         }),
     )
     inlines = [TravelDocumentInline, AuditLogInline]
+
+    def get_urls(self):
+        # Two extra routes so an admin can preview/download Excel and Word
+        # for a report that hasn't been approved yet — before this, the
+        # Summary tab only had something to show once excel_snapshot/
+        # word_snapshot existed (i.e. after approval), even though the
+        # employee's own portal has always been able to generate a live
+        # preview on demand (views/exports.py). Scoped through get_queryset
+        # like everything else here — a department admin can preview their
+        # own department's pending reports, never another's.
+        custom_urls = [
+            path(
+                "<int:pk>/preview-excel/",
+                self.admin_site.admin_view(self.preview_excel),
+                name="expenses_expensereport_preview_excel",
+            ),
+            path(
+                "<int:pk>/preview-word/",
+                self.admin_site.admin_view(self.preview_word),
+                name="expenses_expensereport_preview_word",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def _get_scoped_report(self, request, pk):
+        return get_object_or_404(self.get_queryset(request), pk=pk)
+
+    def preview_excel(self, request, pk):
+        report = self._get_scoped_report(request, pk)
+        response = HttpResponse(content_type=excel_exporter.content_type)
+        response["Content-Disposition"] = f'inline; filename="{export_basename(report)}.{excel_exporter.extension}"'
+        response.write(excel_exporter.to_bytes(report))
+        return response
+
+    def preview_word(self, request, pk):
+        report = self._get_scoped_report(request, pk)
+        response = HttpResponse(content_type=word_exporter.content_type)
+        response["Content-Disposition"] = f'inline; filename="{export_basename(report)}.{word_exporter.extension}"'
+        response.write(word_exporter.to_bytes(report))
+        return response
 
     def get_queryset(self, request):
         # Drafts are private to the employee regardless of who's asking.

@@ -559,6 +559,11 @@ separación de responsabilidades", típicos de arquitectura enterprise —
 `exporters.py` es la primera vez que esa interfaz se declara explícitamente
 con una clase abstracta en vez de solo por convención de nombres.
 
+Ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) para cómo está armado el
+panel de admin en concreto: los tabs del Dashboard, los tabs de la página
+de revisión de un reporte (cómo funciona la clasificación de fieldsets por
+JS), y los context processors detrás de cada uno.
+
 ## Estructura
 
 ```
@@ -570,6 +575,7 @@ lab2/
   .env.example                 # variables de entorno documentadas (copiar a .env)
   docs/DATA_MODEL.md            # diagrama ER y trazabilidad
   docs/DEPLOYMENT.md             # contenedores, HTTPS, base de datos, CI — despliegue en intranet
+  docs/ARCHITECTURE.md           # cómo está armado el panel de admin: tabs, context processors, patrones
   config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding, email/lockout), urls, wsgi/asgi
   accounts/
     models.py                    # User (+ employee_number, supervised_department), LoginEvent

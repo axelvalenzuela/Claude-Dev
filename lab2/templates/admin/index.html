@@ -31,94 +31,82 @@
                         in <strong>{{ pending_reports_scoped_to_department }}</strong>
                     {% endif %}
                     —
-                    <a href="{% url 'admin:expenses_expensereport_changelist' %}?status__exact=submitted">review now</a>
+                    <a href="{% url 'admin:expenses_expensereport_changelist' %}?status__exact=submitted">review now &rarr;</a>
                 {% else %}
                     You're all caught up — no pending review expenses right now.
                 {% endif %}
             </div>
 
-            <div class="dashboard-stats">
-                <div class="stat-card stat-card-pending">
-                    <div class="stat-value">{{ pending_reports_count }}</div>
-                    <div class="stat-label">Pending review expenses</div>
+            <div class="dashboard-overview">
+                <div class="dashboard-stats">
+                    <div class="stat-card stat-card-pending">
+                        <div class="stat-value">{{ pending_reports_count }}</div>
+                        <div class="stat-label">Pending review</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ approval_chart_approved }}</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">{{ approval_chart_rejected }}</div>
+                        <div class="stat-label">Rejected</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value">{{ approval_chart_approved }}</div>
-                    <div class="stat-label">Approved (all time)</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">{{ approval_chart_rejected }}</div>
-                    <div class="stat-label">Rejected (all time)</div>
-                </div>
+
+                {% if approval_chart_total %}
+                    <div class="approval-donut-wrap">
+                        <div class="approval-donut" style="background: conic-gradient(#2e7d32 0% {{ approval_chart_approved_pct }}%, #d5001c {{ approval_chart_approved_pct }}% 100%);"></div>
+                        <div class="approval-donut-legend">
+                            <div><strong>Approval history</strong></div>
+                            <div class="legend-approved">{{ approval_chart_approved }} approved ({{ approval_chart_approved_pct }}%)</div>
+                            <div class="legend-rejected">{{ approval_chart_rejected }} rejected ({{ approval_chart_rejected_pct }}%)</div>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
 
             <h2 class="dashboard-section-title">Pending review expenses</h2>
             {% if pending_reports_list %}
-                <div class="pending-reports-table-wrap">
-                    <table class="pending-reports-table">
-                        <thead>
-                            <tr>
-                                <th>Report</th>
-                                <th>Employee</th>
-                                <th>Department</th>
-                                <th>Amount</th>
-                                <th>Submitted</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for report in pending_reports_list %}
-                                <tr>
-                                    <td>{{ report.title }}</td>
-                                    <td>{{ report.user.get_full_name|default:report.user.email }}</td>
-                                    <td>{{ report.user.department|default:"—" }}</td>
-                                    <td>${{ report.total_amount }}</td>
-                                    <td>{{ report.submitted_at|date:"Y-m-d" }}</td>
-                                    <td><a class="button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">Review</a></td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="employee-directory-list">
+                    {% for report in pending_reports_list %}
+                        <div class="employee-row employee-row-pending">
+                            <div class="report-row-main">
+                                <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_change' report.pk %}">{{ report.title }}</a>
+                                <span class="report-row-meta">{{ report.user.get_full_name|default:report.user.email }} &middot; {{ report.user.department|default:"—" }} &middot; ${{ report.total_amount }} &middot; submitted {{ report.submitted_at|date:"M j" }}</span>
+                            </div>
+                            <span class="report-row-badge">Review</span>
+                            <a class="employee-row-action button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">Access &rarr;</a>
+                        </div>
+                    {% endfor %}
                 </div>
             {% else %}
                 <p class="dashboard-empty">No pending review expenses right now.</p>
             {% endif %}
         {% endif %}
 
-        {% if approval_chart_total %}
-            <h2 class="dashboard-section-title">Approval history</h2>
-            <div class="approval-donut-wrap">
-                <div class="approval-donut" style="background: conic-gradient(#2e7d32 0% {{ approval_chart_approved_pct }}%, #d5001c {{ approval_chart_approved_pct }}% 100%);"></div>
-                <div class="approval-donut-legend">
-                    <div><strong>Your approval history</strong></div>
-                    <div class="legend-approved">{{ approval_chart_approved }} approved ({{ approval_chart_approved_pct }}%)</div>
-                    <div class="legend-rejected">{{ approval_chart_rejected }} rejected ({{ approval_chart_rejected_pct }}%)</div>
-                    <div class="text-muted small mt-1">{{ approval_chart_total }} report{{ approval_chart_total|pluralize }} reviewed in total</div>
-                </div>
-            </div>
-        {% endif %}
-
-        <h2 class="dashboard-section-title">Recent actions</h2>
-        {% load log %}
-        {% get_admin_log 10 as admin_log for_user user %}
-        {% if not admin_log %}
-            <p class="dashboard-empty">{% translate 'None available' %}</p>
-        {% else %}
-            <ul class="actionlist">
-            {% for entry in admin_log %}
-            <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
-                {% if entry.is_deletion or not entry.get_admin_url %}
-                    {{ entry.object_repr }}
-                {% else %}
-                    <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
-                {% endif %}
-                <span class="mini quiet">
-                    {% if entry.content_type %}{% filter capfirst %}{{ entry.content_type }}{% endfilter %}{% else %}{% translate 'Unknown content' %}{% endif %}
-                </span>
-            </li>
-            {% endfor %}
-            </ul>
-        {% endif %}
+        <details class="dashboard-recent-actions">
+            <summary>Recent actions</summary>
+            {% load log %}
+            {% get_admin_log 10 as admin_log for_user user %}
+            {% if not admin_log %}
+                <p class="dashboard-empty">{% translate 'None available' %}</p>
+            {% else %}
+                <ul class="actionlist">
+                {% for entry in admin_log %}
+                <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                    {% if entry.is_deletion or not entry.get_admin_url %}
+                        {{ entry.object_repr }}
+                    {% else %}
+                        <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                    {% endif %}
+                    <span class="mini quiet">
+                        {% if entry.content_type %}{% filter capfirst %}{{ entry.content_type }}{% endfilter %}{% else %}{% translate 'Unknown content' %}{% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </details>
     </div>
 
     <div class="admin-tab-panel" data-panel="employees" hidden>

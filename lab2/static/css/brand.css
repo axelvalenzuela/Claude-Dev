@@ -4,14 +4,21 @@
  *   - the Django Admin approval interface (templates/admin/*.html)
  *
  * Rather than embedding a scraped/copyrighted logo image, the brand mark is
- * a plain CSS wordmark (MHP + "by Porsche" tagline) in Porsche's black/red
- * language — safe to commit to a git repo and just as distinctive.
+ * a plain CSS wordmark (MHP + "by Porsche" tagline) — safe to commit to a
+ * git repo and just as distinctive. The wordmark itself stays black/red;
+ * the *functional* accent color of the approval interface (buttons, links,
+ * header border, hover states, dashboard cards) is Porsche blue — the
+ * color most associated with the brand's most iconic recent cars (911/992
+ * "Miami Blue" and similar) — so the screen an admin spends their day in is
+ * visually distinct from the red-accented employee portal.
  */
 
 :root {
     --brand-black: #0a0a0a;
     --brand-red: #d5001c;
     --brand-red-dark: #a30016;
+    --brand-blue: #0078d4;
+    --brand-blue-dark: #005a9e;
     --brand-white: #ffffff;
     --brand-gray-bg: #f4f4f5;
     --brand-gray-border: #e2e2e4;
@@ -21,9 +28,9 @@
 /* (defined in admin/css/base.css; overriding them here re-themes buttons,
    headers, links, and breadcrumbs everywhere, including their hover states) */
 :root {
-    --primary: var(--brand-red);
+    --primary: var(--brand-blue);
     --secondary: var(--brand-black);
-    --accent: var(--brand-red);
+    --accent: var(--brand-blue);
     --primary-fg: var(--brand-white);
 
     --header-color: var(--brand-white);
@@ -35,16 +42,16 @@
     --breadcrumbs-link-fg: var(--brand-white);
     --breadcrumbs-bg: #1c1c1c;
 
-    --link-fg: var(--brand-black);
-    --link-hover-color: var(--brand-red);
+    --link-fg: var(--brand-blue-dark);
+    --link-hover-color: var(--brand-blue);
 
-    --button-bg: var(--brand-black);
-    --button-hover-bg: var(--brand-red);
-    --default-button-bg: var(--brand-black);
-    --default-button-hover-bg: var(--brand-red);
+    --button-bg: var(--brand-blue);
+    --button-hover-bg: var(--brand-blue-dark);
+    --default-button-bg: var(--brand-blue);
+    --default-button-hover-bg: var(--brand-blue-dark);
 
     --object-tools-bg: var(--brand-black);
-    --object-tools-hover-bg: var(--brand-red);
+    --object-tools-hover-bg: var(--brand-blue);
 }
 
 /* Smooth hover transitions across every admin button/link (Django's admin
@@ -58,7 +65,7 @@
 }
 
 #header {
-    border-bottom: 3px solid var(--brand-red);
+    border-bottom: 3px solid var(--brand-blue);
 }
 
 /* Wordmark used in the admin header (block branding, base_site.html). */
@@ -115,16 +122,53 @@
     color: #333;
 }
 .pending-reports-banner.has-pending {
-    background: #fff4f5;
-    border-color: var(--brand-red);
+    background: #e8f2fb;
+    border-color: var(--brand-blue);
     color: var(--brand-black);
 }
 .pending-reports-banner a {
-    color: var(--brand-red);
+    color: var(--brand-blue-dark);
     font-weight: 600;
 }
 .pending-reports-banner a:hover {
     text-decoration: underline;
+}
+
+/* Quick-glance dashboard stat cards (pending count/amount, approved/
+   rejected totals) on the admin index page, above the approval queue
+   table — blue-accented to match the rest of the approval interface. */
+.dashboard-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 0 0 20px;
+}
+.stat-card {
+    flex: 1 1 150px;
+    padding: 14px 16px;
+    background: var(--brand-white);
+    border: 1px solid var(--brand-gray-border);
+    border-top: 3px solid var(--brand-blue);
+    border-radius: 6px;
+    transition: box-shadow 0.18s ease, transform 0.15s ease;
+}
+.stat-card:hover {
+    box-shadow: 0 4px 14px rgba(0, 120, 212, 0.15);
+    transform: translateY(-1px);
+}
+.stat-card-pending {
+    background: #e8f2fb;
+}
+.stat-card .stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--brand-blue-dark);
+}
+.stat-card .stat-label {
+    font-size: 0.78rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
 /* Approved-vs-rejected donut chart on the admin dashboard — pure CSS
@@ -183,7 +227,7 @@
 
 /* Row hover highlight in changelists, a touch more visible than default. */
 #changelist table tbody tr:hover {
-    background-color: #fff4f5 !important;
+    background-color: #e8f2fb !important;
     transition: background-color 0.15s ease;
 }
 

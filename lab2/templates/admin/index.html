@@ -27,6 +27,30 @@
         {% endif %}
     </div>
 {% endif %}
+{% if pending_reports_count is not None %}
+    <div class="dashboard-stats">
+        <div class="stat-card stat-card-pending">
+            <div class="stat-value">{{ pending_reports_count }}</div>
+            <div class="stat-label">Pending review</div>
+        </div>
+        <div class="stat-card stat-card-pending">
+            <div class="stat-value">${{ pending_reports_amount_total|floatformat:2 }}</div>
+            <div class="stat-label">Pending amount</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ approval_chart_approved }}</div>
+            <div class="stat-label">Approved (all time)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${{ approval_chart_approved_amount|floatformat:2 }}</div>
+            <div class="stat-label">Approved amount</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ approval_chart_rejected }}</div>
+            <div class="stat-label">Rejected (all time)</div>
+        </div>
+    </div>
+{% endif %}
 {% if approval_chart_total %}
     <div class="approval-donut-wrap">
         <div class="approval-donut" style="background: conic-gradient(#2e7d32 0% {{ approval_chart_approved_pct }}%, #d5001c {{ approval_chart_approved_pct }}% 100%);"></div>

@@ -1,4 +1,5 @@
 """Template context processors shared across the whole site."""
+from decimal import Decimal
 
 
 def pending_reports_notification(request):
@@ -29,9 +30,14 @@ def pending_reports_notification(request):
         pending = pending.filter(user__department=user.supervised_department)
         scoped_to_department = user.supervised_department
 
+    pending = list(pending)
+
     return {
-        "pending_reports_count": pending.count(),
+        "pending_reports_count": len(pending),
         "pending_reports_scoped_to_department": scoped_to_department,
+        # $ waiting on this admin's desk right now — feeds the dashboard
+        # stat cards alongside the banner (see templates/admin/index.html).
+        "pending_reports_amount_total": sum((r.total_amount for r in pending), Decimal("0")),
     }
 
 
@@ -52,7 +58,8 @@ def approval_chart(request):
     if not user.is_superuser and user.supervised_department:
         reviewed = reviewed.filter(user__department=user.supervised_department)
 
-    approved_count = reviewed.filter(status=ExpenseReport.Status.APPROVED).count()
+    approved = list(reviewed.filter(status=ExpenseReport.Status.APPROVED))
+    approved_count = len(approved)
     rejected_count = reviewed.filter(status=ExpenseReport.Status.REJECTED).count()
     total = approved_count + rejected_count
 
@@ -66,6 +73,8 @@ def approval_chart(request):
         "approval_chart_total": total,
         "approval_chart_approved_pct": approved_pct,
         "approval_chart_rejected_pct": 100 - approved_pct if total else 0,
+        # Historical $ approved — feeds the dashboard stat cards.
+        "approval_chart_approved_amount": sum((r.total_amount for r in approved), Decimal("0")),
     }
 
 

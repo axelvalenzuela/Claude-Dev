@@ -1,5 +1,5 @@
 {% extends "admin/change_form.html" %}
-{#
+{% comment %}
   Adds two things on top of Django's default change form, without
   touching how the form itself submits (approve/reject still goes through
   the exact same POST -> ExpenseReportAdmin.save_model as before):
@@ -16,7 +16,7 @@
      times — only display:none changes — so nothing about the inline
      formsets' management-form data or field values is affected by which
      tab is showing when the form is submitted.
-#}
+{% endcomment %}
 
 {% block form_top %}
 {{ block.super }}

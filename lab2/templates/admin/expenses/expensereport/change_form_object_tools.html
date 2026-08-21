@@ -1,5 +1,5 @@
 {% load i18n %}
-{#
+{% comment %}
   Overrides Django's default object-tools row (admin/change_form_object_
   tools.html) for ExpenseReport specifically — this template name is
   resolved per-model by InclusionAdminNode before falling back to the
@@ -11,7 +11,7 @@
   styling automatically, via --object-tools-bg), but it downloads the
   report's actual timeline — every status change and review note,
   rejection notes included — as a .docx.
-#}
+{% endcomment %}
 {% block object-tools-items %}
 <li>
     <a href="{% url 'admin:expenses_expensereport_download_history' original.pk %}">{% translate "Download history" %}</a>

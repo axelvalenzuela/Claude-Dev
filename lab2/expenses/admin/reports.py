@@ -55,21 +55,22 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
     )
     # Split into two fieldsets — not just for visual grouping, but because
     # templates/admin/expenses/expensereport/change_form.html classifies
-    # each rendered <fieldset> into a tab by its <h2> title text ("Cuenta"
-    # / "Revisión"), same as it does for the two inlines below ("Travel
-    # documents" -> Documentos, "Audit log entries" -> Historial). The
+    # each rendered <fieldset> into a tab by its <h2> title text ("Report" /
+    # "Review"), same as it does for the two inlines below ("Travel
+    # documents" -> Documents, "Audit log entries" -> History). The
     # Excel/Word download links used to be a field here (exports_display);
-    # they're now a highlighted panel above the tabs instead, rendered
-    # straight from `original` in that same template — important enough to
-    # not be one tab click away.
+    # they're now part of the Summary tab instead, rendered straight from
+    # `original` in that same template, alongside an HTML preview of the
+    # same data — important enough to not be one tab click away, and to be
+    # checkable without opening either file.
     fieldsets = (
-        ("Cuenta", {
+        ("Report", {
             "fields": (
                 "user", "employee_number", "title", "description",
                 "supervisor_name", "supervisor_email", "created_at",
             ),
         }),
-        ("Revisión", {
+        ("Review", {
             "fields": (
                 "status", "review_note", "ceo_clause_ack", "approval_clause",
                 "trip_date_range_display", "trip_start_date", "submission_deadline",

@@ -4,44 +4,98 @@
   touching how the form itself submits (approve/reject still goes through
   the exact same POST -> ExpenseReportAdmin.save_model as before):
 
-  1. A highlighted panel with the Excel/Word download buttons, always
-     visible above the tabs — these used to be just another readonly
-     field (exports_display) buried in the form, easy to miss.
-  2. Tabs (Cuenta / Revisión / Documentos / Historial) built by classifying
-     the fieldsets Django already renders (both the ModelAdmin's own
-     fieldsets and the two inlines are rendered as sibling <fieldset>
-     elements) by their <h2> heading text, then toggling which ones are
-     visible with plain CSS. Every field stays in the DOM at all times —
-     only display:none changes — so nothing about the inline formsets'
-     management-form data or field values is affected by which tab is
-     showing when the form is submitted.
+  1. A Summary tab: the highlighted Excel/Word download buttons plus an
+     HTML preview of the same consolidated data those two files contain
+     (trip info, expense table, $60/day breakdown) — reviewable without
+     opening either file, since neither renders inline in a browser.
+  2. Tabs (Summary / Report / Review / Documents / History) built by
+     classifying the fieldsets Django already renders (both the
+     ModelAdmin's own fieldsets and the two inlines render as sibling
+     <fieldset> elements) by their <h2> heading text, then toggling which
+     ones are visible with plain CSS. Every field stays in the DOM at all
+     times — only display:none changes — so nothing about the inline
+     formsets' management-form data or field values is affected by which
+     tab is showing when the form is submitted.
 #}
 
 {% block form_top %}
 {{ block.super }}
 {% if original %}
-<div class="exports-highlight {% if not original.excel_snapshot and not original.word_snapshot %}exports-highlight-pending{% endif %}">
-    <div class="exports-highlight-title">&#128193; Excel &amp; Word</div>
-    {% if original.excel_snapshot or original.word_snapshot %}
-        <p>Generados automáticamente a partir de los documentos enviados en este reporte.</p>
-        <div class="exports-highlight-buttons">
-            {% if original.excel_snapshot %}
-                <a class="button" href="{{ original.excel_snapshot.url }}" target="_blank">&#128202; Descargar Excel</a>
-            {% endif %}
-            {% if original.word_snapshot %}
-                <a class="button" href="{{ original.word_snapshot.url }}" target="_blank">&#128196; Descargar Word</a>
-            {% endif %}
-        </div>
-    {% else %}
-        <p>Se generarán automáticamente al aprobar este reporte.</p>
-    {% endif %}
+<div class="admin-tabs change-form-tabs">
+    <button type="button" class="admin-tab-btn active" data-cf-tab="summary">Summary</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="report">Report</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="review">Review</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="documents">Documents</button>
+    <button type="button" class="admin-tab-btn" data-cf-tab="history">History</button>
 </div>
 
-<div class="admin-tabs change-form-tabs">
-    <button type="button" class="admin-tab-btn active" data-cf-tab="cuenta">Cuenta</button>
-    <button type="button" class="admin-tab-btn" data-cf-tab="revision">Revisión</button>
-    <button type="button" class="admin-tab-btn" data-cf-tab="documentos">Documentos</button>
-    <button type="button" class="admin-tab-btn" data-cf-tab="historial">Historial</button>
+<div class="tab-panel-summary" data-cf-panel="summary">
+    <div class="exports-highlight {% if not original.excel_snapshot and not original.word_snapshot %}exports-highlight-pending{% endif %}">
+        {% if original.excel_snapshot or original.word_snapshot %}
+            <p>Auto-generated from the documents submitted with this report.</p>
+            <div class="exports-highlight-buttons">
+                {% if original.excel_snapshot %}
+                    <a class="button" href="{{ original.excel_snapshot.url }}" target="_blank">&#128202; Download Excel</a>
+                {% endif %}
+                {% if original.word_snapshot %}
+                    <a class="button" href="{{ original.word_snapshot.url }}" target="_blank">&#128196; Download Word</a>
+                {% endif %}
+            </div>
+        {% else %}
+            <p>Will be generated automatically once this report is approved.</p>
+        {% endif %}
+    </div>
+
+    <h2 class="dashboard-section-title">Trip summary preview</h2>
+    <table class="pending-reports-table summary-info-table">
+        <tbody>
+            <tr><th>Employee</th><td>{{ original.user.get_full_name|default:original.user.email }}</td></tr>
+            <tr><th>Employee #</th><td>{{ original.user.employee_number|default:"—" }}</td></tr>
+            <tr><th>Department</th><td>{{ original.user.department|default:"—" }}</td></tr>
+            <tr><th>Supervisor</th><td>{{ original.supervisor_name }}</td></tr>
+            <tr><th>Trip dates</th><td>{% if original.trip_date_range %}{{ original.trip_date_range.0 }} to {{ original.trip_date_range.1 }}{% else %}—{% endif %}</td></tr>
+            <tr><th>Status</th><td>{{ original.get_status_display }}</td></tr>
+            {% if original.reviewed_at %}
+                <tr><th>Reviewed</th><td>{{ original.reviewed_at }} by {{ original.reviewed_by }}</td></tr>
+                <tr><th>Review note</th><td>{{ original.review_note|default:"—" }}</td></tr>
+                {% if original.approval_clause %}<tr><th>Approval clause</th><td><em>{{ original.approval_clause }}</em></td></tr>{% endif %}
+            {% endif %}
+        </tbody>
+    </table>
+
+    <h2 class="dashboard-section-title">Expenses</h2>
+    <div class="pending-reports-table-wrap">
+        <table class="pending-reports-table">
+            <thead><tr><th>Type</th><th>Date</th><th>File</th><th>Amount</th></tr></thead>
+            <tbody>
+                {% for doc in original.documents.all %}
+                    <tr>
+                        <td>{{ doc.get_type_display }}</td>
+                        <td>{{ doc.document_date }}</td>
+                        <td>{{ doc.file_name }}</td>
+                        <td>${{ doc.amount }}</td>
+                    </tr>
+                {% endfor %}
+                <tr class="summary-total-row"><td colspan="3">Total</td><td>${{ original.total_amount }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="dashboard-section-title">Daily spend vs. $60/day policy</h2>
+    <div class="pending-reports-table-wrap">
+        <table class="pending-reports-table">
+            <thead><tr><th>Date</th><th>Daily total</th><th>Over limit?</th></tr></thead>
+            <tbody>
+                {% for day in original.daily_totals %}
+                    <tr class="{% if day.over_limit %}summary-over-limit{% endif %}">
+                        <td>{{ day.date }}</td>
+                        <td>${{ day.total }}</td>
+                        <td>{% if day.over_limit %}Yes{% else %}No{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endif %}
 {% endblock %}
@@ -54,25 +108,29 @@
     if (!tabButtons.length) return;
 
     var HEADING_TO_TAB = {
-        "Cuenta": "cuenta",
-        "Revisión": "revision",
-        "Travel documents": "documentos",
-        "Audit log entries": "historial",
+        "Report": "report",
+        "Review": "review",
+        "Travel documents": "documents",
+        "Audit log entries": "history",
     };
 
     var fieldsets = document.querySelectorAll("#content-main fieldset.module");
     fieldsets.forEach(function (fieldset) {
         var heading = fieldset.querySelector("h2");
         var text = heading ? heading.textContent.trim() : "";
-        fieldset.dataset.cfPanel = HEADING_TO_TAB[text] || "cuenta";
+        fieldset.dataset.cfPanel = HEADING_TO_TAB[text] || "report";
     });
+
+    var panels = Array.prototype.slice.call(fieldsets).concat(
+        Array.prototype.slice.call(document.querySelectorAll(".tab-panel-summary"))
+    );
 
     function activate(tab) {
         tabButtons.forEach(function (btn) {
             btn.classList.toggle("active", btn.dataset.cfTab === tab);
         });
-        fieldsets.forEach(function (fieldset) {
-            fieldset.style.display = fieldset.dataset.cfPanel === tab ? "" : "none";
+        panels.forEach(function (el) {
+            el.style.display = el.dataset.cfPanel === tab ? "" : "none";
         });
     }
 
@@ -82,7 +140,7 @@
         });
     });
 
-    activate("cuenta");
+    activate("summary");
 })();
 </script>
 {% endblock %}

@@ -16,9 +16,9 @@
 
     <div class="admin-tabs">
         <button type="button" class="admin-tab-btn active" data-tab="dashboard">Dashboard</button>
-        <button type="button" class="admin-tab-btn" data-tab="employees">Empleados</button>
-        <button type="button" class="admin-tab-btn" data-tab="reports">Reportes</button>
-        <button type="button" class="admin-tab-btn" data-tab="accounts">Cuentas y permisos</button>
+        <button type="button" class="admin-tab-btn" data-tab="employees">Employees</button>
+        <button type="button" class="admin-tab-btn" data-tab="reports">Reports</button>
+        <button type="button" class="admin-tab-btn" data-tab="accounts">Users &amp; Groups</button>
     </div>
 
     <div class="admin-tab-panel" data-panel="dashboard">
@@ -122,10 +122,10 @@
     </div>
 
     <div class="admin-tab-panel" data-panel="employees" hidden>
-        <h2 class="dashboard-section-title">Empleados</h2>
-        <p class="dashboard-subtitle">Busca a cualquier empleado registrado en la plataforma. Los que tienen un reporte pendiente de revisión aparecen resaltados.</p>
+        <h2 class="dashboard-section-title">Employees</h2>
+        <p class="dashboard-subtitle">Search for any employee registered on the platform. Anyone with a pending review expense is highlighted.</p>
         <input type="text" id="employee-search" class="employee-search-input"
-               placeholder="Buscar por nombre o departamento…" autofocus>
+               placeholder="Search by name or department…" autofocus>
         {% if employee_directory %}
             <div class="employee-directory-list" id="employee-directory-list">
                 {% for entry in employee_directory %}
@@ -140,20 +140,20 @@
                             </a>
                         {% endif %}
                         <span class="employee-row-department">{{ entry.employee.department|default:"—" }}</span>
-                        <span class="employee-row-count">{{ entry.report_count }} reporte{{ entry.report_count|pluralize }}</span>
+                        <span class="employee-row-count">{{ entry.report_count }} report{{ entry.report_count|pluralize }}</span>
                         {% if entry.has_pending %}
-                            <a class="employee-row-action button" href="{% url 'admin:expenses_expensereport_change' entry.latest_report.pk %}">Consultar reporte pendiente</a>
+                            <a class="employee-row-action button" href="{% url 'admin:expenses_expensereport_change' entry.latest_report.pk %}">Review pending report</a>
                         {% elif entry.report_count %}
-                            <a class="employee-row-action button button-muted" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">Ver historial</a>
+                            <a class="employee-row-action button button-muted" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">View history</a>
                         {% else %}
-                            <span class="employee-row-action employee-row-none">Sin reportes</span>
+                            <span class="employee-row-action employee-row-none">No reports</span>
                         {% endif %}
                     </div>
                 {% endfor %}
             </div>
-            <p class="dashboard-empty" id="employee-directory-no-results" hidden>Sin resultados para esa búsqueda.</p>
+            <p class="dashboard-empty" id="employee-directory-no-results" hidden>No results for that search.</p>
         {% else %}
-            <p class="dashboard-empty">Ningún empleado registrado todavía.</p>
+            <p class="dashboard-empty">No employees registered yet.</p>
         {% endif %}
     </div>
 

@@ -84,7 +84,7 @@ def approval_chart(request):
 
 
 def employee_directory(request):
-    """Feeds the searchable "Empleados" tab in the admin — every employee
+    """Feeds the searchable "Employees" tab in the admin — every employee
     registered on the platform (scoped by department like everything else
     here), whether or not they've ever submitted a report, so RH can look
     someone up before they've done anything, not only after. Each entry

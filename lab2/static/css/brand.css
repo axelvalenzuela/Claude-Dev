@@ -175,11 +175,6 @@
     background: var(--brand-gray-bg);
     border-color: var(--brand-gray-border);
 }
-.exports-highlight-title {
-    font-weight: 800;
-    font-size: 1rem;
-    margin-bottom: 4px;
-}
 .exports-highlight p {
     margin: 0 0 10px;
     color: #444;
@@ -228,6 +223,23 @@
 }
 .pending-reports-table tbody tr:hover {
     background: #e8f2fb;
+}
+
+/* Summary tab's trip preview (see the ExpenseReport change_form override):
+   mirrors the Excel/Word content directly on the page, in the same red
+   already used for "over $60/day" elsewhere in the admin. */
+.summary-total-row td {
+    font-weight: 700;
+}
+.summary-over-limit {
+    background: #fde8ea;
+}
+.summary-over-limit td {
+    color: #b02a37;
+    font-weight: 600;
+}
+.summary-info-table th {
+    width: 160px;
 }
 
 /* "Empleados" tab: search box + one card-style row per employee (see

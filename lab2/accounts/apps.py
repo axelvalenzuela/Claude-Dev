@@ -25,6 +25,12 @@ class AccountsConfig(AppConfig):
         admin.site.site_title = f"{settings.PORTAL_BRAND_NAME} Admin"
         admin.site.index_title = "Reports awaiting approval"
         admin.site.login_form = AdminLoginForm
+        # Django's built-in left navigation tree (every registered app/model,
+        # on every page) duplicates what the Dashboard's own tabs already
+        # do on purpose (Employees / Reports / Users & Groups), and shows up
+        # unwanted while reviewing a single report. Off everywhere, once,
+        # instead of overriding nav-sidebar in every individual template.
+        admin.site.enable_nav_sidebar = False
 
     def _start_auto_shutdown_timer(self):
         from .server_lifecycle import start_auto_shutdown_timer

@@ -722,10 +722,18 @@ separación de responsabilidades", típicos de arquitectura enterprise —
 `exporters.py` es la primera vez que esa interfaz se declara explícitamente
 con una clase abstracta en vez de solo por convención de nombres.
 
-Ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) para cómo está armado el
-panel de admin en concreto: los tabs del Dashboard, los tabs de la página
-de revisión de un reporte (cómo funciona la clasificación de fieldsets por
-JS), y los context processors detrás de cada uno.
+Ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) para el diagrama de
+arquitectura del sistema completo y para cómo está armado el panel de
+admin en concreto: los tabs del Dashboard, los tabs de la página de
+revisión de un reporte (cómo funciona la clasificación de fieldsets por
+JS), y los context processors detrás de cada uno. Cada decisión de
+arquitectura importante (por qué monolito, por qué SQLite/Postgres, el
+modelo de acceso de admin, etc.) tiene su propio registro en
+[`docs/adr/`](docs/adr/) — contexto, alternativas consideradas, y
+consecuencias, no solo la decisión final. Y
+[`docs/USER_STORIES.md`](docs/USER_STORIES.md) consolida todo el proyecto
+como historias de usuario por rol (empleado, admin de departamento, admin
+general, operador de la infraestructura).
 
 ## Estructura
 
@@ -737,8 +745,10 @@ lab2/
   .dockerignore
   .env.example                 # variables de entorno documentadas (copiar a .env)
   docs/DATA_MODEL.md            # diagrama ER y trazabilidad
-  docs/DEPLOYMENT.md             # contenedores, HTTPS, base de datos, CI — despliegue en intranet
-  docs/ARCHITECTURE.md           # cómo está armado el panel de admin: tabs, context processors, patrones
+  docs/DEPLOYMENT.md             # contenedores, HTTPS, base de datos, CI, despliegue en intranet y en la nube
+  docs/ARCHITECTURE.md           # diagrama de arquitectura del sistema + cómo está armado el panel de admin
+  docs/USER_STORIES.md           # historias de usuario por rol, consolidando todo el proyecto
+  docs/adr/                     # Architecture Decision Records — una por decisión de arquitectura, con alternativas y consecuencias
   config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding, email/lockout), urls, wsgi/asgi
   accounts/
     models.py                    # User (+ employee_number, supervised_department), LoginEvent, find_user_by_login_identifier()
@@ -830,7 +840,7 @@ cambios de plantilla/CSS, no de lógica de negocio, así que se verificaron
 manualmente (servidor local + smoke test) en vez de con aserciones
 automatizadas sobre HTML.
 
-## Despliegue en servidor de intranet
+## Despliegue en servidor de intranet (y en la nube)
 
 La app se documenta y prueba como servidor de desarrollo local. Para
 correrla en un servidor de intranet de la empresa se agregó soporte para
@@ -838,4 +848,7 @@ contenedores (`Dockerfile`, `docker-compose.yml`) y un pipeline de CI de
 ejemplo (`.github/workflows/lab2-ci.yml`) — ver
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) para el cómo y el porqué
 (incluye por qué se eligió contenedores sobre una instalación directa en el
-servidor).
+servidor, la decisión de base de datos SQLite vs. PostgreSQL, y una
+sección aparte sobre qué cambia — y qué se necesita agregar — para
+desplegar esta misma imagen en Azure, AWS o GCP en vez de en el servidor
+de intranet).

@@ -1,13 +1,101 @@
-# Admin UI architecture
+# Architecture
 
-This document explains how the Django Admin approval interface is put
-together — the Dashboard, the Employees directory, and a report's review
-page — since none of it is default Django Admin behavior. It complements
+This document has two parts: a **system-level diagram** — everything the
+app is made of, and how a request actually flows through it — and then a
+deep dive into **how the Django Admin approval interface specifically is
+put together** (the Dashboard, the Employees directory, a report's review
+page), since none of that is default Django Admin behavior. It complements
 `DATA_MODEL.md` (the schema and business rules) and `DEPLOYMENT.md`
-(infrastructure); this one is about *how the admin screens are built*, for
-anyone picking up the code after this round of changes.
+(infrastructure, including cloud-hosting considerations); this one is
+about *how the app is built*, for anyone picking up the code after this
+round of changes. See `docs/adr/` for the individual decisions behind the
+choices explained here, with their alternatives and trade-offs, and
+`docs/USER_STORIES.md` for what the app does, told from each role's
+point of view rather than from the code's.
 
-## Why a custom admin UI at all
+## System architecture at a glance
+
+One Django project (`config/`), two apps (`accounts`, `expenses`), one
+process, one database. There's no queue, no cache layer, no
+microservices, no separate frontend build — deliberately: this is a
+single internal tool for a low-traffic workflow (submit a travel expense
+report, get it approved), and every one of those things would be
+solving a scaling problem this app doesn't have. `docs/adr/0001-...`
+covers why a monolith was chosen over splitting anything out.
+
+```mermaid
+flowchart TB
+    subgraph Browser["Browser"]
+        Employee["Employee\n(portal: /reports/, /accounts/)"]
+        Admin["Admin\n(Adrian, Iris, Karen, Steffan)\n(/admin/)"]
+    end
+
+    subgraph App["Django project (config/) — one WSGI process"]
+        direction TB
+        URLs["urls.py routing"]
+
+        subgraph Accounts["accounts app"]
+            Auth["Auth: signup, login, password reset\nEmployeeNumberOrEmailBackend\nLockoutCheckMixin (3-strikes)"]
+            UserAdminMod["UserAdmin / GroupAdmin\n(StaffManagedAdminMixin)"]
+            CtxProc["Context processors:\npending/approved reports, donut chart,\nemployee directory, scope badge"]
+        end
+
+        subgraph Expenses["expenses app"]
+            Views["Employee views:\ncreate/upload/submit/download"]
+            ReportAdmin["ExpenseReportAdmin:\nreview, approve/reject,\nSummary tab, Download history"]
+            Services["services.py:\nbuild_travel_document,\nfinalize_approval"]
+            Policies["policies.py / models.py:\n$60/day + currency + deadline\n(the one place each rule lives)"]
+            Exporters["exporters.py:\nExcelExporter / WordExporter /\nHistoryExporter (ReportExporter ABC)"]
+        end
+    end
+
+    DB[("Database\nSQLite (dev/intranet)\nor PostgreSQL (cloud) —\nsee docs/adr/0002")]
+    Media["Media storage\nlocal disk (dev/intranet)\nor object storage (cloud) —\nsee docs/DEPLOYMENT.md"]
+
+    Employee --> URLs
+    Admin --> URLs
+    URLs --> Auth
+    URLs --> Views
+    URLs --> ReportAdmin
+    URLs --> UserAdminMod
+    Views --> Services
+    ReportAdmin --> Services
+    Services --> Policies
+    Services --> Exporters
+    Auth --> DB
+    Services --> DB
+    Policies --> DB
+    CtxProc --> DB
+    Exporters --> Media
+    Views --> Media
+```
+
+- **One WSGI process serves everything** — the employee portal
+  (Bootstrap templates) and the admin approval interface (reskinned
+  Django Admin) are the same Django project, same process, same
+  session/auth system; they're separated by URL prefix and by
+  `is_staff`, not by being separate deployments.
+- **`accounts` is the lower-level app**: users, login, permissions,
+  Dashboard context processors. `expenses` depends on it (every report
+  belongs to a `User`); `accounts` never imports from `expenses` at
+  module load time (only inside function bodies, to dodge a circular
+  import — see `accounts/context_processors.py`).
+- **The database is the only stateful service** the app talks to — no
+  Redis, no message broker, no search index. Sessions, the audit trail,
+  every business rule's evaluation, all of it reads/writes the same
+  relational database.
+- **Media storage is local disk by default** (`media/uploads/`,
+  `media/reports/`) — fine on the intranet's persistent volume
+  (`docker-compose.yml`), a real limitation in most cloud container
+  platforms (see "Cloud hosting considerations" in `docs/DEPLOYMENT.md`).
+
+## Admin UI architecture
+
+This section explains how the Django Admin approval interface is put
+together — the Dashboard, the Employees directory, and a report's review
+page — since none of it is default Django Admin behavior.
+
+### Why a custom admin UI at all
 
 Django Admin's default index page is a flat list of every registered
 model, with no way to show a report's data inline or group things by
@@ -30,11 +118,14 @@ Six tabs, switched with a small vanilla-JS click handler (no framework):
   CSS-grid row of large tiles (`.kpi-tiles`) — Pending Review, Approved,
   Rejected, and the approval-rate donut — each tile *is* the link to that
   filtered list, so there's no separate banner repeating the same number.
-  Below that, a card-row list of pending-review reports (reusing the same
-  row styling as the Employees tab, see below), and "Recent actions"
-  collapsed behind a native `<details>` so day-to-day admin-log noise
-  doesn't take up scroll space by default. Deliberately kept to what fits
-  on one screen — this is a notification center, not a report browser.
+  Below that, a real `<table>` of expense reports with a **Pending /
+  Approved** filter toggle (`.dashboard-subtabs`, plain CSS `hidden`
+  attribute swap, no framework) — so an admin can browse and compare both
+  without leaving the Dashboard or opening the full Reports changelist —
+  and "Recent actions" collapsed behind a native `<details>` so day-to-day
+  admin-log noise doesn't take up scroll space by default. Deliberately
+  kept to what fits on one screen — this is a notification center, not a
+  full report browser (that's what the Reports tab/changelist is for).
 - **Employees**: a client-side-searchable, card-row list of every employee
   registered on the platform (not just ones with a report), each showing
   their report count and, if their latest report is still `submitted`, a
@@ -42,10 +133,13 @@ Six tabs, switched with a small vanilla-JS click handler (no framework):
 - **Reports** / **Users & Groups**: Django's own `app_list` include, split
   by `app_label` via the `apps_in` template filter (`accounts/
   templatetags/admin_extras.py`) — the Expenses app's model links in one
-  tab, Accounts + Auth (Users, Groups, LoginEvent) in the other. This is
-  also why Django's built-in left navigation sidebar is turned off site-
-  wide (`admin.site.enable_nav_sidebar = False` in `accounts/apps.py`):
-  it duplicated exactly this, on every single admin page, including while
+  tab, Accounts + Auth (Users, Groups, LoginEvent) in the other. Users &
+  Groups is reachable by **any** `is_staff` account, not just
+  `is_superuser` — see `accounts/admin.py:StaffManagedAdminMixin` and
+  `docs/adr/0008-admin-access-model.md`. This tab layout is also why
+  Django's built-in left navigation sidebar is turned off site-wide
+  (`admin.site.enable_nav_sidebar = False` in `accounts/apps.py`): it
+  duplicated exactly this, on every single admin page, including while
   reviewing one report.
 - **Policies** / **Help**: static reference content — every business rule
   in plain language, and an FAQ that tells an admin exactly where to click
@@ -58,7 +152,8 @@ All the tab content comes from context processors
 (`accounts/context_processors.py`), each computing its own
 department-scoped queryset the same way (HR/superuser sees everything, a
 department admin sees only their own): `pending_reports_notification`,
-`approval_chart`, `employee_directory`, `admin_scope_badge`.
+`approved_reports_table`, `approval_chart`, `employee_directory`,
+`admin_scope_badge`.
 
 ## A report's review page (change form)
 

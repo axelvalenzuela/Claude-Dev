@@ -11,3 +11,10 @@ PyMuPDF==1.24.14
 # where `manage.py runserver` is used instead of gunicorn.
 gunicorn==23.0.0
 whitenoise==6.11.0
+
+# NOT installed by default — the default database is SQLite (see
+# docs/adr/0002-database-sqlite-then-postgres.md). Uncomment (or add via
+# `pip install "psycopg[binary]"`) only when DATABASE_URL points at a real
+# PostgreSQL server (required for any cloud deployment — see
+# docs/DEPLOYMENT.md's "Desplegar en un proveedor de nube" section):
+# psycopg[binary]==3.2.3

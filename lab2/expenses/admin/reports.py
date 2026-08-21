@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 from ..models import ExpenseReport, ExpenseReportAuditLog, log_action
 from ..policies import DAILY_LIMIT_USD
 from ..services import finalize_approval
+from .decorators import staff_permission
 from .forms import ExpenseReportAdminForm
 from .inlines import AuditLogInline, TravelDocumentInline
 from .mixins import ExpenseReportDisplayMixin
@@ -90,19 +91,24 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
 
         return queryset
 
+    # Any admin account (HR or a department admin) can open this app and
+    # see the changeform — WHICH reports they can actually see/act on is
+    # entirely decided by get_queryset() above, not by Django's permission
+    # system (a department admin has no explicit "view_expensereport"
+    # Permission object; is_staff plus the queryset scoping is the whole
+    # model). All three checks are identical, so @staff_permission (see
+    # ../decorators.py) writes that once instead of three times.
+    @staff_permission
     def has_module_permission(self, request):
-        # Any admin account (HR or a department admin) can open this app —
-        # WHICH reports they can see/act on is entirely decided by
-        # get_queryset() above, not by Django's permission system (a
-        # department admin has no explicit "view_expensereport" Permission
-        # object; is_staff plus the queryset scoping is the whole model).
-        return request.user.is_active and request.user.is_staff
+        ...
 
+    @staff_permission
     def has_view_permission(self, request, obj=None):
-        return request.user.is_active and request.user.is_staff
+        ...
 
+    @staff_permission
     def has_change_permission(self, request, obj=None):
-        return request.user.is_active and request.user.is_staff
+        ...
 
     def trip_date_range_display(self, obj):
         trip_range = obj.trip_date_range

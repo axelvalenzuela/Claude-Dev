@@ -1,16 +1,13 @@
 """Shared logic for turning an uploaded file + form fields into a
 TravelDocument, used both by the single-document upload on the report detail
 page and by the multi-file attachment step on report creation."""
-from io import BytesIO
-
 from django.core.files.base import ContentFile
 
-from .excel import build_report_workbook
+from .exporters import excel_exporter, word_exporter
 from .forms import TravelDocumentForm
 from .models import ExpenseReportAuditLog, log_action
 from .naming import export_basename
 from .pdf_analysis import analyze_pdf
-from .word_export import build_report_document
 
 
 class DocumentUploadError(Exception):
@@ -79,17 +76,9 @@ def finalize_approval(report, actor) -> None:
     """
     basename = export_basename(report, approved=True)
 
-    excel_bytes = BytesIO()
-    build_report_workbook(report).save(excel_bytes)
-    excel_bytes.seek(0)
-
-    word_bytes = BytesIO()
-    build_report_document(report).save(word_bytes)
-    word_bytes.seek(0)
-
     # Both exports must exist before anything gets deleted.
-    report.excel_snapshot.save(f"{basename}.xlsx", ContentFile(excel_bytes.read()), save=False)
-    report.word_snapshot.save(f"{basename}.docx", ContentFile(word_bytes.read()), save=False)
+    report.excel_snapshot.save(f"{basename}.{excel_exporter.extension}", ContentFile(excel_exporter.to_bytes(report)), save=False)
+    report.word_snapshot.save(f"{basename}.{word_exporter.extension}", ContentFile(word_exporter.to_bytes(report)), save=False)
     report.save(update_fields=["excel_snapshot", "word_snapshot"])
 
     for document in report.documents.all():

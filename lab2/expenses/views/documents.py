@@ -11,10 +11,11 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 
-from ..models import ExpenseReport, TravelDocument, ExpenseReportAuditLog, log_action
+from ..models import TravelDocument, ExpenseReportAuditLog, log_action
 from ..pdf_analysis import analyze_pdf
 from ..policies import validate_trip_span
 from ..services import DocumentUploadError, build_travel_document
+from .decorators import draft_only
 from .mixins import OwnedReportMixin
 
 
@@ -50,13 +51,8 @@ class PreviewDocumentView(LoginRequiredMixin, View):
 
 
 class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
-    def post(self, request, pk):
-        report = self.get_report()
-
-        if report.status != ExpenseReport.Status.DRAFT:
-            messages.error(request, "You can only add documents while the report is a draft.")
-            return redirect("reports:detail", pk=pk)
-
+    @draft_only("add documents")
+    def post(self, request, pk, report):
         file = request.FILES.get("file")
         if not file:
             messages.error(request, "Select a file.")
@@ -100,13 +96,8 @@ class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
 
 
 class DeleteDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
-    def post(self, request, pk, doc_id):
-        report = self.get_report()
-
-        if report.status != ExpenseReport.Status.DRAFT:
-            messages.error(request, "You can only remove documents while the report is a draft.")
-            return redirect("reports:detail", pk=pk)
-
+    @draft_only("remove documents")
+    def post(self, request, pk, doc_id, report):
         document = get_object_or_404(TravelDocument, pk=doc_id, expense_report=report)
         file_name = document.file_name
         document.file.delete(save=False)

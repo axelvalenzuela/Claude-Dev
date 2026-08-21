@@ -522,6 +522,43 @@ divide por responsabilidad, nunca por tamaño arbitrario.**
   hace cada línea (para eso ya están los nombres), sino la decisión de
   diseño detrás del archivo cuando no es obvia solo con el nombre.
 
+### Patrón Decorator
+
+Ya estaba presente de forma implícita en todo lo que provee Django
+(`@admin.register`, `@receiver`, `@property`, `LoginRequiredMixin`); se
+revisó el código propio de la app y se aplicó explícitamente donde había
+lógica transversal duplicada, en vez de solo por usarlo:
+
+- **`expenses/admin/decorators.py:staff_permission`** — `ExpenseReportAdmin`
+  tenía tres métodos (`has_module_permission`, `has_view_permission`,
+  `has_change_permission`) con exactamente el mismo cuerpo de dos líneas.
+  Ahora es un solo decorador aplicado a los tres.
+- **`expenses/views/decorators.py:draft_only`** — `UploadDocumentView` y
+  `DeleteDocumentView` repetían el mismo guard ("solo mientras el reporte
+  sigue en `draft`") con distinto mensaje. El decorador lo centraliza y de
+  paso les pasa el reporte ya cargado (`report=`), sin que cada vista tenga
+  que volver a pedirlo.
+
+### Interfaz enterprise (Separated Interface / Strategy)
+
+`expenses/exporters.py` define una interfaz formal (`ReportExporter`, una
+`ABC` con `build()` abstracto) para los dos formatos exportables — antes,
+`services.py:finalize_approval` y `views/exports.py` repetían, una vez por
+formato, la misma ceremonia de "generar a `BytesIO`, leer los bytes,
+guardar/servir" (4 bloques casi idénticos entre los dos archivos), y el
+content-type de Word estaba además hardcodeado por segunda vez en
+`views/exports.py`. Ahora ambos puntos de uso pasan por `excel_exporter` /
+`word_exporter`; agregar un tercer formato en el futuro (p. ej. PDF) es
+agregar una clase en `exporters.py`, no tocar `services.py` ni las vistas.
+
+Esto formaliza un patrón que la app ya seguía en espíritu — el **Service
+Layer** de Fowler (`expenses/services.py`, lógica de negocio fuera de
+vistas/admin) y los **Policy objects** (`expenses/policies.py`,
+`validators.py`) ya son ejemplos de "programar contra una interfaz/
+separación de responsabilidades", típicos de arquitectura enterprise —
+`exporters.py` es la primera vez que esa interfaz se declara explícitamente
+con una clase abstracta en vez de solo por convención de nombres.
+
 ## Estructura
 
 ```
@@ -554,10 +591,11 @@ lab2/
     validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
     services.py                  # build_travel_document + finalize_approval (exports y borrado de originales, al aprobar)
+    exporters.py                  # ReportExporter (interfaz) + ExcelExporter/WordExporter — ver "Interfaz enterprise"
     naming.py                     # export_basename() — convención de nombre de RH (empleado, fecha, número, APROBADO)
     word_export.py                # genera el .docx (con miniaturas de fotos) al aprobar
-    views/                       # reports.py, documents.py, exports.py, mixins.py — ver arriba
-    admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py
+    views/                       # reports.py, documents.py, exports.py, mixins.py, decorators.py (draft_only) — ver arriba
+    admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py, decorators.py (staff_permission)
     excel.py
     tests/                      # un archivo por vista/servicio probado — ver arriba
   templates/

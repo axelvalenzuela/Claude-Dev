@@ -125,7 +125,7 @@ que realmente atiende peticiones). Para desactivarlo, pon
   marco de referencia de seguridad que pediste: quién entró, cuándo, desde
   dónde, y quién falló al intentarlo.
 
-### 2. Portal del empleado (`expenses/views.py` — vistas basadas en clases)
+### 2. Portal del empleado (`expenses/views/` — vistas basadas en clases)
 - `ReportListView`, `ReportDetailView` (con `LoginRequiredMixin`), y
   `UploadDocumentView` / `DeleteDocumentView` / `SubmitReportView` /
   `ExportExcelView` / `DownloadDocumentView` como `View` con un
@@ -218,7 +218,7 @@ que realmente atiende peticiones). Para desactivarlo, pon
   marcarse para poder guardar una aprobación — rechazar no lo requiere, pero
   sí exige una nota con el motivo.
 
-### 8. Panel de administrador — Django Admin (`expenses/admin.py`)
+### 8. Panel de administrador — Django Admin (`expenses/admin/`)
 - Accesible solo para cuentas admin (`is_staff=True`); cualquier empleado
   normal es rechazado por el framework mismo. Con el header, colores y
   hover animations de la marca ("formato empresarial y distintivo" —
@@ -323,7 +323,7 @@ enviar — así se implementó:
 - Aparece como su propia sección en Django Admin ("Approved reports
   (history)"), no solo como un filtro sobre la bandeja de trabajo —
   modelo *proxy* de `ExpenseReport` (misma tabla, sin migraciones nuevas de
-  esquema) registrado por separado en `expenses/admin.py`.
+  esquema) registrado por separado en `expenses/admin/approved_history.py`.
 - Ordenado alfabéticamente por título; de **solo lectura** (no se puede
   agregar/editar/borrar desde ahí — aprobar/rechazar sigue siendo solo
   desde la bandeja de trabajo normal); respeta el mismo alcance por
@@ -444,6 +444,56 @@ draft --submit()--> submitted --approve(ceo_clause_ack=True)--> approved
 `submit()` exitoso (misma transacción): genera Excel + Word y solo entonces
 borra los archivos originales — ver módulo 10.
 
+## Organización del código y convenciones
+
+Revisado y refactorizado para que el tamaño de cada archivo se mantenga
+manejable y cada uno tenga una sola responsabilidad clara — la regla que se
+siguió: **en cuanto un `views.py`/`admin.py`/archivo de tests empieza a
+mezclar varias responsabilidades distintas (no solo crecer en líneas), se
+divide por responsabilidad, nunca por tamaño arbitrario.**
+
+- **`views.py` → paquete `views/`** (`expenses/views/`): en vez de un solo
+  archivo con las 11 vistas del portal del empleado, se separó en
+  `reports.py` (el reporte en sí: lista, historial, crear, detalle,
+  enviar), `documents.py` (un documento suelto: subir/borrar/descargar/
+  preview) y `exports.py` (descargar Excel/Word), con `mixins.py` para lo
+  compartido (`OwnedReportMixin`). El `__init__.py` re-exporta todo, así
+  que `expenses/urls.py` sigue haciendo `from . import views` /
+  `views.ReportListView` sin enterarse de en qué archivo vive cada clase —
+  el refactor no cambió ninguna URL ni comportamiento.
+- **`admin.py` → paquete `admin/`** (`expenses/admin/`): mismo criterio —
+  `reports.py` (la bandeja de aprobación), `approved_history.py` (el
+  historial de aprobados), `audit_log.py` (la auditoría), más `forms.py`,
+  `inlines.py` y `mixins.py` (`ExpenseReportDisplayMixin`, compartido entre
+  `reports.py` y `approved_history.py` para no duplicar las columnas
+  `employee`/`total_amount_display`/etc.). El `__init__.py` solo importa
+  los submódulos — cada uno se registra a sí mismo con `@admin.register`,
+  que es como Django ya esperaba que funcionara.
+- **Política de negocio separada del esquema**: `expenses/models.py` ya
+  solo define las tablas (`ExpenseReport`, `TravelDocument`, ...) y sus
+  métodos de dominio; los límites y reglas transversales
+  (`DAILY_LIMIT_USD`, `SUBMISSION_WINDOW_DAYS`, `MAX_TRIP_SPAN_DAYS`,
+  `CEO_NAME`, `validate_trip_span()`) viven en `expenses/policies.py`, y el
+  validador genérico de tamaño de archivo en `expenses/validators.py`
+  (el de páginas de PDF se queda en `pdf_analysis.py`, porque solo ese
+  módulo necesita `pypdf`). Cambiar el límite diario de $60 nunca implica
+  tocar el archivo que define las tablas, y viceversa.
+- **`tests/` como paquete, no archivos sueltos**: `accounts/` tenía
+  `tests.py` + tres archivos `tests_algo.py` sueltos — se unificó en
+  `accounts/tests/` (igual que `expenses/tests/` ya estaba), con un
+  archivo por concepto probado (`test_signup.py`, `test_security.py`,
+  `test_approval_chart.py`, ...) en vez de por "cuándo se escribió". El
+  antiguo `expenses/tests/test_views.py` (558 líneas, 4 clases que en
+  realidad probaban cosas distintas) se dividió igual: `test_report_creation.py`,
+  `test_report_submission.py`, `test_report_access.py`, `test_exports.py`,
+  `test_document_preview.py`, `test_report_history.py`,
+  `test_admin_approval.py` — cada uno nombrado por lo que prueba, no por
+  la vista que lo genera, así se encuentra sin tener que adivinar.
+- **Docstrings de módulo**: todo archivo no trivial explica, en 1-3
+  líneas al inicio, *qué* vive ahí y *por qué* está separado así — no qué
+  hace cada línea (para eso ya están los nombres), sino la decisión de
+  diseño detrás del archivo cuando no es obvia solo con el nombre.
+
 ## Estructura
 
 ```
@@ -458,23 +508,25 @@ lab2/
     security.py                    # is_account_locked() — bloqueo tras 3 fallos
     context_processors.py          # notificaciones (pendientes, aprobado/rechazado) + donut chart
     server_lifecycle.py            # apagado automático del runserver a las 12h
-    forms.py                       # LoginForm/AdminLoginForm con LockoutCheckMixin
+    forms.py                       # LoginForm/AdminLoginForm/reset — LockoutCheckMixin
     views.py                       # SignUpView, PasswordResetConfirmView (CBVs)
+    admin.py                       # UserAdmin, LoginEventAdmin (solo lectura)
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
     migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
-    tests_org_admins.py            # roles por departamento, notificaciones, donut chart
-    tests_security.py               # bloqueo de cuenta + reset de contraseña
-    tests_server_lifecycle.py       # apagado automático (sin esperar 12h reales)
+    tests/                          # un archivo por concepto: signup, security, org_admin_seed,
+                                     # department_scoping, notifications, approval_chart, server_lifecycle...
   expenses/
-    models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog, validate_trip_span
+    models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog
+    policies.py                 # DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
+    validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
     services.py                  # build_travel_document + finalize_submission (exports y borrado de originales)
     word_export.py                # genera el .docx (con miniaturas de fotos) al enviar
-    views.py                    # CBVs (ListView/CreateView/DetailView/View + mixins), History, exports, preview AJAX
-    admin.py                    # bandeja de aprobación, historial de aprobados (proxy), auditoría
+    views/                       # reports.py, documents.py, exports.py, mixins.py — ver arriba
+    admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py
     excel.py
-    tests/                      # test_models, test_excel, test_word_export, test_services, test_views, test_pdf_analysis, helpers.py
+    tests/                      # un archivo por vista/servicio probado — ver arriba
   templates/
     base.html                    # layout del portal del empleado (en inglés) + banner de notificaciones
     admin/base_site.html          # branding "MHP by Porsche" del panel admin

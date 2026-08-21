@@ -1,3 +1,7 @@
+"""Auth routes under /accounts/: signup, login/logout, and the password
+reset flow — the same one used by both the employee login and (via the
+"Forgotten your password?" link in templates/admin/login.html) the admin
+login, so there's a single reset flow for every account."""
 from django.contrib.auth import views as auth_views
 from django.urls import path
 

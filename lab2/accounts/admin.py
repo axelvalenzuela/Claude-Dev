@@ -1,3 +1,7 @@
+"""Django Admin registrations for the accounts app: the User admin (with
+the company-specific fields) and the read-only LoginEvent audit trail.
+Expense-report approval lives in expenses/admin/ instead — this module is
+only about the accounts themselves."""
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
@@ -6,6 +10,11 @@ from .models import LoginEvent, User, generate_employee_number
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    """Adds the company fields (employee_number, department,
+    supervised_department) to Django's stock user admin, and auto-assigns
+    an employee_number for any account created here directly (mirroring
+    SignUpForm.save() for the public signup path)."""
+
     list_display = (
         "email",
         "employee_number",

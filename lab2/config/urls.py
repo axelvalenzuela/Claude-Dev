@@ -1,3 +1,7 @@
+"""Project-level URL map: /admin/ is the whole approval interface (see
+expenses/admin/), /accounts/ is auth, /reports/ is the employee portal.
+Media files are only served by Django itself in DEBUG — a real deployment
+would put a web server or storage service in front of them instead."""
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin

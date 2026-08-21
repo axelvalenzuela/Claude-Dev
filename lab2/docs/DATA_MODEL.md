@@ -87,8 +87,8 @@ uploads/deletions.
 - **`ExpenseReportAuditLog`** is the append-only timeline per report:
   `created → document_uploaded (×N) → document_deleted (×N)? → submitted →
   approved | rejected`, each row stamped with who (`actor`) and when. It's
-  written from `expenses/views.py` (employee actions) and
-  `expenses/admin.py` (`ExpenseReportAdmin.save_model`, approve/reject).
+  written from `expenses/views/` (employee actions) and
+  `expenses/admin/reports.py` (`ExpenseReportAdmin.save_model`, approve/reject).
   It is registered read-only in Django Admin
   (`ExpenseReportAuditLogAdmin`, no add/change/delete permissions) as the
   admin's audit view, and also shown inline on each report's admin page.
@@ -112,9 +112,9 @@ audit trail that can be edited after the fact isn't one.
   first.
 - **$60/day policy**: `ExpenseReport.daily_totals()` groups `TravelDocument`
   rows by `document_date` and flags any day whose sum exceeds
-  `DAILY_LIMIT_USD` (`expenses/models.py`). Nothing is stored redundantly —
+  `DAILY_LIMIT_USD` (`expenses/policies.py`). Nothing is stored redundantly —
   it's computed from `TravelDocument`, shown to the employee (report detail
-  page), the admin (list + detail), and the Excel export.
+  page), the admin (list + detail), and the Excel/Word exports.
 - **PDF pre-check at upload time**: `expenses/pdf_analysis.py` reads the PDF
   text layer for every uploaded PDF and fills `extracted_amount` /
   `detected_type` on the `TravelDocument` row immediately, flagging
@@ -129,9 +129,9 @@ audit trail that can be edited after the fact isn't one.
   mandatory `ceo_clause_ack` argument and refuses to approve without it; on
   success it stamps `ceo_authorized=True` and
   `approval_clause="Approved under authority delegated by Steffan Widmer, CEO."`.
-  The admin form (`ExpenseReportAdminForm`) surfaces this as a required
+  The admin form (`ExpenseReportAdminForm`, `expenses/admin/forms.py`) surfaces this as a required
   checkbox that must be ticked to approve — rejecting doesn't need it.
-- **One report = one trip**: `validate_trip_span()` (`expenses/models.py`)
+- **One report = one trip**: `validate_trip_span()` (`expenses/policies.py`)
   rejects a document whose date is more than `MAX_TRIP_SPAN_DAYS` (21) away
   from the rest of the report's documents — checked both when a report is
   created with several attachments at once and when a single document is

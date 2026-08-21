@@ -1,3 +1,6 @@
+"""URLs for the employee-facing side of the app; the admin approval
+interface lives entirely under Django Admin's own /admin/ routes instead
+(see expenses/admin/)."""
 from django.urls import path
 
 from . import views

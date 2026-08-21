@@ -9,13 +9,8 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from accounts.models import User
-from expenses.models import (
-    DAILY_LIMIT_USD,
-    MAX_TRIP_SPAN_DAYS,
-    ExpenseReport,
-    TravelDocument,
-    validate_trip_span,
-)
+from expenses.models import ExpenseReport, TravelDocument
+from expenses.policies import DAILY_LIMIT_USD, MAX_TRIP_SPAN_DAYS, validate_trip_span
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_")
 

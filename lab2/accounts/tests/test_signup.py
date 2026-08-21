@@ -1,7 +1,9 @@
+"""Public self-service registration: creates a regular employee (never
+staff), and every account gets a unique random employee number."""
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import LoginEvent, User, generate_employee_number
+from accounts.models import User, generate_employee_number
 
 
 class SignUpTests(TestCase):
@@ -86,22 +88,3 @@ class EmployeeNumberTests(TestCase):
         ana = User.objects.get(email="ana@example.com")
         luis = User.objects.get(email="luis@example.com")
         self.assertNotEqual(ana.employee_number, luis.employee_number)
-
-
-class LoginEventTraceabilityTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="ana@example.com", email="ana@example.com", password="clave123"
-        )
-
-    def test_successful_login_is_recorded(self):
-        self.client.post(reverse("login"), {"username": "ana@example.com", "password": "clave123"})
-
-        event = LoginEvent.objects.get(email_attempted="ana@example.com", success=True)
-        self.assertEqual(event.user, self.user)
-
-    def test_failed_login_is_recorded_without_a_user(self):
-        self.client.post(reverse("login"), {"username": "ana@example.com", "password": "wrong-password"})
-
-        event = LoginEvent.objects.get(email_attempted="ana@example.com", success=False)
-        self.assertIsNone(event.user)

@@ -1,3 +1,14 @@
+"""ORM models for the expense-report domain: ExpenseReport, TravelDocument,
+and their supporting audit-log/proxy models.
+
+The numeric policy limits and cross-report validation
+(DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME,
+validate_trip_span) live in policies.py, and the generic file-size
+validator lives in validators.py — both imported below and used by
+ExpenseReport's own methods, but kept in their own modules so the business
+policy can be read (and changed) without wading through the schema, and
+vice versa.
+"""
 import os
 import uuid
 from collections import defaultdict
@@ -11,43 +22,8 @@ from django.db import models
 from django.utils import timezone
 
 from .pdf_analysis import validate_pdf_page_count
-
-# Company expense policy: daily spend over this amount is flagged for review.
-DAILY_LIMIT_USD = Decimal("60.00")
-
-# Reports must be submitted within this many days of the trip start (flight date).
-SUBMISSION_WINDOW_DAYS = 30
-
-# All the receipts in one report must belong to the same trip: their expense
-# dates can't span more than this many days (e.g. a March receipt and a June
-# receipt can never be on the same report).
-MAX_TRIP_SPAN_DAYS = 21
-
-# All approvals are issued under the CEO's delegated authority.
-CEO_NAME = "Steffan Widmer"
-CEO_TITLE = "CEO"
-
-
-def validate_file_size(file):
-    max_mb = 10
-    if file.size > max_mb * 1024 * 1024:
-        raise ValidationError(f"File exceeds the maximum size of {max_mb} MB.")
-
-
-def validate_trip_span(dates):
-    """Raises if the given expense dates span more than MAX_TRIP_SPAN_DAYS —
-    the signal that two unrelated trips are being mixed into one report."""
-    dates = [d for d in dates if d is not None]
-    if len(dates) < 2:
-        return
-
-    span = (max(dates) - min(dates)).days
-    if span > MAX_TRIP_SPAN_DAYS:
-        raise ValidationError(
-            f"These receipts span {span} days ({min(dates):%b %d, %Y} to {max(dates):%b %d, %Y}), "
-            f"more than the {MAX_TRIP_SPAN_DAYS}-day limit for a single trip. "
-            f"Create a separate report for the other dates."
-        )
+from .policies import CEO_NAME, CEO_TITLE, DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS
+from .validators import validate_file_size
 
 
 def document_upload_path(instance, filename):

@@ -1,3 +1,8 @@
+"""The two views this app defines on top of Django's built-ins: public
+signup, and a password-reset-confirm that also lifts an account lockout.
+Login/logout/most of the reset flow are Django's stock views, wired up
+directly in accounts/urls.py with our forms/templates — no need for a
+custom view class when there's no extra behavior to add."""
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect

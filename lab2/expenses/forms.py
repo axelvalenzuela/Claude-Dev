@@ -1,3 +1,8 @@
+"""The two employee-facing forms: creating a report, and one document on
+it. TravelDocumentForm is also reused directly by expenses/services.py's
+build_travel_document() for the multi-file creation path — so its
+validation (extension, size, page count, all via TravelDocument.file's
+field validators) runs exactly once, no matter which view is uploading."""
 from django import forms
 
 from .models import ExpenseReport, TravelDocument

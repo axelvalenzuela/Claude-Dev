@@ -4,7 +4,7 @@ the CEO approval clause."""
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
-from .models import DAILY_LIMIT_USD
+from .policies import DAILY_LIMIT_USD
 
 HEADER_FILL = PatternFill("solid", fgColor="D9D9D9")
 VIOLATION_FILL = PatternFill("solid", fgColor="F8D7DA")

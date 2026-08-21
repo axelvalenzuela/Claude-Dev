@@ -14,7 +14,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt
 
-from .models import DAILY_LIMIT_USD
+from .policies import DAILY_LIMIT_USD
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")
 

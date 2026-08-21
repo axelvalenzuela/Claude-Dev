@@ -1,3 +1,8 @@
+"""Every auth-related form in the app: login (employee + admin, both with
+the lockout check), signup, and the branded password-reset forms. Kept in
+one module since none of them is large and they're all part of the same
+"how does someone authenticate" story — split further only if one of them
+grows enough to justify its own file."""
 from django import forms
 from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm, UserCreationForm

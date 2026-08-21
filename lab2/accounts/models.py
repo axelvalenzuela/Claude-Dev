@@ -1,3 +1,7 @@
+"""The custom User model (email as username, department, employee number,
+department-admin scope) and the LoginEvent audit trail every login attempt
+is recorded into — the foundation both accounts/security.py's lockout and
+the admin's traceability view build on top of."""
 import random
 
 from django.contrib.auth.models import AbstractUser

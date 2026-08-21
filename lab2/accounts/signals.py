@@ -1,3 +1,6 @@
+"""Wires Django's built-in login signals to LoginEvent, so every attempt —
+successful or not, against a real account or not — is recorded without any
+view having to remember to do it. Connected in accounts/apps.py:ready()."""
 from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.dispatch import receiver
 

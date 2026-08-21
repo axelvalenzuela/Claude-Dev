@@ -23,12 +23,17 @@ parallel framework; it's Django Admin with its rendering reshaped.
 Four tabs, switched with a small vanilla-JS click handler (no framework):
 **Dashboard**, **Employees**, **Reports**, **Users & Groups**.
 
-- **Dashboard**: the "what needs attention right now" screen — the
-  pending-review banner, three stat cards, the approval donut, a card-row
-  list of pending-review reports, and "Recent actions" collapsed behind a
-  native `<details>` (so day-to-day admin-log noise doesn't take up scroll
-  space by default). Deliberately kept to what fits on one screen — this
-  is a notification center, not a report browser.
+- **Dashboard**: the "what needs attention right now" screen, styled after
+  enterprise portal home pages (SAP SuccessFactors-style KPI tiles) rather
+  than a stacked list of separate widgets. A short greeting header, then a
+  CSS-grid row of large tiles (`.kpi-tiles`) — Pending Review, Approved,
+  Rejected, and the approval-rate donut — each tile *is* the link to that
+  filtered list, so there's no separate banner repeating the same number.
+  Below that, a card-row list of pending-review reports (reusing the same
+  row styling as the Employees tab, see below), and "Recent actions"
+  collapsed behind a native `<details>` so day-to-day admin-log noise
+  doesn't take up scroll space by default. Deliberately kept to what fits
+  on one screen — this is a notification center, not a report browser.
 - **Employees**: a client-side-searchable, card-row list of every employee
   registered on the platform (not just ones with a report), each showing
   their report count and, if their latest report is still `submitted`, a
@@ -95,6 +100,34 @@ form itself submits:
   the employee-facing download views, and the admin's preview routes above
   all go through the same two instances (`excel_exporter`, `word_exporter`)
   instead of each repeating their own "build → BytesIO → serve" ceremony.
+
+## One rule, one place: how the $60/day policy is centralized
+
+`ExpenseReport.daily_totals()` (`expenses/models.py`) is the **only**
+place that decides whether a day is a policy violation — including the
+flight/hotel exemption (a day with a flight or hotel charge routinely
+clears $60 on its own, so it's flagged informationally, never as a
+violation). Every surface that shows this — the employee's report detail
+page, the admin changelist's policy column, the change-form's Summary tab
+and Review tab, the generated Excel, and the generated Word — calls this
+same method and only decides *how* to render the two booleans it returns
+(`over_limit`, `has_flight_or_hotel`), never re-derives them. Concretely,
+that means:
+
+- Changing the daily limit is a one-line edit in `expenses/policies.py`
+  (`DAILY_LIMIT_USD`).
+- Changing which document types are exempt is a one-line edit in
+  `daily_totals()` (`justified_types`).
+- Neither edit requires touching `excel.py`, `word_export.py`,
+  `expenses/admin/reports.py`, or any template — they only read the
+  result.
+
+This is the same "policy separated from schema/presentation" principle
+`expenses/policies.py`/`validators.py` already established for the other
+business rules (submission deadline, trip-span validation, file size) —
+`daily_totals()` is that same idea applied to a rule with more than one
+possible outcome (violation / justified / fine) instead of a plain
+threshold.
 
 ## Adding a new admin tab or panel
 

@@ -8,6 +8,10 @@ from .policies import DAILY_LIMIT_USD
 
 HEADER_FILL = PatternFill("solid", fgColor="D9D9D9")
 VIOLATION_FILL = PatternFill("solid", fgColor="F8D7DA")
+# A flight or hotel charge routinely clears $60/day on its own — that's
+# expected, not a policy question, so it gets a neutral informational
+# color instead of the red used for an unexplained overage.
+JUSTIFIED_FILL = PatternFill("solid", fgColor="D9E8F5")
 
 
 def build_report_workbook(report) -> Workbook:
@@ -78,10 +82,16 @@ def build_report_workbook(report) -> Workbook:
     for day in report.daily_totals():
         sheet.cell(row=row, column=1, value=day["date"].strftime("%Y-%m-%d"))
         sheet.cell(row=row, column=2, value=float(day["total"]))
-        flag_cell = sheet.cell(row=row, column=3, value="Yes" if day["over_limit"] else "No")
         if day["over_limit"]:
+            flag_value, fill = "Yes", VIOLATION_FILL
+        elif day["has_flight_or_hotel"]:
+            flag_value, fill = "Flight/Hotel", JUSTIFIED_FILL
+        else:
+            flag_value, fill = "No", None
+        sheet.cell(row=row, column=3, value=flag_value)
+        if fill:
             for col in (1, 2, 3):
-                sheet.cell(row=row, column=col).fill = VIOLATION_FILL
+                sheet.cell(row=row, column=col).fill = fill
         row += 1
 
     for col in "ABCDE":

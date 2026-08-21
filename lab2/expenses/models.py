@@ -123,15 +123,29 @@ class ExpenseReport(models.Model):
 
     def daily_totals(self):
         """Per-day breakdown of requested expenses, flagging days over the
-        company's daily limit (DAILY_LIMIT_USD)."""
+        company's daily limit (DAILY_LIMIT_USD) — except a day that includes
+        a flight or hotel charge, which is expected to clear $60 on its own
+        and isn't a policy question the way an unusually large day of meals
+        or taxis would be. Those days are still called out (`has_flight_or_
+        hotel`), just not as a policy violation (`over_limit` stays False).
+        """
         totals = defaultdict(lambda: Decimal("0"))
+        types_by_date = defaultdict(set)
         for doc in self.documents.all():
             totals[doc.document_date] += doc.amount
+            types_by_date[doc.document_date].add(doc.type)
 
-        return [
-            {"date": date, "total": total, "over_limit": total > DAILY_LIMIT_USD}
-            for date, total in sorted(totals.items())
-        ]
+        justified_types = {TravelDocument.DocType.FLIGHT, TravelDocument.DocType.HOTEL}
+        result = []
+        for date, total in sorted(totals.items()):
+            has_flight_or_hotel = bool(types_by_date[date] & justified_types)
+            result.append({
+                "date": date,
+                "total": total,
+                "has_flight_or_hotel": has_flight_or_hotel,
+                "over_limit": total > DAILY_LIMIT_USD and not has_flight_or_hotel,
+            })
+        return result
 
     @property
     def has_policy_violations(self) -> bool:

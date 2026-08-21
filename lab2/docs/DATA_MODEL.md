@@ -112,9 +112,17 @@ audit trail that can be edited after the fact isn't one.
   first.
 - **$60/day policy**: `ExpenseReport.daily_totals()` groups `TravelDocument`
   rows by `document_date` and flags any day whose sum exceeds
-  `DAILY_LIMIT_USD` (`expenses/policies.py`). Nothing is stored redundantly —
-  it's computed from `TravelDocument`, shown to the employee (report detail
-  page), the admin (list + detail), and the Excel/Word exports.
+  `DAILY_LIMIT_USD` (`expenses/policies.py`) — **except** a day that
+  includes a `FLIGHT` or `HOTEL` document, which routinely clears $60 on
+  its own and isn't a policy question the way an unusually large day of
+  meals/taxis would be (`has_flight_or_hotel=True`, `over_limit=False` for
+  that day, even though the total is well over the limit). This is the
+  single place the rule is evaluated — nothing is stored redundantly, and
+  no other view recomputes it; the employee (report detail page), the
+  admin (list + detail + the change-form Summary tab), and the Excel/Word
+  exports all read the same two flags and just choose how to render them
+  (red for a real violation, blue/informational for a justified flight or
+  hotel day).
 - **PDF pre-check at upload time**: `expenses/pdf_analysis.py` reads the PDF
   text layer for every uploaded PDF and fills `extracted_amount` /
   `detected_type` on the `TravelDocument` row immediately, flagging

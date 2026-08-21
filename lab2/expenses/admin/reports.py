@@ -194,10 +194,18 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
             '<td style="padding:2px 8px;">${total:.2f}</td>'
             '<td style="padding:2px 8px;">{flag}</td>'
             "</tr>".format(
-                bg="background:#f8d7da;" if day["over_limit"] else "",
+                bg=(
+                    "background:#f8d7da;" if day["over_limit"]
+                    else "background:#d9e8f5;" if day["has_flight_or_hotel"]
+                    else ""
+                ),
                 date=day["date"],
                 total=day["total"],
-                flag="⚠ Over limit" if day["over_limit"] else "OK",
+                flag=(
+                    "⚠ Over limit" if day["over_limit"]
+                    else "✈ Flight/Hotel" if day["has_flight_or_hotel"]
+                    else "OK"
+                ),
             )
             for day in obj.daily_totals()
         )

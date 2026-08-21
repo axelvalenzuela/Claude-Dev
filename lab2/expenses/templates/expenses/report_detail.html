@@ -132,10 +132,14 @@
                 </thead>
                 <tbody>
                     {% for day in daily_totals %}
-                        <tr class="{% if day.over_limit %}table-danger{% endif %}">
+                        <tr class="{% if day.over_limit %}table-danger{% elif day.has_flight_or_hotel %}table-info{% endif %}">
                             <td>{{ day.date|date:"m/d/Y" }}</td>
                             <td>${{ day.total }}</td>
-                            <td>{% if day.over_limit %}⚠ Over $60/day limit{% else %}OK{% endif %}</td>
+                            <td>
+                                {% if day.over_limit %}⚠ Over $60/day limit
+                                {% elif day.has_flight_or_hotel %}&#9992; Flight/Hotel (not a policy question)
+                                {% else %}OK{% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

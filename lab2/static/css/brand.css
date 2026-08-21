@@ -244,6 +244,16 @@
     color: #b02a37;
     font-weight: 600;
 }
+/* A flight or hotel charge routinely clears $60/day on its own — flagged
+   for visibility, but in neutral blue, not the red used for an actual
+   unexplained overage (see ExpenseReport.daily_totals in models.py). */
+.summary-justified {
+    background: #e8f2fb;
+}
+.summary-justified td {
+    color: var(--brand-blue-dark);
+    font-weight: 600;
+}
 .summary-info-table th {
     width: 160px;
 }
@@ -375,32 +385,6 @@ a.employee-row-action.button-muted:hover {
     font-style: italic;
 }
 
-/* "Reports to review" notification banner on the admin dashboard. */
-.pending-reports-banner {
-    margin: 0 0 16px;
-    padding: 12px 18px;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    background: var(--brand-gray-bg);
-    border: 1px solid var(--brand-gray-border);
-    color: #333;
-}
-.pending-reports-banner.has-pending {
-    background: #e8f2fb;
-    border-color: var(--brand-blue);
-    color: var(--brand-black);
-}
-.pending-reports-banner a {
-    display: inline-block;
-    color: var(--brand-blue-dark);
-    font-weight: 600;
-    transition: transform 0.15s ease;
-}
-.pending-reports-banner a:hover {
-    text-decoration: underline;
-    transform: translateX(3px);
-}
-
 /* "Recent actions" collapses behind <details> — native, no JS — so the
    Dashboard tab reads as a one-screen "what needs attention" overview by
    default, with the day-to-day admin-log noise a click away instead of
@@ -422,72 +406,90 @@ a.employee-row-action.button-muted:hover {
     margin-bottom: 8px;
 }
 
-/* Dashboard tab, "at a glance" row: stat cards + the donut side by side
-   instead of stacked full-width sections — keeps the tab a one-screen
-   overview (notifications + numbers) instead of a long scroll, with the
-   actionable "Pending review expenses" list as the one thing below it. */
-.dashboard-overview {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
-    gap: 12px;
-    margin: 0 0 24px;
+/* Dashboard tab header — a short, personal "what am I looking at" line,
+   in the spirit of an enterprise portal home (e.g. SAP SuccessFactors)
+   rather than a page title. */
+.sap-header {
+    margin: 4px 0 20px;
 }
-.dashboard-stats {
-    flex: 2 1 320px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
+.sap-greeting {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--brand-black);
 }
-.stat-card {
-    flex: 1 1 120px;
-    padding: 14px 16px;
+.sap-subtitle {
+    color: #666;
+    font-size: 0.88rem;
+}
+
+/* KPI tile grid — the whole "at a glance" surface of the Dashboard tab:
+   pending/approved/rejected counts and the approval-rate donut as four
+   equally-weighted, generously-sized tiles instead of a cramped strip of
+   small cards plus a separate boxed donut. Each tile is itself the link
+   to that filtered list — no separate banner repeating the same number. */
+.kpi-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 0 0 28px;
+}
+.kpi-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 24px 26px;
     background: var(--brand-white);
     border: 1px solid var(--brand-gray-border);
-    border-top: 3px solid var(--brand-blue);
-    border-radius: 6px;
-    transition: box-shadow 0.18s ease, transform 0.15s ease;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: box-shadow 0.18s ease, transform 0.15s ease, border-color 0.18s ease;
 }
-.stat-card:hover {
-    box-shadow: 0 4px 14px rgba(0, 120, 212, 0.15);
-    transform: translateY(-2px);
+.kpi-tile:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+    border-color: var(--brand-blue);
 }
-.stat-card-pending {
-    background: #e8f2fb;
+.kpi-tile-icon {
+    font-size: 1.4rem;
 }
-.stat-card .stat-value {
-    font-size: 1.6rem;
+.kpi-tile-value {
+    font-size: 2.4rem;
     font-weight: 800;
-    color: var(--brand-blue-dark);
+    color: var(--brand-black);
+    line-height: 1;
 }
-.stat-card .stat-label {
-    font-size: 0.78rem;
-    color: #555;
+.kpi-tile-label {
+    font-size: 0.8rem;
+    color: #666;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+.kpi-tile-alert {
+    background: #fff6e8;
+    border-color: #e2960f;
+}
+.kpi-tile-alert .kpi-tile-value {
+    color: #b8730a;
+}
+.kpi-tile-donut {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
 }
 
 /* Approved-vs-rejected donut chart on the admin dashboard — pure CSS
    (conic-gradient), no chart library/JS dependency. */
-.approval-donut-wrap {
-    flex: 1 1 260px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 16px;
-    background: var(--brand-gray-bg);
-    border: 1px solid var(--brand-gray-border);
-    border-radius: 6px;
-}
 .approval-donut {
-    width: 120px;
-    height: 120px;
+    width: 76px;
+    height: 76px;
     border-radius: 50%;
     flex-shrink: 0;
     transition: transform 0.2s ease;
 }
-.approval-donut:hover {
-    transform: scale(1.04);
+.kpi-tile:hover .approval-donut {
+    transform: scale(1.06);
 }
 .approval-donut::after {
     content: "";
@@ -500,17 +502,6 @@ a.employee-row-action.button-muted:hover {
     background: var(--body-bg, #fff);
     border-radius: 50%;
 }
-.approval-donut-legend .legend-approved::before,
-.approval-donut-legend .legend-rejected::before {
-    content: "";
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    margin-right: 6px;
-}
-.approval-donut-legend .legend-approved::before { background: #2e7d32; }
-.approval-donut-legend .legend-rejected::before { background: var(--brand-red); }
 
 .admin-login-title {
     font-weight: 800;

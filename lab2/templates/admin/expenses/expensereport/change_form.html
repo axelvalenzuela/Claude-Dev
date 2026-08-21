@@ -91,10 +91,14 @@
             <thead><tr><th>Date</th><th>Daily total</th><th>Over limit?</th></tr></thead>
             <tbody>
                 {% for day in original.daily_totals %}
-                    <tr class="{% if day.over_limit %}summary-over-limit{% endif %}">
+                    <tr class="{% if day.over_limit %}summary-over-limit{% elif day.has_flight_or_hotel %}summary-justified{% endif %}">
                         <td>{{ day.date }}</td>
                         <td>${{ day.total }}</td>
-                        <td>{% if day.over_limit %}Yes{% else %}No{% endif %}</td>
+                        <td>
+                            {% if day.over_limit %}Yes
+                            {% elif day.has_flight_or_hotel %}Flight/Hotel
+                            {% else %}No{% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

@@ -123,22 +123,51 @@ class ExpenseReportRulesTests(TestCase):
 
     def test_daily_totals_flags_days_over_limit(self):
         day = timezone.now().date()
-        self._add_document("40.00", date=day)
-        self._add_document("30.00", date=day)  # same day, total 70 > 60
+        # Taxi, not flight/hotel — a genuinely unexplained overage.
+        self._add_document("40.00", doc_type=TravelDocument.DocType.TAXI, date=day)
+        self._add_document("30.00", doc_type=TravelDocument.DocType.TAXI, date=day)  # same day, total 70 > 60
 
         totals = self.report.daily_totals()
 
         self.assertEqual(len(totals), 1)
         self.assertEqual(totals[0]["total"], Decimal("70.00"))
         self.assertTrue(totals[0]["over_limit"])
+        self.assertFalse(totals[0]["has_flight_or_hotel"])
         self.assertTrue(self.report.has_policy_violations)
 
     def test_daily_totals_within_limit_not_flagged(self):
         day = timezone.now().date()
-        self._add_document("30.00", date=day)
+        self._add_document("30.00", doc_type=TravelDocument.DocType.TAXI, date=day)
 
         self.assertFalse(self.report.has_policy_violations)
         self.assertEqual(DAILY_LIMIT_USD, Decimal("60.00"))
+
+    def test_daily_totals_does_not_flag_flight_or_hotel_days(self):
+        # A flight or a hotel night routinely clears $60/day on its own —
+        # that's expected, not a policy violation to flag red.
+        day = timezone.now().date()
+        self._add_document("500.00", doc_type=TravelDocument.DocType.FLIGHT, date=day)
+
+        totals = self.report.daily_totals()
+
+        self.assertEqual(totals[0]["total"], Decimal("500.00"))
+        self.assertTrue(totals[0]["has_flight_or_hotel"])
+        self.assertFalse(totals[0]["over_limit"])
+        self.assertFalse(self.report.has_policy_violations)
+
+    def test_daily_totals_still_flags_non_flight_hotel_overage_same_day_as_flight(self):
+        # A flight-or-hotel day is exempt as a whole (the point is "this
+        # kind of day is naturally expensive"), not just the flight/hotel
+        # line item itself.
+        day = timezone.now().date()
+        self._add_document("500.00", doc_type=TravelDocument.DocType.FLIGHT, date=day)
+        self._add_document("80.00", doc_type=TravelDocument.DocType.MEAL, date=day)
+
+        totals = self.report.daily_totals()
+
+        self.assertEqual(totals[0]["total"], Decimal("580.00"))
+        self.assertTrue(totals[0]["has_flight_or_hotel"])
+        self.assertFalse(totals[0]["over_limit"])
 
     def test_trip_start_date_prefers_flight_document(self):
         self._add_document(doc_type=TravelDocument.DocType.HOTEL, date=timezone.now().date())

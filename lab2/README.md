@@ -174,12 +174,36 @@ que realmente atiende peticiones). Para desactivarlo, pon
 
 ### 3. Política de $60/día (`ExpenseReport.daily_totals()`)
 - Agrupa los documentos por `document_date` y suma el gasto de cada día.
-- Cualquier día con total > **$60 USD** se marca `over_limit=True` —
-  visible para el empleado (detalle del reporte), para el admin (lista +
-  detalle, con ⚠) y en el Excel exportado (fila resaltada en rojo).
+- **Excepción de vuelos/hoteles**: un día con un documento tipo `FLIGHT` u
+  `HOTEL` casi siempre va a superar los $60 por sí solo — eso no es una
+  falta a la política, es lo esperado. `daily_totals()` marca esos días con
+  `has_flight_or_hotel=True` y **no** los marca como `over_limit` aunque el
+  total sea mucho mayor a $60; un día sin vuelo/hotel que de todos modos
+  supera los $60 (p. ej. varios taxis o comidas) sí se marca `over_limit`
+  normalmente. La distinción se calcula **una sola vez, en este método** —
+  ni el Excel, ni el Word, ni el admin, ni el portal del empleado
+  reimplementan la regla, todos leen el mismo `over_limit`/
+  `has_flight_or_hotel` que ya viene calculado (ver "Centralización de
+  políticas" más abajo).
+- Cualquier día realmente fuera de política se marca `over_limit=True` —
+  rojo para el empleado (detalle del reporte), para el admin (lista +
+  detalle, con ⚠) y en el Excel exportado (fila resaltada en rojo). Un día
+  con vuelo/hotel se marca en **azul** (informativo, no alerta) con la
+  nota "Flight/Hotel" en vez de "Yes"/rojo.
 - `ExpenseReport.has_policy_violations` resume si el reporte completo tiene
-  algún día fuera de política — es la señal de "posible falta a las
-  políticas de la empresa" que pediste.
+  algún día *realmente* fuera de política (excluyendo los días de vuelo/
+  hotel) — es la señal de "posible falta a las políticas de la empresa"
+  que pediste.
+
+**Centralización de políticas**: la regla completa (límite de $60,
+excepción de vuelo/hotel) vive en un solo lugar —
+`ExpenseReport.daily_totals()` (`expenses/models.py`), respaldada por
+`DAILY_LIMIT_USD` en `expenses/policies.py`. Cada vista (Excel, Word,
+admin cambios de formulario, portal del empleado) solo *muestra* el
+resultado (color/texto), nunca vuelve a calcular la regla — así que
+cambiar la política (el monto, o qué tipos quedan exentos) siempre es un
+cambio en un solo archivo, y las cuatro superficies quedan sincronizadas
+automáticamente.
 
 ### 4. Fecha límite de envío (fecha de vuelo + 30 días)
 - `ExpenseReport.trip_start_date`: la fecha del documento tipo **FLIGHT**
@@ -626,10 +650,10 @@ cd lab2
 python manage.py test
 ```
 
-118 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+120 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
-de $60/día, análisis de PDF (monto y tipo detectados, y el endpoint de
+de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de
 preview en vivo), creación de reportes con adjuntos múltiples, número de
 empleado (generación y unicidad), generación del Excel y del Word (incluida
 la miniatura embebida de fotos), `finalize_approval` (exports guardados con

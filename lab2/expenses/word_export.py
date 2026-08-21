@@ -121,4 +121,9 @@ def _add_daily_breakdown(document: Document, report) -> None:
         row = table.add_row().cells
         row[0].text = day["date"].strftime("%Y-%m-%d")
         row[1].text = f"${day['total']:.2f}"
-        row[2].text = "Yes" if day["over_limit"] else "No"
+        if day["over_limit"]:
+            row[2].text = "Yes"
+        elif day["has_flight_or_hotel"]:
+            row[2].text = "Flight/Hotel"
+        else:
+            row[2].text = "No"

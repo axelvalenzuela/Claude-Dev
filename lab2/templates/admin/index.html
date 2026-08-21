@@ -23,44 +23,35 @@
 
     <div class="admin-tab-panel" data-panel="dashboard">
         {% if pending_reports_count is not None %}
-            <div class="pending-reports-banner {% if pending_reports_count > 0 %}has-pending{% endif %}">
-                {% if pending_reports_count > 0 %}
-                    <strong>&#128276; {{ pending_reports_count }}</strong>
-                    pending review expense{{ pending_reports_count|pluralize }}
-                    {% if pending_reports_scoped_to_department %}
-                        in <strong>{{ pending_reports_scoped_to_department }}</strong>
-                    {% endif %}
-                    —
-                    <a href="{% url 'admin:expenses_expensereport_changelist' %}?status__exact=submitted">review now &rarr;</a>
-                {% else %}
-                    You're all caught up — no pending review expenses right now.
-                {% endif %}
+            <div class="sap-header">
+                <div class="sap-greeting">Welcome back, {{ user.get_full_name|default:user.email }}</div>
+                <div class="sap-subtitle">
+                    {% if pending_reports_scoped_to_department %}{{ pending_reports_scoped_to_department }} department{% else %}All departments{% endif %}
+                    &middot; Expense Approvals
+                </div>
             </div>
 
-            <div class="dashboard-overview">
-                <div class="dashboard-stats">
-                    <div class="stat-card stat-card-pending">
-                        <div class="stat-value">{{ pending_reports_count }}</div>
-                        <div class="stat-label">Pending review</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">{{ approval_chart_approved }}</div>
-                        <div class="stat-label">Approved</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">{{ approval_chart_rejected }}</div>
-                        <div class="stat-label">Rejected</div>
-                    </div>
-                </div>
-
+            <div class="kpi-tiles">
+                <a class="kpi-tile {% if pending_reports_count > 0 %}kpi-tile-alert{% endif %}"
+                   href="{% url 'admin:expenses_expensereport_changelist' %}?status__exact=submitted">
+                    <div class="kpi-tile-icon">&#128276;</div>
+                    <div class="kpi-tile-value">{{ pending_reports_count }}</div>
+                    <div class="kpi-tile-label">Pending Review</div>
+                </a>
+                <a class="kpi-tile" href="{% url 'admin:expenses_expensereport_changelist' %}?status__exact=approved">
+                    <div class="kpi-tile-icon">&#9989;</div>
+                    <div class="kpi-tile-value">{{ approval_chart_approved }}</div>
+                    <div class="kpi-tile-label">Approved</div>
+                </a>
+                <a class="kpi-tile" href="{% url 'admin:expenses_expensereport_changelist' %}?status__exact=rejected">
+                    <div class="kpi-tile-icon">&#9940;</div>
+                    <div class="kpi-tile-value">{{ approval_chart_rejected }}</div>
+                    <div class="kpi-tile-label">Rejected</div>
+                </a>
                 {% if approval_chart_total %}
-                    <div class="approval-donut-wrap">
+                    <div class="kpi-tile kpi-tile-donut">
                         <div class="approval-donut" style="background: conic-gradient(#2e7d32 0% {{ approval_chart_approved_pct }}%, #d5001c {{ approval_chart_approved_pct }}% 100%);"></div>
-                        <div class="approval-donut-legend">
-                            <div><strong>Approval history</strong></div>
-                            <div class="legend-approved">{{ approval_chart_approved }} approved ({{ approval_chart_approved_pct }}%)</div>
-                            <div class="legend-rejected">{{ approval_chart_rejected }} rejected ({{ approval_chart_rejected_pct }}%)</div>
-                        </div>
+                        <div class="kpi-tile-label">{{ approval_chart_approved_pct }}% Approval Rate</div>
                     </div>
                 {% endif %}
             </div>

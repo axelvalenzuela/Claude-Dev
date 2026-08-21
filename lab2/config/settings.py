@@ -57,6 +57,11 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.User'
 
+# Lets someone log in with either their email or their company employee
+# number (accounts/backends.py) — a superset of the default ModelBackend,
+# not a replacement of its behavior.
+AUTHENTICATION_BACKENDS = ['accounts.backends.EmployeeNumberOrEmailBackend']
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     # Serves collected static files directly from the app process (no nginx

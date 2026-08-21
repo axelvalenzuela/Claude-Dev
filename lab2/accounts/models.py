@@ -19,6 +19,22 @@ def generate_employee_number() -> str:
             return candidate
 
 
+def find_user_by_login_identifier(identifier):
+    """Resolves whatever was typed into the login field — email (which is
+    always the same as `username`, see SignUpForm.save() and the seed
+    migrations) or company employee number — to the matching account, or
+    None. The one place that knows both are valid ways to identify an
+    account, so accounts/backends.py (authentication), forms.py
+    (LockoutCheckMixin) and signals.py (the failed-login audit trail) all
+    agree on what counts as "the same account" no matter which identifier
+    was actually typed on a given attempt."""
+    if not identifier:
+        return None
+    return User.objects.filter(
+        models.Q(email__iexact=identifier) | models.Q(employee_number=identifier)
+    ).first()
+
+
 class User(AbstractUser):
     """App user. username = email; adds the employee's department, company
     employee number, and (for admin accounts only) the department they

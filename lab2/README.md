@@ -44,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **136 tests**.
+- Test framework de Django (basado en `unittest`): **147 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -81,23 +81,70 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 
 ### Cuentas admin (sembradas automáticamente)
 
-Tres cuentas con acceso a `/admin/`, cada una representando un rol distinto
-del organigrama:
+Cinco cuentas con acceso a `/admin/`, cada una representando un rol
+distinto del organigrama:
 
 | Rol | Correo | Password | Alcance |
 |---|---|---|---|
 | Admin general (RH) | `iris.cortez@mhp.com` | `Iris#2026Local` | **Iris Cortez** — ve y aprueba reportes de **todos** los departamentos (`is_superuser`). Es la aprobadora final por defecto. |
+| Admin general (RH) | `karen.plascencia@mhp.com` | *(ver nota abajo — password aleatorio, solo en tu `.env` local)* | **Karen Plascencia** — mismo alcance que Iris Cortez (`is_superuser`), segunda admin general. |
 | Admin de departamento (ICS) | `adrian.heymes@mhp.com` | `Adrian#2026Local` | **Adrian Heymes** — ve y aprueba **solo** reportes de empleados con `department="ICS"`. |
+| Admin general | `axel.valenzuela@mhp.com` | *(ver nota abajo — no committeado)* | **Axel Valenzuela**, identidad de dominio MHP — mismo alcance que Iris/Karen (`is_superuser`). |
 | Bootstrap (dev) | `axel.valenzuela@uabc.edu.mx` | `Admin#2026Local` | Cuenta genérica de arranque local, configurable vía `ADMIN_SEED_*`; independiente del organigrama. |
 
 Un empleado de ICS (p. ej. tú, registrado con `department="ICS"`) solo
-aparece en la bandeja de aprobación de **Adrian Heymes**; **Iris Cortez**
-ve ese mismo reporte y el de cualquier otro departamento, porque es la
-admin general. Ver la sección de "Roles de administrador" más abajo.
+aparece en la bandeja de aprobación de **Adrian Heymes**; cualquiera de
+las admin generales (**Iris Cortez**, **Karen Plascencia**, **Axel
+Valenzuela**) ve ese mismo reporte y el de cualquier otro departamento.
+Ver la sección de "Roles de administrador" más abajo.
 
 > Contraseñas de desarrollo local únicamente. Cámbialas editando `.env` (o
 > las variables `HR_ADMIN_*` / `ICS_ADMIN_*` / `ADMIN_SEED_*` antes del
 > primer `migrate`) si vas a correr esto fuera de tu máquina.
+>
+> **`axel.valenzuela@mhp.com` y `karen.plascencia@mhp.com` son la
+> excepción**: a diferencia de las demás cuentas de esta tabla, sus
+> passwords reales **no** están hardcodeados como default en la migración
+> ni en este README — viven solo en tu `.env` local (gitignored,
+> `AXEL_MHP_ADMIN_PASSWORD` / `KAREN_ADMIN_PASSWORD`), precisamente porque
+> uno de los dos es un password personal real que no debe quedar en el
+> historial de git. El default committeado en la migración
+> (`ChangeMe#2026Local`) solo aplica si tu `.env` no define esa variable.
+>
+> **Login por número de empleado**: cualquier cuenta (admin o empleado)
+> también puede iniciar sesión escribiendo su **número de empleado** en
+> vez del correo, tanto en `/accounts/login/` como en `/admin/login/` —
+> ver "Login con email o número de empleado" más abajo.
+
+### Login con email o número de empleado
+
+El campo de login (empleado y admin, mismo formulario base) acepta **el
+correo o el número de empleado** — es común no acordarse de cuál de los
+dos usar, y ambos ya identifican una sola cuenta de forma única, así que
+no tenía sentido forzar un solo campo.
+
+- `accounts/backends.py:EmployeeNumberOrEmailBackend` reemplaza el
+  `ModelBackend` por default de Django en `AUTHENTICATION_BACKENDS`
+  (`config/settings.py`): primero intenta resolver lo que se escribió como
+  email (comportamiento normal, sin cambios), y si no encuentra nada,
+  reintenta como número de empleado, antes de verificar la contraseña.
+- `accounts/models.py:find_user_by_login_identifier()` es la única función
+  que sabe que ambos identificadores son válidos — la usan tanto el
+  backend de autenticación como el chequeo de bloqueo por intentos
+  fallidos (`LockoutCheckMixin.clean()`) y la bitácora de intentos
+  fallidos (`accounts/signals.py:record_failed_login`), para que los tres
+  se pongan de acuerdo en qué cuenta es "la misma cuenta" sin importar cuál
+  identificador se haya escrito en un intento en particular.
+- Esto importa para el bloqueo de cuenta (3 intentos fallidos seguidos, ver
+  más abajo): sin esta normalización, fallar 2 veces con el correo y una
+  vez con el número de empleado se habría repartido en dos contadores
+  separados de "menos de 3", nunca activando el bloqueo — con la
+  normalización, las tres fallas cuentan para la misma cuenta sin importar
+  qué se haya escrito cada vez.
+- Un login **exitoso** siempre queda registrado en `LoginEvent` con el
+  correo real de la cuenta (sin cambios en esa parte) — solo el registro de
+  intentos **fallidos** necesitaba la normalización, porque antes se
+  guardaba literalmente lo que la persona escribió.
 
 ### El servidor local se apaga solo a las 12 horas
 
@@ -309,9 +356,10 @@ todas las superficies quedan sincronizadas automáticamente.
   `templates/admin/index.html`, así que usa exactamente la misma lógica de
   alcance que `ExpenseReportAdmin.get_queryset` — nunca pueden quedar
   desincronizados.
-- **Organigrama sembrado** (`accounts/migrations/0007_seed_org_admins.py`):
-  Iris Cortez (RH, general) y Adrian Heymes (ICS) — ver la tabla de
-  credenciales más arriba.
+- **Organigrama sembrado** (`accounts/migrations/0007_seed_org_admins.py`,
+  `0008_seed_axel_mhp_admin.py`, `0009_seed_karen_admin.py`): Iris Cortez
+  (RH, general), Adrian Heymes (ICS), Axel Valenzuela (identidad MHP, RH) y
+  Karen Plascencia (RH) — ver la tabla de credenciales más arriba.
 - **Badge "signed in as ..."**: hasta ahora la única forma de notar la
   diferencia entre un admin de RH y uno de departamento era indirecta (qué
   reportes le aparecen en la cola). Se agregó un badge junto al logo, visible
@@ -462,6 +510,10 @@ conservan hasta entonces:
   (`accounts/forms.py:LockoutCheckMixin`, usado por `LoginForm` y por
   `AdminLoginForm` — este último conectado a Django Admin vía
   `admin.site.login_form` en `accounts/apps.py`).
+- El conteo de 3 intentos es **el mismo sin importar si se escribió el
+  correo o el número de empleado** en cada intento — ver "Login con email o
+  número de empleado" más arriba para por qué eso necesitó normalizar el
+  identificador antes de contar, no solo antes de autenticar.
 - **Reset de contraseña real**: se agregaron las vistas de Django
   (`password_reset`, `password_reset_confirm`, etc.) con plantillas de
   marca; en local, `EMAIL_BACKEND` está configurado a la consola (el
@@ -662,7 +714,8 @@ lab2/
   docs/ARCHITECTURE.md           # cómo está armado el panel de admin: tabs, context processors, patrones
   config/                       # settings (django-environ, AUTO_SHUTDOWN_HOURS, branding, email/lockout), urls, wsgi/asgi
   accounts/
-    models.py                    # User (+ employee_number, supervised_department), LoginEvent
+    models.py                    # User (+ employee_number, supervised_department), LoginEvent, find_user_by_login_identifier()
+    backends.py                    # EmployeeNumberOrEmailBackend — login con email o número de empleado
     signals.py                    # graba LoginEvent en cada intento de login
     security.py                    # is_account_locked() — bloqueo tras 3 fallos
     context_processors.py          # notificaciones (pendientes, aprobado/rechazado) + donut chart
@@ -673,8 +726,11 @@ lab2/
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
     migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
+    migrations/0008_seed_axel_mhp_admin.py  # Axel Valenzuela, identidad de dominio MHP (RH)
+    migrations/0009_seed_karen_admin.py     # Karen Plascencia (RH)
     tests/                          # un archivo por concepto: signup, security, org_admin_seed,
-                                     # department_scoping, notifications, approval_chart, server_lifecycle...
+                                     # department_scoping, notifications, approval_chart, server_lifecycle,
+                                     # employee_number_login...
   expenses/
     models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog
     policies.py                 # DAILY_LIMIT_USD, USD_MXN_RATE, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
@@ -711,7 +767,7 @@ cd lab2
 python manage.py test
 ```
 
-136 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+147 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de
@@ -729,9 +785,12 @@ donut chart de aprobación, el bloqueo de cuenta tras 3 intentos fallidos
 (empleado y admin) más el flujo de reset que lo levanta, la lógica de
 apagado automático del servidor a las 12h, el flujo de aprobación/rechazo
 a través del Django Admin, la marca de días fuera de política directamente
-sobre la tabla de gastos del Word (sin la tabla aparte que tenía antes), y
-la generación del `.docx` de historial (`HistoryExporter`/`history_export.py`)
-con el orden cronológico correcto y las notas de rechazo incluidas.
+sobre la tabla de gastos del Word (sin la tabla aparte que tenía antes), la
+generación del `.docx` de historial (`HistoryExporter`/`history_export.py`)
+con el orden cronológico correcto y las notas de rechazo incluidas, el
+login con número de empleado (`EmployeeNumberOrEmailBackend`) y que el
+bloqueo por intentos fallidos cuenta igual sin importar qué identificador
+se haya escrito en cada intento.
 
 Lo que estos tests **no** cubren (y por qué): el render visual del front-end
 (nav responsive, estado "active" de los links, el badge de rol admin) — son

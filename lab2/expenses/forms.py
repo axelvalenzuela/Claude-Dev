@@ -23,10 +23,11 @@ class ExpenseReportForm(forms.ModelForm):
 class TravelDocumentForm(forms.ModelForm):
     class Meta:
         model = TravelDocument
-        fields = ["type", "document_date", "amount", "file"]
+        fields = ["type", "document_date", "amount", "currency", "file"]
         widgets = {
             "type": forms.Select(attrs={"class": "form-select"}),
             "document_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
             "amount": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
+            "currency": forms.Select(attrs={"class": "form-select"}),
             "file": forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".pdf,.jpg,.jpeg,.png"}),
         }

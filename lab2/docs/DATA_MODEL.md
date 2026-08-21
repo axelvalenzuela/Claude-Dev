@@ -48,7 +48,8 @@ erDiagram
         string file "stored path while draft/submitted; cleared once approved (see finalize_approval)"
         string original_filename "name as uploaded, shown to users forever (even after file is gone)"
         string type "taxi, meal, flight, hotel, other (user-selected)"
-        decimal amount "user-entered"
+        decimal amount "user-entered, in its original currency"
+        string currency "USD or MXN, user-selected; USD default"
         date document_date "expense date; earliest FLIGHT date = trip_start_date"
         decimal extracted_amount "nullable, from PDF text analysis"
         bool amount_mismatch "extracted_amount vs amount differ by > $1"
@@ -111,10 +112,10 @@ audit trail that can be edited after the fact isn't one.
   ["-submitted_at"]` — the approval queue is always most-recently-submitted
   first.
 - **$60/day policy**: `ExpenseReport.daily_totals()` groups `TravelDocument`
-  rows by `document_date` and flags any day whose sum exceeds
-  `DAILY_LIMIT_USD` (`expenses/policies.py`) — **except** a day that
-  includes a `FLIGHT` or `HOTEL` document, which routinely clears $60 on
-  its own and isn't a policy question the way an unusually large day of
+  rows by `document_date` and flags any day whose **USD-converted** sum
+  exceeds `DAILY_LIMIT_USD` (`expenses/policies.py`) — **except** a day
+  that includes a `FLIGHT` or `HOTEL` document, which routinely clears $60
+  on its own and isn't a policy question the way an unusually large day of
   meals/taxis would be (`has_flight_or_hotel=True`, `over_limit=False` for
   that day, even though the total is well over the limit). This is the
   single place the rule is evaluated — nothing is stored redundantly, and
@@ -123,6 +124,15 @@ audit trail that can be edited after the fact isn't one.
   exports all read the same two flags and just choose how to render them
   (red for a real violation, blue/informational for a justified flight or
   hotel day).
+- **Currency conversion**: `TravelDocument.currency` (USD/MXN, USD default)
+  records what currency the receipt was actually issued in;
+  `TravelDocument.amount_usd` converts it using a fixed rate
+  (`USD_MXN_RATE`, `expenses/policies.py`) — comparing a peso amount
+  directly against a dollar limit would produce false "over limit" flags
+  (e.g. $292.98 MXN in taxi receipts is really about $17 USD). `amount`
+  itself is never altered; `daily_totals()` and `ExpenseReport.total_amount`
+  both sum `amount_usd`, not the raw `amount`, so a report mixing
+  currencies still has one coherent total.
 - **PDF pre-check at upload time**: `expenses/pdf_analysis.py` reads the PDF
   text layer for every uploaded PDF and fills `extracted_amount` /
   `detected_type` on the `TravelDocument` row immediately, flagging

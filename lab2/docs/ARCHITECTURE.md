@@ -105,22 +105,36 @@ form itself submits:
 
 `ExpenseReport.daily_totals()` (`expenses/models.py`) is the **only**
 place that decides whether a day is a policy violation — including the
-flight/hotel exemption (a day with a flight or hotel charge routinely
-clears $60 on its own, so it's flagged informationally, never as a
-violation). Every surface that shows this — the employee's report detail
-page, the admin changelist's policy column, the change-form's Summary tab
-and Review tab, the generated Excel, and the generated Word — calls this
-same method and only decides *how* to render the two booleans it returns
-(`over_limit`, `has_flight_or_hotel`), never re-derives them. Concretely,
-that means:
+currency conversion and the flight/hotel exemption (a day with a flight or
+hotel charge routinely clears $60 on its own, so it's flagged
+informationally, never as a violation). Every surface that shows this —
+the employee's report detail page, the admin changelist's policy column,
+the change-form's Summary tab and Review tab, the generated Excel, and the
+generated Word — calls this same method and only decides *how* to render
+what it returns (`over_limit`, `has_flight_or_hotel`, `total_usd`), never
+re-derives any of it. Concretely, that means:
 
 - Changing the daily limit is a one-line edit in `expenses/policies.py`
   (`DAILY_LIMIT_USD`).
 - Changing which document types are exempt is a one-line edit in
   `daily_totals()` (`justified_types`).
-- Neither edit requires touching `excel.py`, `word_export.py`,
+- Changing the MXN/USD exchange rate is a one-line edit in
+  `expenses/policies.py` (`USD_MXN_RATE`) — the only place
+  `TravelDocument.amount_usd` reads it from.
+- None of those edits require touching `excel.py`, `word_export.py`,
   `expenses/admin/reports.py`, or any template — they only read the
   result.
+
+**Why the currency conversion exists at all**: `TravelDocument.amount` is
+whatever the employee typed in, in whatever currency they actually paid
+in (`TravelDocument.currency`, USD or MXN) — comparing that raw figure
+against `DAILY_LIMIT_USD` (always dollars) would be comparing pesos to
+dollars as if they were the same unit. A day of MXN taxi receipts adding
+up to $292.98 pesos is really about $17 USD — well under the policy — but
+would incorrectly flag as a $60+ violation if the peso figure were used
+directly. `amount_usd` is the only value ever compared against the limit
+or summed into a report total (`ExpenseReport.total_amount`); `amount`
+itself is left untouched as the as-submitted record.
 
 This is the same "policy separated from schema/presentation" principle
 `expenses/policies.py`/`validators.py` already established for the other

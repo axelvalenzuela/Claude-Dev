@@ -191,7 +191,7 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
         rows = "".join(
             '<tr style="{bg}">'
             '<td style="padding:2px 8px;">{date:%Y-%m-%d}</td>'
-            '<td style="padding:2px 8px;">${total:.2f}</td>'
+            '<td style="padding:2px 8px;">${total:.2f}{usd_note}</td>'
             '<td style="padding:2px 8px;">{flag}</td>'
             "</tr>".format(
                 bg=(
@@ -201,6 +201,10 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
                 ),
                 date=day["date"],
                 total=day["total"],
+                usd_note=(
+                    f' <span style="color:#777;">(&asymp;${day["total_usd"]:.2f} USD)</span>'
+                    if day["total"] != day["total_usd"] else ""
+                ),
                 flag=(
                     "⚠ Over limit" if day["over_limit"]
                     else "✈ Flight/Hotel" if day["has_flight_or_hotel"]

@@ -49,32 +49,37 @@ def build_report_workbook(report) -> Workbook:
             sheet[f"A{info_rows}"], sheet[f"B{info_rows}"] = "Approval clause", report.approval_clause
 
     header_row = info_rows + 2
-    headers = ["#", "Type", "Date", "File", "Amount"]
+    headers = ["#", "Type", "Date", "File", "Amount", "Currency", "USD equivalent"]
     for col, text in enumerate(headers, start=1):
         cell = sheet.cell(row=header_row, column=col, value=text)
         cell.font = Font(bold=True)
         cell.fill = HEADER_FILL
 
     row = header_row + 1
-    total = 0
+    total_usd = 0
     for index, doc in enumerate(report.documents.order_by("type", "document_date"), start=1):
         sheet.cell(row=row, column=1, value=index)
         sheet.cell(row=row, column=2, value=doc.get_type_display())
         sheet.cell(row=row, column=3, value=doc.document_date.strftime("%Y-%m-%d"))
         sheet.cell(row=row, column=4, value=doc.file_name)
         sheet.cell(row=row, column=5, value=float(doc.amount))
-        total += doc.amount
+        sheet.cell(row=row, column=6, value=doc.currency)
+        sheet.cell(row=row, column=7, value=float(doc.amount_usd))
+        total_usd += doc.amount_usd
         row += 1
 
-    sheet.cell(row=row, column=4, value="Total").font = Font(bold=True)
-    sheet.cell(row=row, column=5, value=float(total)).font = Font(bold=True)
+    sheet.cell(row=row, column=4, value="Total (USD)").font = Font(bold=True)
+    sheet.cell(row=row, column=7, value=float(total_usd)).font = Font(bold=True)
     row += 2
 
-    # Daily breakdown against the $60/day policy.
+    # Daily breakdown against the $60/day policy — always compared in USD
+    # (see ExpenseReport.daily_totals / TravelDocument.amount_usd), since a
+    # peso figure compared directly against a dollar limit would be
+    # meaningless.
     sheet.cell(row=row, column=1, value=f"Daily breakdown (policy limit: ${DAILY_LIMIT_USD}/day)").font = Font(bold=True)
     row += 1
     daily_header_row = row
-    for col, text in enumerate(["Date", "Daily total", "Over policy limit?"], start=1):
+    for col, text in enumerate(["Date", "Daily total", "Daily total (USD)", "Over policy limit?"], start=1):
         cell = sheet.cell(row=daily_header_row, column=col, value=text)
         cell.font = Font(bold=True)
         cell.fill = HEADER_FILL
@@ -82,19 +87,20 @@ def build_report_workbook(report) -> Workbook:
     for day in report.daily_totals():
         sheet.cell(row=row, column=1, value=day["date"].strftime("%Y-%m-%d"))
         sheet.cell(row=row, column=2, value=float(day["total"]))
+        sheet.cell(row=row, column=3, value=float(day["total_usd"]))
         if day["over_limit"]:
             flag_value, fill = "Yes", VIOLATION_FILL
         elif day["has_flight_or_hotel"]:
             flag_value, fill = "Flight/Hotel", JUSTIFIED_FILL
         else:
             flag_value, fill = "No", None
-        sheet.cell(row=row, column=3, value=flag_value)
+        sheet.cell(row=row, column=4, value=flag_value)
         if fill:
-            for col in (1, 2, 3):
+            for col in (1, 2, 3, 4):
                 sheet.cell(row=row, column=col).fill = fill
         row += 1
 
-    for col in "ABCDE":
-        sheet.column_dimensions[col].width = 26
+    for col in "ABCDEFG":
+        sheet.column_dimensions[col].width = 22
 
     return wb

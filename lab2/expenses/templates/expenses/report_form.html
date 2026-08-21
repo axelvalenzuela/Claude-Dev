@@ -72,9 +72,16 @@
                     <label class="form-label small">Expense date</label>
                     <input type="date" name="doc_date" class="form-control form-control-sm doc-date">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label small">Amount</label>
                     <input type="number" step="0.01" min="0.01" name="doc_amount" class="form-control form-control-sm doc-amount">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Currency</label>
+                    <select name="doc_currency" class="form-select form-select-sm doc-currency">
+                        <option value="USD" selected>USD</option>
+                        <option value="MXN">MXN</option>
+                    </select>
                 </div>
             </div>
         </div>

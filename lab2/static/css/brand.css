@@ -159,6 +159,13 @@
     color: #777;
     font-style: italic;
 }
+/* Small muted/secondary text — e.g. the USD-equivalent note next to an
+   MXN amount. Django Admin doesn't load Bootstrap, so this isn't already
+   available the way it is on the employee portal side. */
+.text-muted {
+    color: #777;
+    font-size: 0.85em;
+}
 
 /* Highlighted Excel/Word download panel at the top of a report's change
    form (see templates/admin/expenses/expensereport/change_form.html) —

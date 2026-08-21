@@ -22,7 +22,7 @@ from django.db import models
 from django.utils import timezone
 
 from .pdf_analysis import validate_pdf_page_count
-from .policies import CEO_NAME, CEO_TITLE, DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS
+from .policies import CEO_NAME, CEO_TITLE, DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS, USD_MXN_RATE
 from .validators import validate_file_size
 
 
@@ -82,7 +82,13 @@ class ExpenseReport(models.Model):
 
     @property
     def total_amount(self) -> Decimal:
-        return sum((doc.amount for doc in self.documents.all()), Decimal("0"))
+        """The report's grand total, in USD (TravelDocument.amount_usd) —
+        summing raw `amount` directly would be meaningless once a report
+        mixes currencies (e.g. a peso-denominated hotel bill next to a
+        dollar-denominated flight). For an all-USD report (the common
+        case), amount_usd == amount for every document, so this is
+        unchanged from before."""
+        return sum((doc.amount_usd for doc in self.documents.all()), Decimal("0"))
 
     # --- Travel window / submission deadline --------------------------------
 
@@ -128,22 +134,33 @@ class ExpenseReport(models.Model):
         and isn't a policy question the way an unusually large day of meals
         or taxis would be. Those days are still called out (`has_flight_or_
         hotel`), just not as a policy violation (`over_limit` stays False).
+
+        The policy check always compares against `total_usd` (every
+        document's `amount_usd`), never the raw `total` — a day of MXN
+        receipts can add up to a large peso figure that's actually well
+        under $60 once converted; comparing pesos directly against a
+        dollar limit would flag it for no real reason. `total` is kept
+        alongside for display, since it's what was actually paid.
         """
         totals = defaultdict(lambda: Decimal("0"))
+        totals_usd = defaultdict(lambda: Decimal("0"))
         types_by_date = defaultdict(set)
         for doc in self.documents.all():
             totals[doc.document_date] += doc.amount
+            totals_usd[doc.document_date] += doc.amount_usd
             types_by_date[doc.document_date].add(doc.type)
 
         justified_types = {TravelDocument.DocType.FLIGHT, TravelDocument.DocType.HOTEL}
         result = []
         for date, total in sorted(totals.items()):
             has_flight_or_hotel = bool(types_by_date[date] & justified_types)
+            total_usd = totals_usd[date]
             result.append({
                 "date": date,
                 "total": total,
+                "total_usd": total_usd,
                 "has_flight_or_hotel": has_flight_or_hotel,
-                "over_limit": total > DAILY_LIMIT_USD and not has_flight_or_hotel,
+                "over_limit": total_usd > DAILY_LIMIT_USD and not has_flight_or_hotel,
             })
         return result
 
@@ -205,6 +222,10 @@ class TravelDocument(models.Model):
         HOTEL = "hotel", "Hotel"
         OTHER = "other", "Other"
 
+    class Currency(models.TextChoices):
+        USD = "USD", "USD"
+        MXN = "MXN", "MXN"
+
     expense_report = models.ForeignKey(
         ExpenseReport, on_delete=models.CASCADE, related_name="documents"
     )
@@ -221,6 +242,11 @@ class TravelDocument(models.Model):
     original_filename = models.CharField(max_length=255, blank=True)
     type = models.CharField("Type", max_length=20, choices=DocType.choices)
     amount = models.DecimalField("Amount", max_digits=10, decimal_places=2)
+    # The currency the receipt was actually issued in — kept separate from
+    # `amount` so the original, as-submitted figure is never altered; only
+    # `amount_usd` below does the conversion, and only for the one thing
+    # that needs a single common currency (the $60/day policy check).
+    currency = models.CharField("Currency", max_length=3, choices=Currency.choices, default=Currency.USD)
     document_date = models.DateField("Expense date")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -245,6 +271,26 @@ class TravelDocument(models.Model):
     @property
     def file_name(self) -> str:
         return self.original_filename or (os.path.basename(self.file.name) if self.file else "")
+
+    @property
+    def amount_usd(self) -> Decimal:
+        """`amount` converted to USD (see policies.USD_MXN_RATE) — the only
+        thing that should ever compare this document's cost against
+        DAILY_LIMIT_USD, which is always in USD. A $292.98 MXN day of taxi
+        receipts is really about $17 USD, well under the $60/day policy —
+        comparing the raw peso figure against a dollar limit would flag it
+        for no reason.
+
+        `amount` is coerced explicitly because a freshly-`.create()`d
+        instance (not yet round-tripped through the database) can still
+        hold whatever raw value was assigned — a plain str, if the caller
+        passed one — rather than the Decimal the DecimalField normally
+        returns once loaded from the DB.
+        """
+        amount = self.amount if isinstance(self.amount, Decimal) else Decimal(str(self.amount))
+        if self.currency == self.Currency.MXN:
+            return (amount / USD_MXN_RATE).quantize(Decimal("0.01"))
+        return amount
 
 
 class ExpenseReportAuditLog(models.Model):

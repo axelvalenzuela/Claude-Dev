@@ -31,12 +31,13 @@ class ExpenseReportRulesTests(TestCase):
         )
         self.report = ExpenseReport.objects.create(user=self.employee, title="Trip to Mexico City")
 
-    def _add_document(self, amount="100.00", doc_type=TravelDocument.DocType.FLIGHT, date=None):
+    def _add_document(self, amount="100.00", doc_type=TravelDocument.DocType.FLIGHT, date=None, currency=TravelDocument.Currency.USD):
         return TravelDocument.objects.create(
             expense_report=self.report,
             file=SimpleUploadedFile("receipt.pdf", b"content", content_type="application/pdf"),
             type=doc_type,
             amount=amount,
+            currency=currency,
             document_date=date or timezone.now().date(),
         )
 
@@ -168,6 +169,47 @@ class ExpenseReportRulesTests(TestCase):
         self.assertEqual(totals[0]["total"], Decimal("580.00"))
         self.assertTrue(totals[0]["has_flight_or_hotel"])
         self.assertFalse(totals[0]["over_limit"])
+
+    def test_amount_usd_converts_mxn_using_the_fixed_rate(self):
+        document = self._add_document("170.00", doc_type=TravelDocument.DocType.TAXI, currency=TravelDocument.Currency.MXN)
+        self.assertEqual(document.amount_usd, Decimal("10.00"))  # 170 / 17
+
+    def test_amount_usd_is_unchanged_for_usd_documents(self):
+        document = self._add_document("42.50", doc_type=TravelDocument.DocType.TAXI, currency=TravelDocument.Currency.USD)
+        self.assertEqual(document.amount_usd, Decimal("42.50"))
+
+    def test_daily_totals_compares_mxn_amounts_in_usd_not_raw_pesos(self):
+        # 3 MXN taxi receipts summing to 292.98 pesos (~$17.23 USD) must not
+        # be flagged just because the peso figure looks large next to $60.
+        day = timezone.now().date()
+        self._add_document("66.64", doc_type=TravelDocument.DocType.TAXI, date=day, currency=TravelDocument.Currency.MXN)
+        self._add_document("84.44", doc_type=TravelDocument.DocType.TAXI, date=day, currency=TravelDocument.Currency.MXN)
+        self._add_document("141.90", doc_type=TravelDocument.DocType.TAXI, date=day, currency=TravelDocument.Currency.MXN)
+
+        totals = self.report.daily_totals()
+
+        self.assertEqual(totals[0]["total"], Decimal("292.98"))
+        # Each receipt is converted and rounded individually, then summed
+        # (3.92 + 4.97 + 8.35), not "convert the 292.98 total and round
+        # once" (which would give 17.23) — the standard way to add up
+        # individually-priced line items.
+        self.assertEqual(totals[0]["total_usd"], Decimal("17.24"))
+        self.assertFalse(totals[0]["over_limit"])
+
+    def test_daily_totals_still_flags_a_genuinely_large_mxn_day(self):
+        # A peso day that's still over $60 once converted is flagged normally.
+        day = timezone.now().date()
+        self._add_document("2000.00", doc_type=TravelDocument.DocType.TAXI, date=day, currency=TravelDocument.Currency.MXN)
+
+        totals = self.report.daily_totals()
+
+        self.assertEqual(totals[0]["total_usd"], Decimal("117.65"))  # 2000 / 17
+        self.assertTrue(totals[0]["over_limit"])
+
+    def test_total_amount_sums_in_usd_across_mixed_currencies(self):
+        self._add_document("100.00", doc_type=TravelDocument.DocType.TAXI, currency=TravelDocument.Currency.USD)
+        self._add_document("170.00", doc_type=TravelDocument.DocType.TAXI, currency=TravelDocument.Currency.MXN)
+        self.assertEqual(self.report.total_amount, Decimal("110.00"))  # 100 + (170 / 17)
 
     def test_trip_start_date_prefers_flight_document(self):
         self._add_document(doc_type=TravelDocument.DocType.HOTEL, date=timezone.now().date())

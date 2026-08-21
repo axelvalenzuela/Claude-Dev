@@ -60,7 +60,11 @@ class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):
 
         try:
             document = build_travel_document(
-                file, request.POST.get("type"), request.POST.get("document_date"), request.POST.get("amount")
+                file,
+                request.POST.get("type"),
+                request.POST.get("document_date"),
+                request.POST.get("amount"),
+                currency=request.POST.get("currency", "USD"),
             )
         except DocumentUploadError as exc:
             messages.error(request, f"Couldn't upload the document: {exc.message}")

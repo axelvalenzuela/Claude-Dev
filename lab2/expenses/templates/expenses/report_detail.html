@@ -90,7 +90,7 @@
                                     <span class="text-muted" title="Archived into the Excel/Word exports">{{ doc.file_name }} (archived)</span>
                                 {% endif %}
                             </td>
-                            <td>${{ doc.amount }}</td>
+                            <td>{{ doc.amount }} {{ doc.currency }}{% if doc.currency != "USD" %} <span class="text-muted small">(&asymp;${{ doc.amount_usd }} USD)</span>{% endif %}</td>
                             <td>
                                 {% if doc.amount_mismatch %}
                                     <span class="badge bg-warning text-dark" title="PDF shows ${{ doc.extracted_amount }}">Amount mismatch</span>
@@ -134,7 +134,7 @@
                     {% for day in daily_totals %}
                         <tr class="{% if day.over_limit %}table-danger{% elif day.has_flight_or_hotel %}table-info{% endif %}">
                             <td>{{ day.date|date:"m/d/Y" }}</td>
-                            <td>${{ day.total }}</td>
+                            <td>${{ day.total }}{% if day.total != day.total_usd %} <span class="text-muted small">(&asymp;${{ day.total_usd }} USD)</span>{% endif %}</td>
                             <td>
                                 {% if day.over_limit %}⚠ Over $60/day limit
                                 {% elif day.has_flight_or_hotel %}&#9992; Flight/Hotel (not a policy question)
@@ -155,17 +155,21 @@
             <form action="{% url 'reports:upload_document' report.pk %}" method="post" enctype="multipart/form-data" id="single-upload-form">
                 {% csrf_token %}
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Type</label>
                         {{ upload_form.type }}
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Expense date</label>
                         {{ upload_form.document_date }}
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">Amount</label>
                         {{ upload_form.amount }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Currency</label>
+                        {{ upload_form.currency }}
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">File (PDF, JPG, PNG)</label>

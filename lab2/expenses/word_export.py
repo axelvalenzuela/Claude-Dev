@@ -54,14 +54,14 @@ def build_report_document(report) -> Document:
             row[0].text, row[1].text = "Approval clause", report.approval_clause
 
     document.add_heading("Expenses", level=2)
-    expense_table = document.add_table(rows=1, cols=5)
+    expense_table = document.add_table(rows=1, cols=6)
     expense_table.style = "Light Grid Accent 1"
     header_cells = expense_table.rows[0].cells
-    for cell, text in zip(header_cells, ["#", "Type", "Date", "File", "Amount"]):
+    for cell, text in zip(header_cells, ["#", "Type", "Date", "File", "Amount", "USD equivalent"]):
         cell.text = text
         cell.paragraphs[0].runs[0].bold = True
 
-    total = 0
+    total_usd = 0
     # Alphabetically by expense type, then chronologically within each type.
     for index, doc in enumerate(report.documents.order_by("type", "document_date"), start=1):
         row = expense_table.add_row().cells
@@ -69,11 +69,12 @@ def build_report_document(report) -> Document:
         row[1].text = doc.get_type_display()
         row[2].text = doc.document_date.strftime("%Y-%m-%d")
         row[3].text = doc.file_name
-        row[4].text = f"${doc.amount:.2f}"
-        total += doc.amount
+        row[4].text = f"{doc.amount:.2f} {doc.currency}"
+        row[5].text = f"${doc.amount_usd:.2f}"
+        total_usd += doc.amount_usd
 
     total_paragraph = document.add_paragraph()
-    total_run = total_paragraph.add_run(f"Total: ${total:.2f}")
+    total_run = total_paragraph.add_run(f"Total (USD): ${total_usd:.2f}")
     total_run.bold = True
     total_run.font.size = Pt(12)
 
@@ -98,7 +99,7 @@ def _add_receipt_captures(document: Document, report) -> None:
     document.add_heading("Receipt captures", level=2)
     for doc in photo_docs:
         caption = document.add_paragraph()
-        caption.add_run(f"{doc.get_type_display()} — {doc.document_date:%Y-%m-%d} — ${doc.amount:.2f}").bold = True
+        caption.add_run(f"{doc.get_type_display()} — {doc.document_date:%Y-%m-%d} — {doc.amount:.2f} {doc.currency}").bold = True
         try:
             doc.file.open("rb")
             document.add_picture(doc.file, width=Inches(3))
@@ -110,10 +111,13 @@ def _add_receipt_captures(document: Document, report) -> None:
 
 
 def _add_daily_breakdown(document: Document, report) -> None:
+    # Always compared in USD (see ExpenseReport.daily_totals /
+    # TravelDocument.amount_usd) — a peso total compared directly against
+    # a dollar limit would be meaningless.
     document.add_heading(f"Daily spend vs. ${DAILY_LIMIT_USD}/day policy", level=2)
-    table = document.add_table(rows=1, cols=3)
+    table = document.add_table(rows=1, cols=4)
     table.style = "Light Grid Accent 1"
-    for cell, text in zip(table.rows[0].cells, ["Date", "Daily total", "Over policy limit?"]):
+    for cell, text in zip(table.rows[0].cells, ["Date", "Daily total", "Daily total (USD)", "Over policy limit?"]):
         cell.text = text
         cell.paragraphs[0].runs[0].bold = True
 
@@ -121,9 +125,10 @@ def _add_daily_breakdown(document: Document, report) -> None:
         row = table.add_row().cells
         row[0].text = day["date"].strftime("%Y-%m-%d")
         row[1].text = f"${day['total']:.2f}"
+        row[2].text = f"${day['total_usd']:.2f}"
         if day["over_limit"]:
-            row[2].text = "Yes"
+            row[3].text = "Yes"
         elif day["has_flight_or_hotel"]:
-            row[2].text = "Flight/Hotel"
+            row[3].text = "Flight/Hotel"
         else:
-            row[2].text = "No"
+            row[3].text = "No"

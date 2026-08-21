@@ -174,6 +174,20 @@ que realmente atiende peticiones). Para desactivarlo, pon
 
 ### 3. Política de $60/día (`ExpenseReport.daily_totals()`)
 - Agrupa los documentos por `document_date` y suma el gasto de cada día.
+- **Conversión de moneda**: `TravelDocument.currency` (USD o MXN, USD por
+  default) registra en qué moneda se emitió el recibo — el empleado la
+  elige al subir el documento. El límite de $60/día siempre está en
+  dólares, así que compararlo contra un monto en pesos sin convertir daría
+  falsos positivos (p. ej. $292.98 MXN en 3 viajes de Uber son solo
+  ~$17 USD, muy por debajo de $60 — comparar los pesos directamente contra
+  $60 los marcaría como violación sin serlo). `TravelDocument.amount_usd`
+  hace la conversión con una tasa fija (`USD_MXN_RATE` en
+  `expenses/policies.py`, 17 pesos por dólar — es una herramienta interna,
+  no un sistema de tesorería con tasa en vivo) y es lo único que se compara
+  contra el límite; `amount` original nunca se altera, se conserva tal
+  cual se capturó. `ExpenseReport.total_amount` también suma en
+  `amount_usd`, no en `amount`, por la misma razón — el total de un reporte
+  que mezcla monedas no tiene sentido si no se convierten primero.
 - **Excepción de vuelos/hoteles**: un día con un documento tipo `FLIGHT` u
   `HOTEL` casi siempre va a superar los $60 por sí solo — eso no es una
   falta a la política, es lo esperado. `daily_totals()` marca esos días con
@@ -196,14 +210,14 @@ que realmente atiende peticiones). Para desactivarlo, pon
   que pediste.
 
 **Centralización de políticas**: la regla completa (límite de $60,
-excepción de vuelo/hotel) vive en un solo lugar —
+conversión de moneda, excepción de vuelo/hotel) vive en un solo lugar —
 `ExpenseReport.daily_totals()` (`expenses/models.py`), respaldada por
-`DAILY_LIMIT_USD` en `expenses/policies.py`. Cada vista (Excel, Word,
-admin cambios de formulario, portal del empleado) solo *muestra* el
-resultado (color/texto), nunca vuelve a calcular la regla — así que
-cambiar la política (el monto, o qué tipos quedan exentos) siempre es un
-cambio en un solo archivo, y las cuatro superficies quedan sincronizadas
-automáticamente.
+`DAILY_LIMIT_USD` y `USD_MXN_RATE` en `expenses/policies.py`. Cada vista
+(Excel, Word, admin, portal del empleado) solo *muestra* el resultado
+(color/texto/el monto ya convertido), nunca vuelve a calcular la regla ni
+la conversión — así que cambiar la política (el monto, la tasa de cambio,
+o qué tipos quedan exentos) siempre es un cambio en un solo archivo, y
+todas las superficies quedan sincronizadas automáticamente.
 
 ### 4. Fecha límite de envío (fecha de vuelo + 30 días)
 - `ExpenseReport.trip_start_date`: la fecha del documento tipo **FLIGHT**
@@ -617,7 +631,7 @@ lab2/
                                      # department_scoping, notifications, approval_chart, server_lifecycle...
   expenses/
     models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog
-    policies.py                 # DAILY_LIMIT_USD, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
+    policies.py                 # DAILY_LIMIT_USD, USD_MXN_RATE, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
     validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
     services.py                  # build_travel_document + finalize_approval (exports y borrado de originales, al aprobar)

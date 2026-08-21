@@ -13,12 +13,19 @@ class TravelDocumentInline(admin.TabularInline):
     fields = (
         "type",
         "document_date",
-        "amount",
+        "amount_display",
         "file_link",
         "verification_display",
         "uploaded_at",
     )
     readonly_fields = fields
+
+    def amount_display(self, obj):
+        if obj.currency == obj.Currency.USD:
+            return f"${obj.amount}"
+        return format_html('{} {} <span style="color:#777;">(&asymp;${} USD)</span>', obj.amount, obj.currency, obj.amount_usd)
+
+    amount_display.short_description = "Amount"
 
     def file_link(self, obj):
         if obj.file:

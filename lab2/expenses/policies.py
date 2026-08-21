@@ -15,6 +15,14 @@ from django.core.exceptions import ValidationError
 # Daily spend over this amount is flagged for review (ExpenseReport.daily_totals()).
 DAILY_LIMIT_USD = Decimal("60.00")
 
+# Fixed conversion rate used to compare an MXN-denominated receipt against
+# DAILY_LIMIT_USD (which is always in USD) — this is an internal tool, not
+# a treasury system, so a single fixed rate is deliberately used instead of
+# a live FX feed; TravelDocument.amount_usd (models.py) is the only place
+# it's applied. Update this constant if the real rate moves meaningfully;
+# nothing else needs to change.
+USD_MXN_RATE = Decimal("17.00")
+
 # Reports must be submitted within this many days of the trip start (flight date).
 SUBMISSION_WINDOW_DAYS = 30
 

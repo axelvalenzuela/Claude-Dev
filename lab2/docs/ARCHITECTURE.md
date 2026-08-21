@@ -20,8 +20,9 @@ parallel framework; it's Django Admin with its rendering reshaped.
 
 ## The Dashboard (`templates/admin/index.html`)
 
-Four tabs, switched with a small vanilla-JS click handler (no framework):
-**Dashboard**, **Employees**, **Reports**, **Users & Groups**.
+Six tabs, switched with a small vanilla-JS click handler (no framework):
+**Dashboard**, **Employees**, **Reports**, **Users & Groups**, **Policies**,
+**Help**.
 
 - **Dashboard**: the "what needs attention right now" screen, styled after
   enterprise portal home pages (SAP SuccessFactors-style KPI tiles) rather
@@ -46,6 +47,12 @@ Four tabs, switched with a small vanilla-JS click handler (no framework):
   wide (`admin.site.enable_nav_sidebar = False` in `accounts/apps.py`):
   it duplicated exactly this, on every single admin page, including while
   reviewing one report.
+- **Policies** / **Help**: static reference content — every business rule
+  in plain language, and an FAQ that tells an admin exactly where to click
+  for common situations. Styled as secondary tabs (lighter, smaller text)
+  since they're reference material, not part of the day-to-day workflow —
+  the point of a help section is that it's there when needed and out of
+  the way otherwise.
 
 All the tab content comes from context processors
 (`accounts/context_processors.py`), each computing its own

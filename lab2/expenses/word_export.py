@@ -3,13 +3,15 @@
 This is the second permanent record generated at approval time, alongside
 the .xlsx from expenses/excel.py — see expenses/services.py:finalize_approval.
 It captures the same structured data as the Excel export, plus an embedded
-thumbnail of every photo receipt (JPG/PNG). PDF receipts are listed by name
-only (rendering a PDF page to an image would need a system-level dependency
-like poppler, which isn't worth adding just for a thumbnail).
+capture of *every* receipt — PDF invoices included, rendered to an image via
+receipt_capture.py (PyMuPDF), not just photo receipts (JPG/PNG) — ordered by
+expense date, so the captures read the same order as the trip happened in.
 
 This function MUST run before the original TravelDocument.file is deleted —
-once that happens there's nothing left to embed a thumbnail from.
+once that happens there's nothing left to capture an image from.
 """
+from io import BytesIO
+
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
@@ -17,8 +19,8 @@ from docx.oxml import OxmlElement
 from docx.shared import Inches, Pt
 
 from .policies import DAILY_LIMIT_USD, USD_MXN_RATE
+from .receipt_capture import render_receipt_thumbnail
 
-IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")
 # Same green the company's real Advance & Expense Report spreadsheet uses
 # to highlight its own totals column.
 USD_SHADE = "C6EFCE"
@@ -103,6 +105,10 @@ def build_report_document(report) -> Document:
         _shade_cell(row[9], USD_SHADE)
         total_usd += doc.amount_usd
 
+    for subtotal in report.totals_by_currency():
+        subtotal_paragraph = document.add_paragraph()
+        subtotal_paragraph.add_run(f"Total ({subtotal['currency']}): {subtotal['total']:.2f}").bold = True
+
     total_paragraph = document.add_paragraph()
     total_run = total_paragraph.add_run(f"Total (USD): ${total_usd:.2f}")
     total_run.bold = True
@@ -115,29 +121,26 @@ def build_report_document(report) -> Document:
 
 
 def _add_receipt_captures(document: Document, report) -> None:
-    """Embeds a thumbnail of every photo receipt still on disk. Called
-    before the originals are deleted — this is the permanent visual record
-    of what the JPG/PNG receipts looked like."""
-    photo_docs = [
-        doc
-        for doc in report.documents.order_by("type", "document_date")
-        if doc.file and doc.file_name.lower().endswith(IMAGE_EXTENSIONS)
-    ]
-    if not photo_docs:
+    """Embeds a visual capture of every receipt still on disk — a PDF
+    invoice's first page rendered to an image, or a photo receipt as-is
+    (see receipt_capture.py) — ordered by expense date, not type, so the
+    captures read in the order the trip actually happened. Called before
+    the originals are deleted — this is the permanent visual record of
+    what every receipt looked like, invoices included, not just photos."""
+    docs_with_files = [doc for doc in report.documents.order_by("document_date") if doc.file]
+    if not docs_with_files:
         return
 
     document.add_heading("Receipt captures", level=2)
-    for doc in photo_docs:
+    for doc in docs_with_files:
         caption = document.add_paragraph()
         caption.add_run(f"{doc.get_type_display()} — {doc.document_date:%Y-%m-%d} — {doc.amount:.2f} {doc.currency}").bold = True
         try:
-            doc.file.open("rb")
-            document.add_picture(doc.file, width=Inches(3))
+            thumbnail = render_receipt_thumbnail(doc.file)
+            document.add_picture(BytesIO(thumbnail), width=Inches(3))
             document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.LEFT
-        except Exception:  # noqa: BLE001 - a bad/unreadable image must never block the export
-            document.add_paragraph("(Could not embed this image.)")
-        finally:
-            doc.file.close()
+        except Exception:  # noqa: BLE001 - a bad/unreadable receipt must never block the export
+            document.add_paragraph("(Could not capture this receipt.)")
 
 
 def _add_daily_breakdown(document: Document, report) -> None:

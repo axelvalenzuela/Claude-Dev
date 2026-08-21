@@ -352,17 +352,23 @@ conservan hasta entonces:
   3. Si algo falla generando los exports, **nada se borra** — toda la
      aprobación se revierte (transacción atómica) y el reporte se queda en
      `submitted`.
-- **Un reporte rechazado no se toca**: no existe flujo de reenvío, así que
-  sus archivos originales se conservan indefinidamente junto con el motivo
-  del rechazo — solo la aprobación dispara el borrado.
+- **Un reporte rechazado no dispara el borrado por aprobación**: no existe
+  flujo de reenvío, así que sus archivos originales no se borran al
+  rechazar — pero sí quedan sujetos a la **política de retención de 90
+  días** igual que cualquier otro documento pendiente (ver más abajo), no
+  se conservan indefinidamente.
 - El **Word** (`.docx`, editable) incluye lo mismo que el Excel (datos del
   empleado, departamento, supervisor, fechas del viaje, tabla de gastos
   ordenada **alfabéticamente por tipo**, desglose de $60/día) más una
-  sección de **"Receipt captures"**: una miniatura incrustada de cada
-  recibo que sea foto (JPG/PNG) — se embebe *antes* de borrar el original,
-  así que es el respaldo visual permanente de esas fotos. Los PDF solo se
-  listan por nombre (renderizar una página de PDF a imagen necesitaría una
-  dependencia de sistema tipo poppler, no se agregó solo para esto).
+  sección de **"Receipt captures"**: una captura de **cada recibo**, no
+  solo fotos — un PDF también se renderiza a imagen (primera página, vía
+  `expenses/receipt_capture.py` con PyMuPDF, que instala como paquete de
+  pip normal, sin dependencia de sistema tipo poppler) — ordenadas por
+  **fecha del gasto**, no por tipo, para que se lean en el orden en que
+  pasó el viaje. Se embeben *antes* de borrar el original, así que es el
+  respaldo visual permanente de cada recibo. El mismo render se usa para
+  la galería "Receipt captures" del tab Summary del admin, para poder
+  verlas sin descargar nada (mientras el original siga en el servidor).
 - Mientras el reporte está en `draft` o `submitted` (pendiente de
   revisión), los links de descarga de **Excel y Word**
   (`ExportExcelView`/`ExportWordView` para el empleado; el campo
@@ -377,6 +383,16 @@ conservan hasta entonces:
   documentos con su estado), que es justo el flujo pedido ("simplemente
   tiene que entrar a gestionar el reporte de ese usuario que ya envió") —
   un archivo aparte solo hubiera duplicado lo mismo dos veces.
+- **Retención de 90 días para lo que nunca se aprueba**: la aprobación ya
+  borra los originales de inmediato, pero un reporte que se queda
+  `submitted` sin que nadie lo revise, o que se rechaza, antes se quedaba
+  con sus archivos originales para siempre. Ahora hay un límite:
+  `expenses/management/commands/cleanup_old_documents.py` (programado por
+  fuera de la app — cron/Task Scheduler, ver `docs/DEPLOYMENT.md`) borra el
+  archivo original de cualquier `TravelDocument` que lleve más de
+  `FILE_RETENTION_DAYS` (90, `expenses/policies.py`) días subido, sin
+  importar el estado del reporte — el reporte y la fila del documento
+  **no** se tocan, solo el archivo, igual que hace la aprobación.
 
 ### 11. Ordenado alfabético (portal + archivos generados)
 - **Dentro de Excel/Word**: la tabla de gastos de un reporte se ordena por

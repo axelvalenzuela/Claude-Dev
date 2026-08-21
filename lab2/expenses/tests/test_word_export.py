@@ -9,6 +9,7 @@ from docx import Document
 
 from accounts.models import User
 from expenses.models import ExpenseReport, TravelDocument
+from expenses.tests.helpers import make_pdf_bytes
 from expenses.word_export import build_report_document
 
 MEDIA_ROOT = tempfile.mkdtemp(prefix="expense_reports_tests_")
@@ -85,6 +86,24 @@ class WordExportTests(TestCase):
         document = build_report_document(self.report)
         # python-docx exposes embedded images via inline_shapes.
         self.assertGreaterEqual(len(document.inline_shapes), 1)
+
+    def test_embeds_a_capture_for_pdf_receipts_too(self):
+        # Not just photos — a real PDF invoice must also get a rendered
+        # page image, not just be listed by name.
+        report = ExpenseReport.objects.create(user=self.employee, title="PDF-only trip")
+        TravelDocument.objects.create(
+            expense_report=report,
+            file=SimpleUploadedFile("invoice.pdf", make_pdf_bytes("Invoice"), content_type="application/pdf"),
+            type=TravelDocument.DocType.TAXI,
+            amount="50.00",
+            document_date="2026-08-01",
+        )
+
+        document = build_report_document(report)
+
+        self.assertGreaterEqual(len(document.inline_shapes), 1)
+        text = self._all_text(document)
+        self.assertNotIn("Could not capture this receipt", text)
 
     def test_no_documents_still_produces_a_document(self):
         empty_report = ExpenseReport.objects.create(user=self.employee, title="No documents")

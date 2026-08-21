@@ -2,16 +2,16 @@
 admin (department-scoped or HR/general) uses to review and approve/reject
 submitted reports."""
 from django.contrib import admin
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.urls import path
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 
 from ..exporters import excel_exporter, word_exporter
 from ..models import ExpenseReport, ExpenseReportAuditLog, log_action
 from ..naming import export_basename
 from ..policies import DAILY_LIMIT_USD
+from ..receipt_capture import render_receipt_thumbnail
 from ..services import finalize_approval
 from .decorators import staff_permission
 from .forms import ExpenseReportAdminForm
@@ -106,11 +106,28 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.preview_word),
                 name="expenses_expensereport_preview_word",
             ),
+            path(
+                "<int:pk>/documents/<int:doc_id>/preview-capture/",
+                self.admin_site.admin_view(self.preview_receipt_capture),
+                name="expenses_expensereport_preview_capture",
+            ),
         ]
         return custom_urls + super().get_urls()
 
     def _get_scoped_report(self, request, pk):
         return get_object_or_404(self.get_queryset(request), pk=pk)
+
+    def preview_receipt_capture(self, request, pk, doc_id):
+        # Same PDF/photo-to-image rendering used to build the Word export's
+        # "Receipt captures" section (receipt_capture.py) — lets an admin
+        # see what a receipt actually looks like right in the browser,
+        # without downloading anything, for as long as the original file
+        # is still on the server (i.e. before the report is approved).
+        report = self._get_scoped_report(request, pk)
+        document = get_object_or_404(report.documents, pk=doc_id)
+        if not document.file:
+            raise Http404
+        return HttpResponse(render_receipt_thumbnail(document.file), content_type="image/png")
 
     def preview_excel(self, request, pk):
         report = self._get_scoped_report(request, pk)
@@ -184,46 +201,23 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
     deadline_flag.short_description = "Deadline"
 
     def daily_breakdown_display(self, obj):
+        # A full day-by-day table here just repeats what the Summary tab's
+        # own daily breakdown already shows in more space — this field is
+        # for a fast "is there anything to flag" read while reviewing, not
+        # a second copy of the same table. Nothing to say unless a day
+        # actually violates the policy.
         if not obj.pk:
             return "—"
-        # Row content is built only from dates/decimals/fixed strings (no
-        # user-controlled text), so it's safe to mark as pre-escaped HTML.
-        rows = "".join(
-            '<tr style="{bg}">'
-            '<td style="padding:2px 8px;">{date:%Y-%m-%d}</td>'
-            '<td style="padding:2px 8px;">${total:.2f}{usd_note}</td>'
-            '<td style="padding:2px 8px;">{flag}</td>'
-            "</tr>".format(
-                bg=(
-                    "background:#f8d7da;" if day["over_limit"]
-                    else "background:#d9e8f5;" if day["has_flight_or_hotel"]
-                    else ""
-                ),
-                date=day["date"],
-                total=day["total"],
-                usd_note=(
-                    f' <span style="color:#777;">(&asymp;${day["total_usd"]:.2f} USD)</span>'
-                    if day["total"] != day["total_usd"] else ""
-                ),
-                flag=(
-                    "⚠ Over limit" if day["over_limit"]
-                    else "✈ Flight/Hotel" if day["has_flight_or_hotel"]
-                    else "OK"
-                ),
-            )
-            for day in obj.daily_totals()
-        )
-        if not rows:
-            return "No documents yet."
+        violations = [day for day in obj.daily_totals() if day["over_limit"]]
+        if not violations:
+            return format_html('<span style="color:#2e7d32;">&#10003; No policy violations</span>')
+        notes = ", ".join(f'{day["date"]:%b %d} (${day["total_usd"]:.2f} USD)' for day in violations)
         return format_html(
-            '<table style="border-collapse:collapse;">'
-            '<tr style="font-weight:bold;"><td style="padding:2px 8px;">Date</td>'
-            '<td style="padding:2px 8px;">Total</td><td style="padding:2px 8px;">$60/day policy</td></tr>'
-            "{}</table>",
-            mark_safe(rows),
+            '<span style="color:#b02a37;font-weight:bold;">&#9888; {} day{} over $60/day: {}</span>',
+            len(violations), "" if len(violations) == 1 else "s", notes,
         )
 
-    daily_breakdown_display.short_description = f"Daily spend (policy: ${DAILY_LIMIT_USD}/day)"
+    daily_breakdown_display.short_description = f"$60/day policy check"
 
     def save_model(self, request, obj, form, change):
         status_changed = change and "status" in form.changed_data

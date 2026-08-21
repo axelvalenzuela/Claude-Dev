@@ -19,6 +19,8 @@
         <button type="button" class="admin-tab-btn" data-tab="employees">Employees</button>
         <button type="button" class="admin-tab-btn" data-tab="reports">Reports</button>
         <button type="button" class="admin-tab-btn" data-tab="accounts">Users &amp; Groups</button>
+        <button type="button" class="admin-tab-btn admin-tab-btn-secondary" data-tab="policies">Policies</button>
+        <button type="button" class="admin-tab-btn admin-tab-btn-secondary" data-tab="help">Help</button>
     </div>
 
     <div class="admin-tab-panel" data-panel="dashboard">
@@ -142,6 +144,86 @@
 
     <div class="admin-tab-panel" data-panel="accounts" hidden>
         {% include "admin/app_list.html" with app_list=app_list|apps_in:"accounts,auth" show_changelinks=True %}
+    </div>
+
+    <div class="admin-tab-panel" data-panel="policies" hidden>
+        <h2 class="dashboard-section-title">Policies</h2>
+        <p class="dashboard-subtitle">Every rule the platform actually enforces, in one place — each one is implemented in exactly one spot in the code, so this list can't drift out of sync with what the app does.</p>
+
+        <div class="policy-card">
+            <h3>$60/day spending limit</h3>
+            <p>Any day whose total (converted to USD) exceeds $60 is flagged for review — <strong>except</strong> a day that includes a Flight or Hotel charge, which routinely clears $60 on its own and isn't a policy question the way an unusual day of meals or taxis would be. That day is still shown, just not as a violation.</p>
+        </div>
+        <div class="policy-card">
+            <h3>Currency (USD / MXN)</h3>
+            <p>Employees pick the currency a receipt was actually issued in. MXN amounts are converted to USD at a fixed rate (17 pesos per dollar) for the $60/day check and every report total — the original peso amount is never altered, only used for comparison. Update the rate in one place (<code>expenses/policies.py:USD_MXN_RATE</code>) if it moves.</p>
+        </div>
+        <div class="policy-card">
+            <h3>30-day submission deadline</h3>
+            <p>A report must be submitted within 30 days of the trip's flight date (or its earliest document date, if there's no flight). Past that, the employee can't submit it — the documents stay on the report as a draft.</p>
+        </div>
+        <div class="policy-card">
+            <h3>One report = one trip (21-day span)</h3>
+            <p>Every document on a report must fall within 21 days of the others. Receipts from two unrelated trips can't be combined into one report.</p>
+        </div>
+        <div class="policy-card">
+            <h3>4-page PDF limit</h3>
+            <p>An uploaded PDF receipt can't exceed 4 pages. The amount/type auto-detection only searches the first 2 pages.</p>
+        </div>
+        <div class="policy-card">
+            <h3>CEO approval clause</h3>
+            <p>An admin can't approve a report without explicitly checking the box confirming the approval is issued under the CEO's delegated authority (Steffan Widmer). Rejecting doesn't require this, but does require a note explaining why.</p>
+        </div>
+        <div class="policy-card">
+            <h3>File retention</h3>
+            <p>Original receipt files (PDFs/photos) are deleted once a report is <strong>approved</strong> — the generated Excel and Word become the permanent record instead (with a receipt capture image embedded for every document, not just photos). A report that's never approved (still pending, or rejected) keeps its originals until they're 90 days old, at which point a scheduled cleanup job removes them automatically (the report and its data stay — only the file goes). See <code>docs/DEPLOYMENT.md</code> for how that job is scheduled.</p>
+        </div>
+        <div class="policy-card">
+            <h3>Department-scoped approval</h3>
+            <p>An HR/general admin sees and approves every department's reports. A department admin only sees and approves their own department's — never another's, even by guessing a report's URL directly.</p>
+        </div>
+        <div class="policy-card">
+            <h3>Account lockout</h3>
+            <p>3 consecutive failed login attempts on an email locks that account out, even with the correct password afterward. A password reset lifts the lockout.</p>
+        </div>
+    </div>
+
+    <div class="admin-tab-panel" data-panel="help" hidden>
+        <h2 class="dashboard-section-title">Help &amp; FAQ</h2>
+        <p class="dashboard-subtitle">Common questions while reviewing reports — what to do, and exactly where to click.</p>
+
+        <div class="faq-item">
+            <div class="faq-question">A report shows a red "$60/day" flag, but it's a flight or hotel day — is that a problem?</div>
+            <div class="faq-answer">No action needed. Flight/hotel days are shown in blue as informational, never as a violation — only a genuinely unexplained day (no flight/hotel, still over $60) shows red. See the Policies tab.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">Where do I download the final Excel/Word for an approved report?</div>
+            <div class="faq-answer">Open the report → <strong>Summary</strong> tab (the first one) → the green/gray box at the top has the download buttons. Before approval, the same box lets you preview a live version instead.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">How do I approve or reject a report?</div>
+            <div class="faq-answer">Open the report → <strong>Review</strong> tab → set Status, add a note (required to reject), check the CEO clause box (required to approve) → Save.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">A document's file link says "(archived)" — where did it go?</div>
+            <div class="faq-answer">The report was approved, which deletes original files by design (see Policies → File retention). The data is still there; download the Summary tab's Excel/Word for the permanent record, which includes an image capture of every receipt.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">How do I find a specific employee?</div>
+            <div class="faq-answer">Go to the <strong>Employees</strong> tab and type their name or department in the search box — every employee registered on the platform is listed, not just ones with a report.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">I only see some departments' reports, not all of them — is that a bug?</div>
+            <div class="faq-answer">No — that's department-scoped access working as intended (see Policies). Only the HR/general admin account sees every department.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">I'm locked out after failed login attempts — what do I do?</div>
+            <div class="faq-answer">Use "Forgot your password?" on the login page. Completing a password reset lifts the lockout automatically.</div>
+        </div>
+        <div class="faq-item">
+            <div class="faq-question">Where can I see a report's full history — who did what, and when?</div>
+            <div class="faq-answer">Open the report → <strong>History</strong> tab (the last one) — every action (created, documents uploaded, submitted, approved/rejected) with who did it and when.</div>
+        </div>
     </div>
 
 </div>

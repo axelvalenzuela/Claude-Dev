@@ -264,6 +264,111 @@
 .summary-info-table th {
     width: 160px;
 }
+/* Compact $60/day policy flag on the Summary tab — a full day-by-day
+   table here would just repeat the Expenses table above; this is only
+   supposed to answer "is there anything to flag", not restate the data. */
+.summary-policy-flag {
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+.summary-policy-flag-ok {
+    background: #e3f3e5;
+    color: #2e7d32;
+}
+.summary-policy-flag-bad {
+    background: #fde8ea;
+    color: #b02a37;
+}
+.summary-policy-list {
+    margin: 4px 0 16px 24px;
+    color: #b02a37;
+    font-weight: 600;
+}
+/* Receipt captures gallery — the same PDF/photo-to-image renders embedded
+   in the generated Word export, viewable inline before ever downloading
+   it (see ExpenseReportAdmin.preview_receipt_capture). */
+.receipt-capture-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin: 0 0 20px;
+}
+.receipt-capture-card {
+    width: 200px;
+    border: 1px solid var(--brand-gray-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--brand-white);
+}
+.receipt-capture-card img {
+    display: block;
+    width: 100%;
+    height: 220px;
+    object-fit: contain;
+    background: var(--brand-gray-bg);
+}
+.receipt-capture-caption {
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    color: #555;
+}
+
+/* The Policies/Help tabs are reference material, not part of the day-to-day
+   approval workflow — a lighter, secondary tab style keeps them from
+   competing with Dashboard/Employees/Reports for attention. */
+.admin-tab-btn-secondary {
+    color: #999;
+    font-weight: 500;
+}
+.admin-tab-btn-secondary.active {
+    color: var(--brand-blue-dark);
+    font-weight: 600;
+}
+
+.policy-card {
+    padding: 14px 18px;
+    margin: 0 0 12px;
+    background: var(--brand-white);
+    border: 1px solid var(--brand-gray-border);
+    border-left: 3px solid var(--brand-blue);
+    border-radius: 6px;
+}
+.policy-card h3 {
+    margin: 0 0 6px;
+    font-size: 0.95rem;
+    color: var(--brand-black);
+}
+.policy-card p {
+    margin: 0;
+    color: #444;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+.policy-card code {
+    background: var(--brand-gray-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+.faq-item {
+    padding: 14px 18px;
+    margin: 0 0 10px;
+    background: var(--brand-white);
+    border: 1px solid var(--brand-gray-border);
+    border-radius: 6px;
+}
+.faq-question {
+    font-weight: 700;
+    color: var(--brand-black);
+    margin-bottom: 6px;
+}
+.faq-answer {
+    color: #444;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
 /* Expenses table styled after the company's real Advance & Expense Report
    spreadsheet — the "Amount (USD)" column highlighted green the same way
    that sheet highlights its own total column. Shared with the equivalent

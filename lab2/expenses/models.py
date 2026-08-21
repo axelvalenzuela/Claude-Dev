@@ -90,6 +90,17 @@ class ExpenseReport(models.Model):
         unchanged from before."""
         return sum((doc.amount_usd for doc in self.documents.all()), Decimal("0"))
 
+    def totals_by_currency(self):
+        """Subtotal per original currency (e.g. a report's MXN receipts
+        summed separately from its USD ones) — shown alongside
+        `total_amount` (always USD) in the expenses table, since "how much
+        was actually paid in pesos" is a real number someone reviewing the
+        report wants to see, not just the converted figure."""
+        totals = defaultdict(lambda: Decimal("0"))
+        for doc in self.documents.all():
+            totals[doc.currency] += doc.amount
+        return [{"currency": currency, "total": total} for currency, total in sorted(totals.items())]
+
     # --- Travel window / submission deadline --------------------------------
 
     @property

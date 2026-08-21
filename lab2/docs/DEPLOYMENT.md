@@ -157,6 +157,37 @@ Si se agrega un reverse proxy, también hay que definir
 `DJANGO_CSRF_TRUSTED_ORIGINS` con la(s) URL(s) pública(s) por las que se
 accede (p. ej. `https://viaticos.intranet.mhp.local`).
 
+## Política de retención de archivos (90 días)
+
+Los archivos originales de un reporte se borran automáticamente al
+aprobarlo (ver README, sección "Excel + Word al aprobar"). Para un reporte
+que nunca se aprueba (se queda pendiente, o se rechaza), el comando
+`cleanup_old_documents` borra el archivo original una vez que lleva más de
+90 días subido (`FILE_RETENTION_DAYS` en `expenses/policies.py`) — el
+registro en la base de datos y el reporte en sí **no** se tocan, solo el
+archivo.
+
+Este comando **no se ejecuta solo** — hay que programarlo:
+
+```bash
+# Dentro del contenedor / entorno con el venv activo:
+python manage.py cleanup_old_documents           # borra
+python manage.py cleanup_old_documents --dry-run # solo muestra qué borraría
+```
+
+- **Linux (cron)**, una vez al día es suficiente:
+  ```
+  0 3 * * * cd /ruta/al/proyecto && /ruta/al/venv/bin/python manage.py cleanup_old_documents >> /var/log/mhp-cleanup.log 2>&1
+  ```
+- **Windows (Task Scheduler)**: crear una tarea que ejecute
+  `python.exe manage.py cleanup_old_documents` con el directorio de trabajo
+  apuntando a `lab2/` y el intérprete del venv del proyecto, programada
+  diaria.
+- **Contenedor Docker**: si se despliega con `docker-compose.yml`, se puede
+  agregar un segundo servicio (o un `cron` dentro de la imagen) que corra
+  `docker compose exec web python manage.py cleanup_old_documents` con la
+  misma cadencia.
+
 ## Pipeline de CI
 
 `.github/workflows/lab2-ci.yml` corre en cada push/PR que toque `lab2/`:

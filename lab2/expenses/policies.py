@@ -35,6 +35,16 @@ MAX_TRIP_SPAN_DAYS = 21
 CEO_NAME = "Steffan Widmer"
 CEO_TITLE = "CEO"
 
+# Original receipt files (still on disk while a report is submitted/
+# pending, or indefinitely for a rejected one — see services.py) are
+# deleted once they're this many days old, regardless of the report's
+# status — see expenses/management/commands/cleanup_old_documents.py. This
+# doesn't touch already-approved reports, which have their originals
+# deleted at approval time anyway (services.finalize_approval), nor the
+# TravelDocument row itself or the generated Excel/Word — only the
+# original file, same as approval already does.
+FILE_RETENTION_DAYS = 90
+
 
 def validate_trip_span(dates):
     """Raises if the given expense dates span more than MAX_TRIP_SPAN_DAYS —

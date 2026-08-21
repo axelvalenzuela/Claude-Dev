@@ -124,6 +124,13 @@
                     </tbody>
                 </table>
             </div>
+            {% if report.totals_by_currency|length > 1 or report.totals_by_currency.0.currency != "USD" %}
+                <div class="px-3 pb-3 text-muted small">
+                    {% for subtotal in report.totals_by_currency %}
+                        Total ({{ subtotal.currency }}): {{ subtotal.total }}{% if not forloop.last %} &middot; {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
         {% endif %}
     </div>
 </div>

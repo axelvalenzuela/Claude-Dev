@@ -95,30 +95,45 @@
                         <td class="expense-report-usd-col">${{ doc.amount_usd }}</td>
                     </tr>
                 {% endfor %}
+                {% for subtotal in original.totals_by_currency %}
+                    <tr class="summary-total-row"><td colspan="7">Total ({{ subtotal.currency }})</td><td>{{ subtotal.total }}</td></tr>
+                {% endfor %}
                 <tr class="summary-total-row"><td colspan="7">Total (USD)</td><td class="expense-report-usd-col">${{ original.total_amount }}</td></tr>
             </tbody>
         </table>
     </div>
 
-    <h2 class="dashboard-section-title">Daily spend vs. $60/day policy</h2>
-    <div class="pending-reports-table-wrap">
-        <table class="pending-reports-table">
-            <thead><tr><th>Date</th><th>Daily total</th><th>Over limit?</th></tr></thead>
-            <tbody>
-                {% for day in original.daily_totals %}
-                    <tr class="{% if day.over_limit %}summary-over-limit{% elif day.has_flight_or_hotel %}summary-justified{% endif %}">
-                        <td>{{ day.date }}</td>
-                        <td>${{ day.total }}{% if day.total != day.total_usd %} <span class="text-muted">(&asymp;${{ day.total_usd }} USD)</span>{% endif %}</td>
-                        <td>
-                            {% if day.over_limit %}Yes
-                            {% elif day.has_flight_or_hotel %}Flight/Hotel
-                            {% else %}No{% endif %}
-                        </td>
-                    </tr>
+    <h2 class="dashboard-section-title">Receipt captures</h2>
+    {% with docs_with_files=original.documents.all %}
+        {% if original.excel_snapshot or original.word_snapshot %}
+            <p class="dashboard-empty">Originals were archived once this report was approved — see the captures already embedded in the Word export above.</p>
+        {% else %}
+            <div class="receipt-capture-gallery">
+                {% for doc in docs_with_files %}
+                    {% if doc.file %}
+                        <div class="receipt-capture-card">
+                            <img src="{% url 'admin:expenses_expensereport_preview_capture' original.pk doc.pk %}" alt="{{ doc.get_type_display }} receipt, {{ doc.document_date }}" loading="lazy">
+                            <div class="receipt-capture-caption">{{ doc.get_type_display }} — {{ doc.document_date }} — {{ doc.amount }} {{ doc.currency }}</div>
+                        </div>
+                    {% endif %}
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <h2 class="dashboard-section-title">$60/day policy check</h2>
+    {% if original.has_policy_violations %}
+        <p class="summary-policy-flag summary-policy-flag-bad">&#9888; Flagged day(s) — over $60/day, not explained by a flight or hotel charge:</p>
+        <ul class="summary-policy-list">
+            {% for day in original.daily_totals %}
+                {% if day.over_limit %}
+                    <li>{{ day.date }} — ${{ day.total_usd }} USD</li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="summary-policy-flag summary-policy-flag-ok">&#10003; No policy violations — every day is either under $60/day or explained by a flight/hotel charge.</p>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

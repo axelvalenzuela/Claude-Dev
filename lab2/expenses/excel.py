@@ -84,6 +84,11 @@ def build_report_workbook(report) -> Workbook:
         total_usd += doc.amount_usd
         row += 1
 
+    for subtotal in report.totals_by_currency():
+        sheet.cell(row=row, column=9, value=f"Total ({subtotal['currency']})").font = Font(bold=True)
+        sheet.cell(row=row, column=10, value=float(subtotal["total"]))
+        row += 1
+
     sheet.cell(row=row, column=9, value="Total (USD)").font = Font(bold=True)
     total_cell = sheet.cell(row=row, column=10, value=float(total_usd))
     total_cell.font = Font(bold=True)

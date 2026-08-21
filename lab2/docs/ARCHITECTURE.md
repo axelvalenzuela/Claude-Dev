@@ -113,11 +113,14 @@ form itself submits:
 
 ## Two design patterns applied deliberately
 
-- **Decorator** (`expenses/admin/decorators.py:staff_permission`,
+- **Decorator** (`accounts/decorators.py:staff_permission`,
   `expenses/views/decorators.py:draft_only`): wraps cross-cutting checks
   that were previously duplicated verbatim across multiple methods/views.
-  See the "Decorator pattern" section of the main `README.md` for the
-  before/after.
+  `staff_permission` lives in `accounts/` (not `expenses/admin/`, where it
+  started) because `accounts.admin.UserAdmin`/`GroupAdmin` use it too, now
+  that Users & Groups access is is_staff-based rather than
+  superuser-only — see the "Decorator pattern" section of the main
+  `README.md` for the before/after.
 - **Formal exporter interface** (`expenses/exporters.py:ReportExporter`,
   an `ABC`): `ExcelExporter`/`WordExporter`/`HistoryExporter` are the only
   three places that know how to turn a report into bytes; `finalize_approval`

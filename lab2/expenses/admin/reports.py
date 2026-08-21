@@ -7,13 +7,14 @@ from django.shortcuts import get_object_or_404
 from django.urls import path
 from django.utils.html import format_html
 
+from accounts.decorators import staff_permission
+
 from ..exporters import excel_exporter, history_exporter, word_exporter
 from ..models import ExpenseReport, ExpenseReportAuditLog, log_action
 from ..naming import export_basename
 from ..policies import DAILY_LIMIT_USD
 from ..receipt_capture import render_receipt_thumbnail
 from ..services import finalize_approval
-from .decorators import staff_permission
 from .forms import ExpenseReportAdminForm
 from .inlines import AuditLogInline, TravelDocumentInline
 from .mixins import ExpenseReportDisplayMixin
@@ -181,7 +182,8 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
     # system (a department admin has no explicit "view_expensereport"
     # Permission object; is_staff plus the queryset scoping is the whole
     # model). All three checks are identical, so @staff_permission (see
-    # ../decorators.py) writes that once instead of three times.
+    # accounts/decorators.py — shared with UserAdmin/GroupAdmin) writes
+    # that once instead of three times.
     @staff_permission
     def has_module_permission(self, request):
         ...

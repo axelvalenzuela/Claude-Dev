@@ -44,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **147 tests**.
+- Test framework de Django (basado en `unittest`): **158 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -81,15 +81,22 @@ La app queda disponible en `http://127.0.0.1:8080/`:
 
 ### Cuentas admin (sembradas automáticamente)
 
-Cuatro cuentas con acceso a `/admin/`, cada una representando un rol
+Cinco cuentas con acceso a `/admin/`, cada una representando un rol
 distinto del organigrama:
 
 | Rol | Correo | Password | Alcance |
 |---|---|---|---|
 | Admin general (RH) | `iris.cortez@mhp.com` | `Iris#2026Local` | **Iris Cortez** — ve y aprueba reportes de **todos** los departamentos (`is_superuser`). Es la aprobadora final por defecto. |
 | Admin general (RH) | `karen.plascencia@mhp.com` | *(ver nota abajo — password aleatorio, solo en tu `.env` local)* | **Karen Plascencia** — mismo alcance que Iris Cortez (`is_superuser`), segunda admin general. |
+| Admin general (CEO) | `steffan.widmer@mhp.com` | `Steffan#2026Local` | **Steffan Widmer** — el CEO cuya autoridad delegada ya se menciona en la cláusula de aprobación (`expenses/policies.py:CEO_NAME`); mismo alcance que Iris/Karen (`is_superuser`). |
 | Admin de departamento (ICS) | `adrian.heymes@mhp.com` | `Adrian#2026Local` | **Adrian Heymes** — ve y aprueba **solo** reportes de empleados con `department="ICS"`. |
 | Bootstrap (dev) | `axel.valenzuela@uabc.edu.mx` | `Admin#2026Local` | Cuenta genérica de arranque local, configurable vía `ADMIN_SEED_*`; independiente del organigrama. |
+
+**Las cuatro pueden ver y gestionar Users & Groups** (no solo las
+`is_superuser`) — Adrian, como cualquier cuenta `is_staff`, también puede
+abrir una cuenta y marcarle `is_staff`/`is_superuser`/`supervised_department`
+para darle acceso de admin a alguien más. Ver `accounts/admin.py:
+StaffManagedAdminMixin`.
 
 Y una cuenta de **empleado regular, sin acceso a `/admin/`**:
 
@@ -107,8 +114,8 @@ empleado.
 Un empleado de ICS (p. ej. `axel.valenzuela@mhp.com`, con
 `department="ICS"`) solo aparece en la bandeja de aprobación de **Adrian
 Heymes**; cualquiera de las admin generales (**Iris Cortez**, **Karen
-Plascencia**) ve ese mismo reporte y el de cualquier otro departamento.
-Ver la sección de "Roles de administrador" más abajo.
+Plascencia**, **Steffan Widmer**) ve ese mismo reporte y el de cualquier
+otro departamento. Ver la sección de "Roles de administrador" más abajo.
 
 > Contraseñas de desarrollo local únicamente. Cámbialas editando `.env` (o
 > las variables `HR_ADMIN_*` / `ICS_ADMIN_*` / `ADMIN_SEED_*` antes del
@@ -369,8 +376,9 @@ todas las superficies quedan sincronizadas automáticamente.
   alcance que `ExpenseReportAdmin.get_queryset` — nunca pueden quedar
   desincronizados.
 - **Organigrama sembrado** (`accounts/migrations/0007_seed_org_admins.py`,
-  `0009_seed_karen_admin.py`): Iris Cortez (RH, general), Adrian Heymes
-  (ICS) y Karen Plascencia (RH) — ver la tabla de credenciales más arriba.
+  `0009_seed_karen_admin.py`, `0010_seed_steffan_widmer.py`): Iris Cortez
+  (RH, general), Adrian Heymes (ICS), Karen Plascencia (RH) y Steffan
+  Widmer (RH, CEO) — ver la tabla de credenciales más arriba.
   `0008_seed_axel_mhp_employee.py` siembra la identidad MHP de Axel
   Valenzuela como **empleado**, no admin — no forma parte del organigrama.
 - **Badge "signed in as ..."**: hasta ahora la única forma de notar la
@@ -673,10 +681,16 @@ Ya estaba presente de forma implícita en todo lo que provee Django
 revisó el código propio de la app y se aplicó explícitamente donde había
 lógica transversal duplicada, en vez de solo por usarlo:
 
-- **`expenses/admin/decorators.py:staff_permission`** — `ExpenseReportAdmin`
+- **`accounts/decorators.py:staff_permission`** — `ExpenseReportAdmin`
   tenía tres métodos (`has_module_permission`, `has_view_permission`,
   `has_change_permission`) con exactamente el mismo cuerpo de dos líneas.
-  Ahora es un solo decorador aplicado a los tres.
+  Ahora es un solo decorador aplicado a los tres. Vive en `accounts/` (no
+  en `expenses/admin/`, donde empezó) porque `accounts/admin.py` también
+  lo usa ahora: `UserAdmin`/`GroupAdmin` (re-registrado) lo aplican a sus
+  cinco métodos `has_*_permission`, para que Users &amp; Groups deje de
+  ser exclusivo del admin general (`is_superuser`) y cualquier cuenta
+  `is_staff` — Adrian Heymes (admin de departamento) incluido — pueda
+  ver y gestionar cuentas y grupos.
 - **`expenses/views/decorators.py:draft_only`** — `UploadDocumentView` y
   `DeleteDocumentView` repetían el mismo guard ("solo mientras el reporte
   sigue en `draft`") con distinto mensaje. El decorador lo centraliza y de
@@ -729,18 +743,20 @@ lab2/
   accounts/
     models.py                    # User (+ employee_number, supervised_department), LoginEvent, find_user_by_login_identifier()
     backends.py                    # EmployeeNumberOrEmailBackend — login con email o número de empleado
+    decorators.py                  # staff_permission — compartido por accounts/admin.py y expenses/admin/reports.py
     signals.py                    # graba LoginEvent en cada intento de login
     security.py                    # is_account_locked() — bloqueo tras 3 fallos
-    context_processors.py          # notificaciones (pendientes, aprobado/rechazado) + donut chart
+    context_processors.py          # notificaciones (pendientes, aprobado/rechazado), tabla de reportes del dashboard, donut chart
     server_lifecycle.py            # apagado automático del runserver a las 12h
     forms.py                       # LoginForm/AdminLoginForm/reset — LockoutCheckMixin
     views.py                       # SignUpView, PasswordResetConfirmView (CBVs)
-    admin.py                       # UserAdmin, LoginEventAdmin (solo lectura)
+    admin.py                       # UserAdmin, GroupAdmin (re-registrado), LoginEventAdmin (solo lectura) — StaffManagedAdminMixin
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
     migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
     migrations/0008_seed_axel_mhp_employee.py  # Axel Valenzuela, identidad de dominio MHP (empleado, no admin)
     migrations/0009_seed_karen_admin.py     # Karen Plascencia (RH)
+    migrations/0010_seed_steffan_widmer.py  # Steffan Widmer, CEO (RH)
     tests/                          # un archivo por concepto: signup, security, org_admin_seed,
                                      # department_scoping, notifications, approval_chart, server_lifecycle,
                                      # employee_number_login...
@@ -755,7 +771,7 @@ lab2/
     word_export.py                # genera el .docx (con capturas de recibos) al aprobar
     history_export.py             # genera el .docx de historial (auditoría completa) para el botón "Download history"
     views/                       # reports.py, documents.py, exports.py, mixins.py, decorators.py (draft_only) — ver arriba
-    admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py, decorators.py (staff_permission)
+    admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py — staff_permission ahora vive en accounts/decorators.py
     excel.py
     tests/                      # un archivo por vista/servicio probado — ver arriba
   templates/
@@ -780,7 +796,7 @@ cd lab2
 python manage.py test
 ```
 
-147 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+158 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de
@@ -801,9 +817,12 @@ a través del Django Admin, la marca de días fuera de política directamente
 sobre la tabla de gastos del Word (sin la tabla aparte que tenía antes), la
 generación del `.docx` de historial (`HistoryExporter`/`history_export.py`)
 con el orden cronológico correcto y las notas de rechazo incluidas, el
-login con número de empleado (`EmployeeNumberOrEmailBackend`) y que el
+login con número de empleado (`EmployeeNumberOrEmailBackend`), que el
 bloqueo por intentos fallidos cuenta igual sin importar qué identificador
-se haya escrito en cada intento.
+se haya escrito en cada intento, la tabla Pending/Approved del Dashboard
+con su alcance por departamento, y que Users &amp; Groups sea accesible
+para cualquier cuenta `is_staff` (no solo `is_superuser`) incluyendo que
+un admin de departamento pueda otorgarle acceso de admin a alguien más.
 
 Lo que estos tests **no** cubren (y por qué): el render visual del front-end
 (nav responsive, estado "active" de los links, el badge de rol admin) — son

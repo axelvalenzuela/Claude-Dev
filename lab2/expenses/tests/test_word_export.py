@@ -109,3 +109,35 @@ class WordExportTests(TestCase):
         empty_report = ExpenseReport.objects.create(user=self.employee, title="No documents")
         document = build_report_document(empty_report)
         self.assertGreaterEqual(len(document.paragraphs), 1)
+
+    def test_no_separate_daily_breakdown_section(self):
+        # Replaced by marking violation days directly on the Expenses table
+        # (see test_flags_a_policy_violation_day_on_its_expense_row) — a
+        # whole extra table repeating the same dates would just be noise.
+        document = build_report_document(self.report)
+        text = self._all_text(document)
+        self.assertNotIn("Daily spend", text)
+
+    def test_flags_a_policy_violation_day_on_its_expense_row(self):
+        report = ExpenseReport.objects.create(user=self.employee, title="Taxi-heavy day")
+        TravelDocument.objects.create(
+            expense_report=report,
+            file=SimpleUploadedFile("taxi1.jpg", ONE_PIXEL_PNG, content_type="image/jpeg"),
+            type=TravelDocument.DocType.TAXI,
+            amount="40.00",
+            document_date="2026-08-09",
+        )
+        TravelDocument.objects.create(
+            expense_report=report,
+            file=SimpleUploadedFile("taxi2.jpg", ONE_PIXEL_PNG, content_type="image/jpeg"),
+            type=TravelDocument.DocType.TAXI,
+            amount="35.00",
+            document_date="2026-08-09",
+        )
+
+        document = build_report_document(report)
+        text = self._all_text(document)
+
+        self.assertIn("2026-08-09 ⚠", text)
+        self.assertIn("exceed the $60.00/day policy", text)
+        self.assertIn("2026-08-09", text.split("exceed the $60.00/day policy")[1])

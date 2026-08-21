@@ -201,7 +201,12 @@
 }
 /* Django's own "History" object-tool (Django's built-in LogEntry-based
    change log) is redundant with our own Audit Log tab and note-taking, and
-   was rendering as an unstyled black link — dropped rather than themed. */
+   was rendering as an unstyled black link — dropped rather than themed.
+   ExpenseReport's change form is the one exception: its own object-tools
+   template (templates/admin/expenses/expensereport/
+   change_form_object_tools.html) replaces this link entirely with a
+   "Download history" one instead of reusing/unhiding this class, so it's
+   unaffected by the rule below. */
 .historylink {
     display: none;
 }

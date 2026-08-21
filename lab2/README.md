@@ -44,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **114 tests**.
+- Test framework de Django (basado en `unittest`): **136 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -359,8 +359,13 @@ conservan hasta entonces:
   se conservan indefinidamente.
 - El **Word** (`.docx`, editable) incluye lo mismo que el Excel (datos del
   empleado, departamento, supervisor, fechas del viaje, tabla de gastos
-  ordenada **alfabéticamente por tipo**, desglose de $60/día) más una
-  sección de **"Receipt captures"**: una captura de **cada recibo**, no
+  ordenada **alfabéticamente por tipo**), pero sin la tabla aparte de
+  desglose diario que sí tiene el Excel: un día que excede los $60/día se
+  marca directamente en su propia fila de la tabla de gastos (fecha en
+  rojo con ⚠, más una nota corta al final listando esas fechas si aplica)
+  — una segunda tabla completa repitiendo las mismas fechas solo saturaría
+  al lector. Además incluye una sección de **"Receipt captures"**: una
+  captura de **cada recibo**, no
   solo fotos — un PDF también se renderiza a imagen (primera página, vía
   `expenses/receipt_capture.py` con PyMuPDF, que instala como paquete de
   pip normal, sin dependencia de sistema tipo poppler) — ordenadas por
@@ -499,6 +504,12 @@ conservan hasta entonces:
 - Se escribe desde las vistas del empleado y desde el admin
   (`ExpenseReportAdmin.save_model`). Es el histórico por usuario que
   pediste, más allá del último estado guardado en `ExpenseReport`.
+- Descargable directamente desde el panel de un reporte: el botón
+  **"Download history"** (arriba del formulario, donde antes estaba el
+  link "History" de Django) genera un `.docx` con esta bitácora completa
+  — cada cambio de estado, quién lo hizo y su nota, notas de rechazo
+  incluidas — en orden cronológico, hasta el estado actual del reporte
+  (`expenses/history_export.py`, ver [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
 - Ver [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) para el diagrama de
   relaciones completo y el porqué de este diseño.
 
@@ -610,14 +621,19 @@ lógica transversal duplicada, en vez de solo por usarlo:
 ### Interfaz enterprise (Separated Interface / Strategy)
 
 `expenses/exporters.py` define una interfaz formal (`ReportExporter`, una
-`ABC` con `build()` abstracto) para los dos formatos exportables — antes,
+`ABC` con `build()` abstracto) para los formatos exportables — antes,
 `services.py:finalize_approval` y `views/exports.py` repetían, una vez por
 formato, la misma ceremonia de "generar a `BytesIO`, leer los bytes,
 guardar/servir" (4 bloques casi idénticos entre los dos archivos), y el
 content-type de Word estaba además hardcodeado por segunda vez en
-`views/exports.py`. Ahora ambos puntos de uso pasan por `excel_exporter` /
-`word_exporter`; agregar un tercer formato en el futuro (p. ej. PDF) es
-agregar una clase en `exporters.py`, no tocar `services.py` ni las vistas.
+`views/exports.py`. Ahora esos puntos de uso pasan por `excel_exporter` /
+`word_exporter`; agregar un formato adicional es agregar una clase en
+`exporters.py`, no tocar `services.py` ni las vistas — así se agregó
+`HistoryExporter` (`expenses/history_export.py`), el tercer formato: a
+diferencia de los otros dos nunca es un snapshot guardado, siempre se
+genera al vuelo a partir de `report.audit_log` — es lo que descarga el
+botón "Download history" del panel de un reporte (ver
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
 
 Esto formaliza un patrón que la app ya seguía en espíritu — el **Service
 Layer** de Fowler (`expenses/services.py`, lógica de negocio fuera de
@@ -665,9 +681,10 @@ lab2/
     validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
     pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
     services.py                  # build_travel_document + finalize_approval (exports y borrado de originales, al aprobar)
-    exporters.py                  # ReportExporter (interfaz) + ExcelExporter/WordExporter — ver "Interfaz enterprise"
+    exporters.py                  # ReportExporter (interfaz) + ExcelExporter/WordExporter/HistoryExporter — ver "Interfaz enterprise"
     naming.py                     # export_basename() — convención de nombre de RH (empleado, fecha, número, APROBADO)
-    word_export.py                # genera el .docx (con miniaturas de fotos) al aprobar
+    word_export.py                # genera el .docx (con capturas de recibos) al aprobar
+    history_export.py             # genera el .docx de historial (auditoría completa) para el botón "Download history"
     views/                       # reports.py, documents.py, exports.py, mixins.py, decorators.py (draft_only) — ver arriba
     admin/                        # reports.py, approved_history.py, audit_log.py, forms.py, inlines.py, mixins.py, decorators.py (staff_permission)
     excel.py
@@ -694,7 +711,7 @@ cd lab2
 python manage.py test
 ```
 
-120 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+136 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de
@@ -710,8 +727,11 @@ departamento (Iris Cortez/RH ve todo, Adrian Heymes solo ICS, sin fugas por
 URL directa), las notificaciones de pendientes y de aprobado/rechazado, el
 donut chart de aprobación, el bloqueo de cuenta tras 3 intentos fallidos
 (empleado y admin) más el flujo de reset que lo levanta, la lógica de
-apagado automático del servidor a las 12h, y el flujo de aprobación/rechazo
-a través del Django Admin.
+apagado automático del servidor a las 12h, el flujo de aprobación/rechazo
+a través del Django Admin, la marca de días fuera de política directamente
+sobre la tabla de gastos del Word (sin la tabla aparte que tenía antes), y
+la generación del `.docx` de historial (`HistoryExporter`/`history_export.py`)
+con el orden cronológico correcto y las notas de rechazo incluidas.
 
 Lo que estos tests **no** cubren (y por qué): el render visual del front-end
 (nav responsive, estado "active" de los links, el badge de rol admin) — son

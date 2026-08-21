@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.urls import path
 from django.utils.html import format_html
 
-from ..exporters import excel_exporter, word_exporter
+from ..exporters import excel_exporter, history_exporter, word_exporter
 from ..models import ExpenseReport, ExpenseReportAuditLog, log_action
 from ..naming import export_basename
 from ..policies import DAILY_LIMIT_USD
@@ -111,6 +111,11 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.preview_receipt_capture),
                 name="expenses_expensereport_preview_capture",
             ),
+            path(
+                "<int:pk>/download-history/",
+                self.admin_site.admin_view(self.download_history),
+                name="expenses_expensereport_download_history",
+            ),
         ]
         return custom_urls + super().get_urls()
 
@@ -141,6 +146,20 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
         response = HttpResponse(content_type=word_exporter.content_type)
         response["Content-Disposition"] = f'inline; filename="{export_basename(report)}.{word_exporter.extension}"'
         response.write(word_exporter.to_bytes(report))
+        return response
+
+    def download_history(self, request, pk):
+        # Repurposes the object-tools slot Django's own "History" link used
+        # to occupy (see templates/admin/expenses/expensereport/
+        # change_form_object_tools.html) — a raw LogEntry page wasn't useful
+        # here, but a downloadable timeline of every status change and
+        # review note is. Always a live build (never gated on approval, and
+        # never a saved snapshot), since the point is what's happened so far.
+        report = self._get_scoped_report(request, pk)
+        response = HttpResponse(content_type=history_exporter.content_type)
+        filename = f"{export_basename(report)}_historial.{history_exporter.extension}"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response.write(history_exporter.to_bytes(report))
         return response
 
     def get_queryset(self, request):

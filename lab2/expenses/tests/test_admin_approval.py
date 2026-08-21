@@ -165,6 +165,50 @@ class AdminApprovalFlowTests(TestCase):
         self.assertFalse(self.report.word_snapshot)
         self.assertTrue(document.file)
 
+    def test_change_form_shows_download_history_button(self):
+        # Repurposes the object-tools slot Django's default "History" link
+        # used to occupy — see templates/admin/expenses/expensereport/
+        # change_form_object_tools.html.
+        self.client.login(username="admin@example.com", password="clave123")
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        response = self.client.get(url)
+        self.assertContains(response, "Download history")
+        self.assertContains(
+            response, reverse("admin:expenses_expensereport_download_history", args=[self.report.pk])
+        )
+
+    def test_download_history_includes_rejection_note(self):
+        self.client.login(username="admin@example.com", password="clave123")
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        self.client.post(
+            url,
+            {
+                "status": "rejected",
+                "review_note": "Missing itemized receipt",
+                "_save": "Save",
+                **self._inline_management_data(),
+            },
+        )
+
+        history_url = reverse("admin:expenses_expensereport_download_history", args=[self.report.pk])
+        response = self.client.get(history_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        from io import BytesIO
+
+        from docx import Document
+
+        document = Document(BytesIO(response.content))
+        text = "\n".join(
+            cell.text for table in document.tables for row in table.rows for cell in row.cells
+        )
+        self.assertIn("Rejected", text)
+        self.assertIn("Missing itemized receipt", text)
+
     def test_admin_reject_requires_note(self):
         self.client.login(username="admin@example.com", password="clave123")
 

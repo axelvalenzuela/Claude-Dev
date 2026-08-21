@@ -84,15 +84,32 @@ form itself submits:
 2. **The Summary tab's content** (manually placed in the `form_top` block,
    not a fieldset): the Excel/Word download buttons, and an HTML preview of
    the same consolidated data those two files contain (trip info, the
-   expense table, the daily $60/day breakdown with over-limit days in red)
-   — reviewable without opening either file. Before a report is approved,
-   there's no saved snapshot yet, so the buttons point at two small custom
-   admin routes instead (`ExpenseReportAdmin.get_urls()` →
-   `preview_excel` / `preview_word`) that generate the file live, the same
-   way the employee's own portal already could
-   (`expenses/views/exports.py`) — scoped through `get_queryset()` so a
-   department admin can only preview a report they're actually allowed to
-   see.
+   expense table, the $60/day policy flag) — reviewable without opening
+   either file. Before a report is approved, there's no saved snapshot yet,
+   so the buttons point at two small custom admin routes instead
+   (`ExpenseReportAdmin.get_urls()` → `preview_excel` / `preview_word`)
+   that generate the file live, the same way the employee's own portal
+   already could (`expenses/views/exports.py`) — scoped through
+   `get_queryset()` so a department admin can only preview a report
+   they're actually allowed to see.
+3. **A repurposed "Download history" object-tool** (`templates/admin/
+   expenses/expensereport/change_form_object_tools.html`): Django renders
+   this row above the change form via a per-model-overridable template
+   (`InclusionAdminNode` resolves `admin/<app>/<model>/change_form_object_
+   tools.html` before falling back to the site-wide default), so this
+   override only affects `ExpenseReport` — no other model's change form
+   changes. Django's own version puts a "History" link here pointing at
+   its raw `LogEntry`-based change log, which is redundant with the
+   Documents/History tabs above and isn't very actionable on its own; this
+   override keeps the same object-tools slot (so it still renders as the
+   theme's black pill button via the `--object-tools-bg` CSS variable, no
+   extra styling needed) but points it at `download_history`
+   (`ExpenseReportAdmin.get_urls()`), which builds and serves a `.docx` of
+   the report's actual audit trail — every status change, who made it, and
+   any note, rejection notes included — via `expenses/history_export.py`
+   and the `HistoryExporter` in `expenses/exporters.py`. Always built live
+   from `report.audit_log`, never gated on approval and never a saved
+   snapshot, since the point is to see the trail as it stands right now.
 
 ## Two design patterns applied deliberately
 
@@ -102,11 +119,14 @@ form itself submits:
   See the "Decorator pattern" section of the main `README.md` for the
   before/after.
 - **Formal exporter interface** (`expenses/exporters.py:ReportExporter`,
-  an `ABC`): `ExcelExporter`/`WordExporter` are the only two places that
-  know how to turn a report into bytes; `finalize_approval` (services.py),
-  the employee-facing download views, and the admin's preview routes above
-  all go through the same two instances (`excel_exporter`, `word_exporter`)
-  instead of each repeating their own "build → BytesIO → serve" ceremony.
+  an `ABC`): `ExcelExporter`/`WordExporter`/`HistoryExporter` are the only
+  three places that know how to turn a report into bytes; `finalize_approval`
+  (services.py), the employee-facing download views, and the admin's
+  preview/download routes above all go through the same three instances
+  (`excel_exporter`, `word_exporter`, `history_exporter`) instead of each
+  repeating their own "build → BytesIO → serve" ceremony. `HistoryExporter`
+  is the odd one out by design — it never produces a saved snapshot, since
+  `finalize_approval` never calls it; it only ever builds live.
 
 ## One rule, one place: how the $60/day policy is centralized
 

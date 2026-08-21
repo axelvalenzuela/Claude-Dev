@@ -1,0 +1,19 @@
+{% load i18n %}
+{#
+  Overrides Django's default object-tools row (admin/change_form_object_
+  tools.html) for ExpenseReport specifically — this template name is
+  resolved per-model by InclusionAdminNode before falling back to the
+  site-wide default, so no other model's change form is affected.
+
+  Django's own "History" link here just opened its raw LogEntry-based
+  change log — not useful next to our own Audit Log tab. Repurposed
+  instead: same object-tools slot (so it keeps the site's black pill
+  styling automatically, via --object-tools-bg), but it downloads the
+  report's actual timeline — every status change and review note,
+  rejection notes included — as a .docx.
+#}
+{% block object-tools-items %}
+<li>
+    <a href="{% url 'admin:expenses_expensereport_download_history' original.pk %}">{% translate "Download history" %}</a>
+</li>
+{% endblock %}

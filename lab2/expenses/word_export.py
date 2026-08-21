@@ -22,8 +22,10 @@ from .policies import DAILY_LIMIT_USD, USD_MXN_RATE
 from .receipt_capture import render_receipt_thumbnail
 
 # Same green the company's real Advance & Expense Report spreadsheet uses
-# to highlight its own totals column.
+# to highlight its own totals column. VIOLATION_SHADE matches excel.py's
+# VIOLATION_FILL so a flagged day reads the same color in both formats.
 USD_SHADE = "C6EFCE"
+VIOLATION_SHADE = "F8D7DA"
 
 
 def _shade_cell(cell, hex_color: str) -> None:
@@ -88,12 +90,20 @@ def build_report_document(report) -> Document:
         if text == "Amount (USD)":
             _shade_cell(cell, USD_SHADE)
 
+    # Days over the $60/day policy (see ExpenseReport.daily_totals — the one
+    # place that decides this, currency conversion and the flight/hotel
+    # exemption included) are flagged directly on their row here instead of
+    # in a separate table: a whole extra section repeating dates the reader
+    # just saw would only add noise, not information.
+    violation_dates = {day["date"] for day in report.daily_totals() if day["over_limit"]}
+
     total_usd = 0
     # Alphabetically by expense type, then chronologically within each type.
     for index, doc in enumerate(report.documents.order_by("type", "document_date"), start=1):
+        is_violation_day = doc.document_date in violation_dates
         row = expense_table.add_row().cells
         row[0].text = str(index)
-        row[1].text = doc.document_date.strftime("%Y-%m-%d")
+        row[1].text = f"{doc.document_date:%Y-%m-%d}" + (" ⚠" if is_violation_day else "")
         row[2].text = doc.get_type_display()
         row[3].text = doc.vendor_name or "—"
         row[4].text = f"{doc.amount:.2f}"
@@ -103,6 +113,9 @@ def build_report_document(report) -> Document:
         row[8].text = doc.file_name
         row[9].text = f"${doc.amount_usd:.2f}"
         _shade_cell(row[9], USD_SHADE)
+        if is_violation_day:
+            row[1].paragraphs[0].runs[0].bold = True
+            _shade_cell(row[1], VIOLATION_SHADE)
         total_usd += doc.amount_usd
 
     for subtotal in report.totals_by_currency():
@@ -114,8 +127,16 @@ def build_report_document(report) -> Document:
     total_run.bold = True
     total_run.font.size = Pt(12)
 
+    if violation_dates:
+        dates_text = ", ".join(day.strftime("%Y-%m-%d") for day in sorted(violation_dates))
+        policy_paragraph = document.add_paragraph()
+        policy_run = policy_paragraph.add_run(
+            f"⚠ Day(s) marked above exceed the ${DAILY_LIMIT_USD}/day policy and aren't "
+            f"explained by a flight or hotel charge: {dates_text}"
+        )
+        policy_run.bold = True
+
     _add_receipt_captures(document, report)
-    _add_daily_breakdown(document, report)
 
     return document
 
@@ -141,27 +162,3 @@ def _add_receipt_captures(document: Document, report) -> None:
             document.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.LEFT
         except Exception:  # noqa: BLE001 - a bad/unreadable receipt must never block the export
             document.add_paragraph("(Could not capture this receipt.)")
-
-
-def _add_daily_breakdown(document: Document, report) -> None:
-    # Always compared in USD (see ExpenseReport.daily_totals /
-    # TravelDocument.amount_usd) — a peso total compared directly against
-    # a dollar limit would be meaningless.
-    document.add_heading(f"Daily spend vs. ${DAILY_LIMIT_USD}/day policy", level=2)
-    table = document.add_table(rows=1, cols=4)
-    table.style = "Light Grid Accent 1"
-    for cell, text in zip(table.rows[0].cells, ["Date", "Daily total", "Daily total (USD)", "Over policy limit?"]):
-        cell.text = text
-        cell.paragraphs[0].runs[0].bold = True
-
-    for day in report.daily_totals():
-        row = table.add_row().cells
-        row[0].text = day["date"].strftime("%Y-%m-%d")
-        row[1].text = f"${day['total']:.2f}"
-        row[2].text = f"${day['total_usd']:.2f}"
-        if day["over_limit"]:
-            row[3].text = "Yes"
-        elif day["has_flight_or_hotel"]:
-            row[3].text = "Flight/Hotel"
-        else:
-            row[3].text = "No"

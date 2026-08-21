@@ -52,5 +52,21 @@ class WordExporter(ReportExporter):
         return build_report_document(report)
 
 
+class HistoryExporter(ReportExporter):
+    """Not one of the two permanent export formats — this always builds
+    live from the audit log (expenses/history_export.py), never from a
+    saved snapshot, since it needs to reflect the trail as it stands right
+    now rather than a point-in-time copy."""
+
+    extension = "docx"
+    content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+    def build(self, report):
+        from .history_export import build_history_document
+
+        return build_history_document(report)
+
+
 excel_exporter = ExcelExporter()
 word_exporter = WordExporter()
+history_exporter = HistoryExporter()

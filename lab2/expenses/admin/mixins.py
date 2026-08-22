@@ -7,7 +7,26 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 
+STATUS_BADGES = {
+    "draft": ("#6c757d", "Draft"),
+    "submitted": ("#e2960f", "⏳ Pending review"),
+    "approved": ("#2e7d32", "✅ Approved"),
+    "rejected": ("#c62828", "⛔ Rejected"),
+}
+
+
 class ExpenseReportDisplayMixin:
+    def status_badge(self, obj):
+        # A colored, iconed pill instead of Django's default plain-text
+        # status column — approved vs. not-approved should be readable at
+        # a glance in a changelist full of rows, not only after reading
+        # each title/status word individually.
+        color, label = STATUS_BADGES.get(obj.status, ("#6c757d", obj.get_status_display()))
+        return format_html('<span class="status-pill" style="background-color:{};">{}</span>', color, label)
+
+    status_badge.short_description = "Status"
+    status_badge.admin_order_field = "status"
+
     def employee(self, obj):
         return obj.user.get_full_name() or obj.user.email
 

@@ -33,7 +33,7 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
         "employee",
         "employee_number",
         "department",
-        "status",
+        "status_badge",
         "total_amount_display",
         "policy_flag",
         "deadline_flag",

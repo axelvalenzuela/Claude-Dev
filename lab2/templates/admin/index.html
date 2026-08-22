@@ -159,22 +159,16 @@
 
     <div class="admin-tab-panel" data-panel="employees" hidden>
         <h2 class="dashboard-section-title">Employees</h2>
-        <p class="dashboard-subtitle">Search for any employee registered on the platform. Anyone with a pending review expense is highlighted.</p>
+        <p class="dashboard-subtitle">Search for any employee registered on the platform. Click a name to see all of their reports and pick which one to open — click the button instead to jump straight to the one that needs you.</p>
         <input type="text" id="employee-search" class="employee-search-input"
                placeholder="Search by name or department…" autofocus>
         {% if employee_directory %}
             <div class="employee-directory-list" id="employee-directory-list">
                 {% for entry in employee_directory %}
                     <div class="employee-row {% if entry.has_pending %}employee-row-pending{% else %}employee-row-clear{% endif %}" data-search="{{ entry.employee.get_full_name|default:entry.employee.email }} {{ entry.employee.department }}">
-                        {% if entry.has_pending %}
-                            <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_change' entry.latest_report.pk %}">
-                                {{ entry.employee.get_full_name|default:entry.employee.email }}
-                            </a>
-                        {% else %}
-                            <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}">
-                                {{ entry.employee.get_full_name|default:entry.employee.email }}
-                            </a>
-                        {% endif %}
+                        <a class="employee-row-name" href="{% url 'admin:expenses_expensereport_changelist' %}?user__id__exact={{ entry.employee.pk }}" title="See all of {{ entry.employee.get_full_name|default:entry.employee.email }}'s reports">
+                            {{ entry.employee.get_full_name|default:entry.employee.email }}
+                        </a>
                         <span class="employee-row-department">{{ entry.employee.department|default:"—" }}</span>
                         <span class="employee-row-count">{{ entry.report_count }} report{{ entry.report_count|pluralize }}</span>
                         {% if entry.has_pending %}

@@ -150,3 +150,41 @@ class RecentReviewNotificationTests(TestCase):
 
     def test_admin_gets_no_employee_style_notification(self):
         self.assertEqual(recent_review_notification(fake_request(self.iris)), {})
+
+
+class EmployeeDirectoryNameLinkTests(TestCase):
+    """Clicking an employee's name on the Employees tab must show their
+    full report list (so an admin can see and choose which one to open),
+    never jump straight into a single report the way the row's action
+    button does — even when that employee has a pending report."""
+
+    def setUp(self):
+        self.employee = User.objects.create_user(
+            username="ana@example.com", email="ana@example.com", password="x", department="ICS"
+        )
+        self.iris = User.objects.get(email="iris.cortez@mhp.com")
+
+        report = ExpenseReport.objects.create(user=self.employee, title="ICS trip", supervisor_name="S")
+        report.documents.create(
+            file=SimpleUploadedFile("r.jpg", b"x", content_type="image/jpeg"),
+            type="hotel",
+            amount="50.00",
+            document_date=TODAY.isoformat(),
+        )
+        report.submit()
+        report.save()
+        self.report = report
+
+    def test_name_links_to_the_filtered_changelist_not_the_single_report(self):
+        self.client.login(username="iris.cortez@mhp.com", password="Iris#2026Local")
+        response = self.client.get(reverse("admin:index"))
+        body = response.content.decode("utf-8")
+
+        changelist_url = reverse("admin:expenses_expensereport_changelist") + f"?user__id__exact={self.employee.pk}"
+        change_url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+
+        self.assertIn(f'class="employee-row-name" href="{changelist_url}"', body)
+        self.assertNotIn(f'class="employee-row-name" href="{change_url}"', body)
+        # The action button still offers the fast path straight to the
+        # pending report.
+        self.assertIn(change_url, body)

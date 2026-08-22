@@ -209,6 +209,29 @@ class AdminApprovalFlowTests(TestCase):
         self.assertIn("Rejected", text)
         self.assertIn("Missing itemized receipt", text)
 
+    def test_changelist_shows_a_colored_status_pill_not_plain_text(self):
+        # Approval status needs to be readable at a glance across a full
+        # list of rows — a colored pill with an icon, not just the plain
+        # word Django's default list_display would render.
+        self.client.login(username="admin@example.com", password="clave123")
+        response = self.client.get(reverse("admin:expenses_expensereport_changelist"))
+        self.assertContains(response, "status-pill")
+        self.assertContains(response, "Pending review")
+
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        self.client.post(
+            url,
+            {
+                "status": "approved",
+                "review_note": "Looks good",
+                "ceo_clause_ack": "on",
+                "_save": "Save",
+                **self._inline_management_data(),
+            },
+        )
+        response = self.client.get(reverse("admin:expenses_expensereport_changelist"))
+        self.assertContains(response, "Approved")
+
     def test_admin_reject_requires_note(self):
         self.client.login(username="admin@example.com", password="clave123")
 

@@ -158,7 +158,7 @@ class ExpenseReportAdmin(ExpenseReportDisplayMixin, admin.ModelAdmin):
         # never a saved snapshot), since the point is what's happened so far.
         report = self._get_scoped_report(request, pk)
         response = HttpResponse(content_type=history_exporter.content_type)
-        filename = f"{export_basename(report)}_historial.{history_exporter.extension}"
+        filename = f"{export_basename(report)}_history.{history_exporter.extension}"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response.write(history_exporter.to_bytes(report))
         return response

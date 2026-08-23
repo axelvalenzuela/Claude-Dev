@@ -17,6 +17,7 @@
      formsets' management-form data or field values is affected by which
      tab is showing when the form is submitted.
 {% endcomment %}
+{% load expense_extras %}
 
 {% block form_top %}
 {{ block.super }}
@@ -58,7 +59,7 @@
             <tr><th>Department</th><td>{{ original.user.department|default:"—" }}</td></tr>
             <tr><th>Supervisor</th><td>{{ original.supervisor_name }}</td></tr>
             <tr><th>Trip dates</th><td>{% if original.trip_date_range %}{{ original.trip_date_range.0 }} to {{ original.trip_date_range.1 }}{% else %}—{% endif %}</td></tr>
-            <tr><th>Status</th><td>{{ original.get_status_display }}</td></tr>
+            <tr><th>Status</th><td>{{ original.status|status_pill }}</td></tr>
             {% if original.reviewed_at %}
                 <tr><th>Reviewed</th><td>{{ original.reviewed_at }} by {{ original.reviewed_by }}</td></tr>
                 <tr><th>Review note</th><td>{{ original.review_note|default:"—" }}</td></tr>

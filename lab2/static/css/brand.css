@@ -295,24 +295,35 @@
     font-weight: 600;
 }
 
-/* Colored status pill on the Reports changelist (ExpenseReportAdmin.
-   status_badge) — approved vs. not-approved needs to be readable at a
-   glance across a full list of rows, not only after reading each status
-   word individually. */
-#changelist .status-pill {
+/* Colored status pill — the Reports changelist (ExpenseReportAdmin.
+   status_badge) and the change-form Summary tab's status_pill template
+   filter (expenses/templatetags/expense_extras.py) both use this same
+   class, so a report's state reads the same everywhere it's shown: a
+   colored, iconed pill, not a plain status word buried in a table row. */
+.status-pill {
     display: inline-block;
-    padding: 5px 14px;
+    padding: 6px 16px;
     border-radius: 999px;
     color: var(--brand-white);
-    font-size: 0.78rem;
+    font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.02em;
     white-space: nowrap;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-#changelist tr:hover .status-pill {
+tr:hover .status-pill {
     transform: scale(1.07);
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+/* A subtle pulse on a still-pending report's pill specifically (never on
+   an already-resolved approved/rejected one), so "this one still needs a
+   decision" is visible without reading the label. */
+.status-pill-submitted {
+    animation: status-pill-pulse 2.2s ease-in-out infinite;
+}
+@keyframes status-pill-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+    50% { box-shadow: 0 0 0 6px rgba(226, 150, 15, 0.18); }
 }
 
 /* Summary tab's trip preview (see the ExpenseReport change_form override):

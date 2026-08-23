@@ -232,6 +232,36 @@ class AdminApprovalFlowTests(TestCase):
         response = self.client.get(reverse("admin:expenses_expensereport_changelist"))
         self.assertContains(response, "Approved")
 
+    def test_summary_tab_shows_a_colored_status_pill_not_plain_text(self):
+        # The change form's "Trip summary preview" used to render Status
+        # as a plain word (get_status_display) — easy to miss next to
+        # every other plain row. Same status_pill class/markup as the
+        # changelist now, via expenses/templatetags/expense_extras.py.
+        self.client.login(username="admin@example.com", password="clave123")
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        response = self.client.get(url)
+        self.assertContains(response, "status-pill status-pill-submitted")
+        self.assertContains(response, "Pending review")
+
+    def test_only_the_pending_status_pill_pulses(self):
+        # Approved/rejected pills are resolved — pulsing them alongside a
+        # genuinely pending one would be noise, not a useful signal.
+        self.client.login(username="admin@example.com", password="clave123")
+        url = reverse("admin:expenses_expensereport_change", args=[self.report.pk])
+        self.client.post(
+            url,
+            {
+                "status": "approved",
+                "review_note": "Looks good",
+                "ceo_clause_ack": "on",
+                "_save": "Save",
+                **self._inline_management_data(),
+            },
+        )
+        response = self.client.get(url)
+        self.assertContains(response, "status-pill status-pill-approved")
+        self.assertNotContains(response, "status-pill-submitted")
+
     def test_admin_reject_requires_note(self):
         self.client.login(username="admin@example.com", password="clave123")
 

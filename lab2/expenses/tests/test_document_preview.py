@@ -28,6 +28,20 @@ class PreviewDocumentTests(TestCase):
         self.assertEqual(data["extracted_amount"], "85.50")
         self.assertEqual(data["detected_type"], "hotel")
 
+    def test_preview_document_also_extracts_date_vendor_and_currency(self):
+        pdf_bytes = _make_pdf_bytes(
+            "Hotel Paradiso\nCheck-in 08/15/2025\nHotel Reservation Total $85.50 USD"
+        )
+        response = self.client.post(
+            reverse("reports:preview_document"),
+            {"file": SimpleUploadedFile("receipt.pdf", pdf_bytes, content_type="application/pdf")},
+        )
+
+        data = response.json()
+        self.assertEqual(data["extracted_date"], "2025-08-15")
+        self.assertEqual(data["extracted_vendor"], "Hotel Paradiso")
+        self.assertEqual(data["detected_currency"], "USD")
+
     def test_preview_document_skips_non_pdf_files(self):
         response = self.client.post(
             reverse("reports:preview_document"),
@@ -38,3 +52,6 @@ class PreviewDocumentTests(TestCase):
         data = response.json()
         self.assertFalse(data["is_pdf"])
         self.assertIsNone(data["extracted_amount"])
+        self.assertIsNone(data["extracted_date"])
+        self.assertIsNone(data["extracted_vendor"])
+        self.assertIsNone(data["detected_currency"])

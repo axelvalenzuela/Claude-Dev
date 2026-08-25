@@ -19,11 +19,24 @@ from .decorators import draft_only
 from .mixins import OwnedReportMixin
 
 
+EMPTY_PDF_ANALYSIS = {
+    "is_pdf": False,
+    "extracted_amount": None,
+    "detected_type": None,
+    "detected_type_label": None,
+    "extracted_date": None,
+    "extracted_vendor": None,
+    "detected_currency": None,
+}
+
+
 class PreviewDocumentView(LoginRequiredMixin, View):
     """AJAX endpoint used while composing a new report: analyzes one PDF at
     a time (as soon as it's attached, before the report is created or
-    anything is saved) and returns the amount/type it detected, so the
-    employee can review it live instead of only finding out after saving."""
+    anything is saved) and returns whatever it detected — amount, type,
+    date, vendor, currency — so the report can be pre-filled from the
+    receipt itself instead of the employee retyping what's already
+    printed on it."""
 
     def post(self, request):
         file = request.FILES.get("file")
@@ -31,9 +44,7 @@ class PreviewDocumentView(LoginRequiredMixin, View):
             return JsonResponse({"error": "No file provided."}, status=400)
 
         if not file.name.lower().endswith(".pdf"):
-            return JsonResponse(
-                {"is_pdf": False, "extracted_amount": None, "detected_type": None, "detected_type_label": None}
-            )
+            return JsonResponse(EMPTY_PDF_ANALYSIS)
 
         analysis = analyze_pdf(file)
         detected_type_label = None
@@ -46,6 +57,9 @@ class PreviewDocumentView(LoginRequiredMixin, View):
                 "extracted_amount": str(analysis.extracted_amount) if analysis.extracted_amount is not None else None,
                 "detected_type": analysis.detected_type,
                 "detected_type_label": detected_type_label,
+                "extracted_date": analysis.extracted_date.isoformat() if analysis.extracted_date else None,
+                "extracted_vendor": analysis.extracted_vendor,
+                "detected_currency": analysis.detected_currency,
             }
         )
 

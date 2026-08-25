@@ -1078,6 +1078,39 @@ tr:hover .badge {
     font-size: 0.82rem;
 }
 
+/* The pre-fill/default note above each pane's fields (expenses/
+   templates/expenses/report_form.html) — deliberately placed above the
+   fields it describes, and worded to separate what the PDF actually
+   detected from what's just this form's default, so a default value
+   never gets mistaken for a real reading off the receipt. */
+.preview-status-note {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+}
+.preview-status-note-loading {
+    background: #e7f3fc;
+    border-color: #b6def4;
+    color: #0c5a86;
+}
+.preview-status-note-success {
+    background: #e9f7ec;
+    border-color: #bfe6c8;
+    color: #1e6b30;
+}
+.preview-status-note-warning {
+    background: #fff6e5;
+    border-color: #f5dca3;
+    color: #8a5a00;
+}
+.preview-status-note-default {
+    background: #f1f1f2;
+    border-color: var(--brand-gray-border);
+    color: #555;
+}
+
 /* File-picker drop zone gets an obvious hover/drag affordance instead of
    looking like a static input. */
 .file-drop-zone {

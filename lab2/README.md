@@ -44,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **187 tests**.
+- Test framework de Django (basado en `unittest`): **199 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -225,6 +225,17 @@ que realmente atiende peticiones). Para desactivarlo, pon
   lo que el empleado capturó, se marca `amount_mismatch` / `type_mismatch` y
   se le avisa — así se evitan errores/posibles incumplimientos de política
   desde el origen, no solo al aprobar.
+- **También adivina fecha, proveedor y moneda** (mismo módulo): una fecha
+  con formato numérico común (`MM/DD/YYYY`, ISO, etc. — nunca una fecha
+  futura, señal de un dígito mal leído), la primera línea corta con letras
+  de la página 1 como proveedor probable (heurística deliberadamente más
+  floja que monto/tipo — sin lista de palabras clave que la ancle, así que
+  se omite en vez de adivinar mal), y "MXN"/"peso" vs. "USD"/"dollar" en el
+  texto para la moneda. En la página de "New expense report", cada pestaña
+  de archivo muestra una nota **arriba** de los campos indicando
+  explícitamente qué se detectó de verdad contra qué quedó en su valor por
+  default (fecha de hoy, USD) — para que un default nunca se confunda con
+  un dato real leído del recibo.
 - **Supervisor**: cada reporte guarda `supervisor_name` (obligatorio) y
   `supervisor_email` (opcional) — a quién queda dirigido el envío. Visible
   en el detalle, en el admin y en el Excel.
@@ -823,7 +834,7 @@ lab2/
     models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog
     policies.py                 # DAILY_LIMIT_USD, USD_MXN_RATE, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
     validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
-    pdf_analysis.py             # extracción de monto/tipo (prioriza pág. 1-2) y límite de 4 páginas
+    pdf_analysis.py             # extracción de monto/tipo/fecha/proveedor/moneda (prioriza pág. 1-2) y límite de 4 páginas
     services.py                  # build_travel_document + finalize_approval (exports y borrado de originales, al aprobar)
     exporters.py                  # ReportExporter (interfaz) + ExcelExporter/WordExporter/HistoryExporter — ver "Interfaz enterprise"
     naming.py                     # export_basename() — convención de nombre de RH (empleado, fecha, número, APROBADO)
@@ -856,7 +867,7 @@ cd lab2
 python manage.py test
 ```
 
-187 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+199 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de

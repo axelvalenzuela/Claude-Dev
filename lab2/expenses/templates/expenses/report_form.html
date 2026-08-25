@@ -71,6 +71,10 @@
 <template id="document-pane-template">
     <div class="document-pane">
         <div class="document-preview"></div>
+        <div class="preview-status-note preview-status-note-default">
+            Nothing auto-detected for a photo — check every field below, including the
+            <strong>today's date</strong> and <strong>USD</strong> defaults.
+        </div>
         <div class="row g-2 mt-1">
             <div class="col-md-3">
                 <label class="form-label small">Type</label>
@@ -109,7 +113,6 @@
                 </select>
             </div>
         </div>
-        <div class="mt-2"><span class="badge bg-secondary preview-status">Photo — enter details manually</span></div>
     </div>
 </template>
 
@@ -125,6 +128,12 @@
     const csrfToken = document.querySelector("#report-form [name=csrfmiddlewaretoken]").value;
     const today = new Date().toISOString().slice(0, 10);
 
+    // The single source of truth for what's attached — the native file
+    // input can't accumulate across separate pick/drop interactions on
+    // its own (every dialog selection, or every drop, replaces .files
+    // wholesale), so every add/remove goes through this array first and
+    // filePicker.files is rebuilt from it afterward, never the reverse.
+    let selectedFiles = [];
     let objectUrls = [];
 
     function revokeObjectUrls() {
@@ -132,9 +141,28 @@
         objectUrls = [];
     }
 
-    filePicker.addEventListener("change", () => {
-        rebuild(Array.from(filePicker.files).length - 1);
-    });
+    function syncFilePickerInput() {
+        const dataTransfer = new DataTransfer();
+        selectedFiles.forEach((file) => dataTransfer.items.add(file));
+        filePicker.files = dataTransfer.files;
+    }
+
+    function addFiles(newFiles) {
+        selectedFiles = selectedFiles.concat(Array.from(newFiles));
+        syncFilePickerInput();
+        rebuild(selectedFiles.length - 1);
+    }
+
+    function removeFileAt(index) {
+        selectedFiles.splice(index, 1);
+        syncFilePickerInput();
+        rebuild(Math.min(index, selectedFiles.length - 1));
+    }
+
+    // Fires only on a genuine native-dialog pick (clicking the drop
+    // zone label) — at that point filePicker.files is exactly the new
+    // batch just chosen, appended to whatever was already attached.
+    filePicker.addEventListener("change", () => addFiles(filePicker.files));
 
     ["dragenter", "dragover"].forEach((eventName) => {
         dropZone.addEventListener(eventName, (event) => {
@@ -150,18 +178,8 @@
     });
     dropZone.addEventListener("drop", (event) => {
         if (!event.dataTransfer || !event.dataTransfer.files.length) return;
-        filePicker.files = event.dataTransfer.files;
-        filePicker.dispatchEvent(new Event("change"));
+        addFiles(event.dataTransfer.files);
     });
-
-    function removeFileAt(index) {
-        const dataTransfer = new DataTransfer();
-        Array.from(filePicker.files).forEach((file, i) => {
-            if (i !== index) dataTransfer.items.add(file);
-        });
-        filePicker.files = dataTransfer.files;
-        rebuild(Math.min(index, filePicker.files.length - 1));
-    }
 
     function activate(index) {
         tabsList.querySelectorAll(".document-tab-btn").forEach((btn, i) => {
@@ -205,8 +223,7 @@
         tabsList.innerHTML = "";
         panesContainer.innerHTML = "";
 
-        const files = Array.from(filePicker.files);
-        files.forEach((file, index) => {
+        selectedFiles.forEach((file, index) => {
             const tabButton = tabButtonTemplate.content.firstElementChild.cloneNode(true);
             tabButton.querySelector(".document-tab-icon").textContent = file.type.startsWith("image/") ? "🖼️" : "📄";
             tabButton.querySelector(".document-tab-label").textContent = file.name;
@@ -226,49 +243,94 @@
             pane.querySelector(".doc-date").value = today;
             panesContainer.appendChild(pane);
 
-            analyzeIfPdf(file, pane);
+            analyzeFile(file, pane);
         });
 
-        if (files.length) {
-            const clampedIndex = Math.max(0, Math.min(activeIndex, files.length - 1));
+        if (selectedFiles.length) {
+            const clampedIndex = Math.max(0, Math.min(activeIndex, selectedFiles.length - 1));
             activate(clampedIndex);
         }
     }
 
-    function analyzeIfPdf(file, pane) {
-        if (!file.name.toLowerCase().endsWith(".pdf")) return;
+    // Pre-fills every field the receipt itself makes possible (amount,
+    // type, date, vendor, currency for a PDF) and, right above the
+    // fields, spells out exactly which of those are real detections vs.
+    // which are just this form's defaults — so a default never gets
+    // mistaken for something the app actually read off the receipt.
+    function analyzeFile(file, pane) {
+        const note = pane.querySelector(".preview-status-note");
+        const isPdf = file.name.toLowerCase().endsWith(".pdf");
 
-        const status = pane.querySelector(".preview-status");
-        status.textContent = "Analyzing PDF…";
-        status.className = "badge bg-info preview-status";
+        if (!isPdf) {
+            note.textContent = "";
+            note.innerHTML = "Photo attached — nothing can be auto-detected. Defaults: " +
+                "<strong>today's date</strong> and <strong>USD</strong> — enter type, amount, and vendor, and correct the defaults if needed.";
+            note.className = "preview-status-note preview-status-note-default";
+            return;
+        }
+
+        note.textContent = "Analyzing PDF…";
+        note.className = "preview-status-note preview-status-note-loading";
 
         const formData = new FormData();
         formData.append("file", file);
 
         fetch(previewUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData })
             .then((response) => response.json())
-            .then((data) => {
-                let detected = [];
-                if (data.extracted_amount) {
-                    pane.querySelector(".doc-amount").value = data.extracted_amount;
-                    detected.push("$" + data.extracted_amount);
-                }
-                if (data.detected_type) {
-                    pane.querySelector(".doc-type").value = data.detected_type;
-                    detected.push(data.detected_type_label);
-                }
-                if (detected.length) {
-                    status.textContent = "Detected: " + detected.join(" · ") + " (edit if needed)";
-                    status.className = "badge bg-success preview-status";
-                } else {
-                    status.textContent = "Couldn't detect anything — enter details manually";
-                    status.className = "badge bg-warning text-dark preview-status";
-                }
-            })
+            .then((data) => applyAnalysis(pane, data, note))
             .catch(() => {
-                status.textContent = "Preview failed — enter details manually";
-                status.className = "badge bg-warning text-dark preview-status";
+                note.textContent = "Preview failed — enter every field manually, including the date/currency defaults.";
+                note.className = "preview-status-note preview-status-note-warning";
             });
+    }
+
+    function applyAnalysis(pane, data, note) {
+        const detected = [];
+        const defaulted = [];
+
+        if (data.extracted_amount) {
+            pane.querySelector(".doc-amount").value = data.extracted_amount;
+            detected.push("amount ($" + data.extracted_amount + ")");
+        } else {
+            defaulted.push("amount");
+        }
+
+        if (data.detected_type) {
+            pane.querySelector(".doc-type").value = data.detected_type;
+            detected.push("type (" + data.detected_type_label + ")");
+        } else {
+            defaulted.push("type");
+        }
+
+        if (data.extracted_date) {
+            pane.querySelector(".doc-date").value = data.extracted_date;
+            detected.push("date (" + data.extracted_date + ")");
+        } else {
+            defaulted.push("date (defaulted to today)");
+        }
+
+        if (data.extracted_vendor) {
+            pane.querySelector(".doc-vendor").value = data.extracted_vendor;
+            detected.push("vendor (" + data.extracted_vendor + ")");
+        } else {
+            defaulted.push("vendor (e.g. \"United Airlines, INC\")");
+        }
+
+        if (data.detected_currency) {
+            pane.querySelector(".doc-currency").value = data.detected_currency;
+            detected.push("currency (" + data.detected_currency + ")");
+        } else {
+            defaulted.push("currency (defaulted to USD)");
+        }
+
+        const parts = [];
+        if (detected.length) parts.push("Detected from the PDF: " + detected.join(", ") + ".");
+        if (defaulted.length) parts.push("Not detected, using a default — please check: " + defaulted.join(", ") + ".");
+
+        note.textContent = parts.join(" ");
+        note.className = detected.length
+            ? "preview-status-note preview-status-note-success"
+            : "preview-status-note preview-status-note-warning";
     }
 })();
 </script>

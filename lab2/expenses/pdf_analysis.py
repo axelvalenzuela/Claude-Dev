@@ -10,6 +10,7 @@ count, which the company treats as a hard limit (see validate_pdf_page_count).
 """
 import re
 from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
@@ -30,11 +31,26 @@ TYPE_KEYWORDS = {
     "meal": ("restaurant", "meal", "breakfast", "lunch", "dinner", "food", "menu", "server"),
 }
 
+# Ordered most-specific-first; a receipt only needs to match one of these to
+# have its date guessed. Numeric formats cover the large majority of real
+# receipts (boarding passes, hotel folios, ride receipts) — no dateutil
+# dependency needed for that. A guessed date in the future is discarded (a
+# misread digit, not a real receipt date).
+DATE_CANDIDATE_PATTERNS = [
+    (re.compile(r"\b\d{4}-\d{1,2}-\d{1,2}\b"), "%Y-%m-%d"),
+    (re.compile(r"\b\d{1,2}/\d{1,2}/\d{4}\b"), "%m/%d/%Y"),
+    (re.compile(r"\b\d{1,2}/\d{1,2}/\d{2}\b"), "%m/%d/%y"),
+    (re.compile(r"\b\d{1,2}-\d{1,2}-\d{4}\b"), "%m-%d-%Y"),
+]
+
 
 @dataclass
 class PdfAnalysisResult:
     extracted_amount: Decimal | None = None
     detected_type: str | None = None
+    extracted_date: date | None = None
+    extracted_vendor: str | None = None
+    detected_currency: str | None = None
 
 
 def validate_pdf_page_count(file):
@@ -73,7 +89,17 @@ def analyze_pdf(file_obj) -> PdfAnalysisResult:
     if detected_type is None:
         detected_type = _guess_type(full_text)
 
-    return PdfAnalysisResult(extracted_amount=amount, detected_type=detected_type)
+    extracted_date = _guess_date(priority_text) or _guess_date(full_text)
+    extracted_vendor = _guess_vendor(pages)
+    detected_currency = _guess_currency(priority_text) or _guess_currency(full_text)
+
+    return PdfAnalysisResult(
+        extracted_amount=amount,
+        detected_type=detected_type,
+        extracted_date=extracted_date,
+        extracted_vendor=extracted_vendor,
+        detected_currency=detected_currency,
+    )
 
 
 def _extract_pages(file_obj) -> list[str]:
@@ -130,3 +156,46 @@ def _guess_type(text: str) -> str | None:
             best_type, best_score = doc_type, score
 
     return best_type
+
+
+def _guess_date(text: str) -> date | None:
+    for pattern, fmt in DATE_CANDIDATE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        try:
+            parsed = datetime.strptime(match.group(0), fmt).date()
+        except ValueError:
+            continue
+        if parsed <= date.today():
+            return parsed
+    return None
+
+
+def _guess_vendor(pages: list[str]) -> str | None:
+    # A receipt's vendor/company name is almost always one of the first
+    # few printed lines — this is a much rougher heuristic than the amount/
+    # type detection (no keyword list to anchor on), so it's skipped
+    # entirely rather than guessing wrong on an unusual layout: only a
+    # short, letter-containing, non-numeric line counts as a candidate.
+    if not pages:
+        return None
+    for line in pages[0].splitlines()[:8]:
+        candidate = line.strip()
+        if not (3 <= len(candidate) <= 60):
+            continue
+        if not re.search(r"[A-Za-z]{3,}", candidate):
+            continue
+        if AMOUNT_PATTERN.search(candidate):
+            continue
+        return candidate
+    return None
+
+
+def _guess_currency(text: str) -> str | None:
+    lowered = text.lower()
+    if "mxn" in lowered or "peso" in lowered or "mx$" in lowered:
+        return "MXN"
+    if "usd" in lowered or "us$" in lowered or "dollar" in lowered:
+        return "USD"
+    return None

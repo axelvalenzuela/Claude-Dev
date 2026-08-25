@@ -334,6 +334,29 @@
 .pending-reports-table tbody tr:hover td:first-child {
     font-weight: 600;
 }
+/* The Access/View button in the last column was wrapping onto two lines
+   ("Access" then "→" underneath) at the table's default column width,
+   reading as squished instead of like a real button. Its own cell no
+   longer shrinks to fit, and the arrow is a separate span so it can
+   shift on hover without the whole button reflowing. */
+.pending-reports-action-cell {
+    white-space: nowrap;
+    width: 1%;
+}
+.pending-reports-access-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    white-space: nowrap;
+}
+.pending-reports-arrow {
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+.pending-reports-table tbody tr:hover .pending-reports-arrow {
+    transform: translateX(4px);
+}
 
 /* Colored status pill — the Reports changelist (ExpenseReportAdmin.
    status_badge) and the change-form Summary tab's status_pill template

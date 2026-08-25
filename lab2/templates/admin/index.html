@@ -87,7 +87,7 @@
                                         <td>{{ report.user.department|default:"—" }}</td>
                                         <td>${{ report.total_amount }}</td>
                                         <td>{{ report.submitted_at|date:"M j" }}</td>
-                                        <td><a class="button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">Access &rarr;</a></td>
+                                        <td class="pending-reports-action-cell"><a class="button pending-reports-access-btn" href="{% url 'admin:expenses_expensereport_change' report.pk %}">Access <span class="pending-reports-arrow">&rarr;</span></a></td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -120,7 +120,7 @@
                                         <td>{{ report.user.department|default:"—" }}</td>
                                         <td>${{ report.total_amount }}</td>
                                         <td>{{ report.reviewed_at|date:"M j" }}</td>
-                                        <td><a class="button" href="{% url 'admin:expenses_expensereport_change' report.pk %}">View</a></td>
+                                        <td class="pending-reports-action-cell"><a class="button pending-reports-access-btn" href="{% url 'admin:expenses_expensereport_change' report.pk %}">View <span class="pending-reports-arrow">&rarr;</span></a></td>
                                     </tr>
                                 {% endfor %}
                             </tbody>

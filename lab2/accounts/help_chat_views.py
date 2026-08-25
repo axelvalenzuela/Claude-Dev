@@ -35,7 +35,7 @@ class HelpChatAskView(LoginRequiredMixin, View):
             return JsonResponse({"error": "Type a question first."}, status=400)
 
         HelpChatMessage.objects.create(user=request.user, role=HelpChatMessage.Role.USER, text=text)
-        answer = find_answer(text, is_staff=request.user.is_staff)
+        answer = find_answer(text, user=request.user)
         HelpChatMessage.objects.create(user=request.user, role=HelpChatMessage.Role.BOT, text=answer)
 
         return JsonResponse({"answer": answer})

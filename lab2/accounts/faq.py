@@ -1,11 +1,12 @@
 """The help-chat widget's answer engine. Deliberately rule-based, not an
-LLM call: every answer here is already true and already documented
-(README.md, the admin's Policies/Help tabs) — matching a question to the
-right canned answer needs no model, no API key, no per-message cost, and
-no internet connection, which keeps this feature consistent with the
-rest of the app (SQLite by default, vendored Bootstrap, no CDN — see
-docs/adr/0002-database-sqlite-then-postgres.md's "no unnecessary external
-dependency" spirit).
+LLM call: every answer here is either a fact already documented (README,
+the admin's Policies/Help tabs) or read live off the database at answer
+time — matching a question to the right answer needs no model, no API
+key, no per-message cost, and no internet connection, which keeps this
+feature consistent with the rest of the app (SQLite by default, vendored
+Bootstrap, no CDN — see docs/adr/0002-database-sqlite-then-postgres.md's
+"no unnecessary external dependency" spirit, and
+docs/adr/0009-rule-based-help-chat.md for the full reasoning).
 
 Matching is a simple keyword-overlap score, not fuzzy/semantic search —
 good enough for a fixed, small set of known topics, and its behavior is
@@ -15,14 +16,38 @@ both employees and admins, "employee"/"admin" only to that role — an
 employee's chat should never suggest managing Users & Groups, and an
 admin asking "how do I approve" shouldn't get an employee's submit-a-
 report answer instead.
+
+Two kinds of entries:
+- **FAQ_ENTRIES**: a fixed `answer` string, same for everyone who
+  matches. A few of these interpolate a policy constant (the MXN/USD
+  rate, the expense-type list) directly from where that constant is
+  defined, rather than duplicating the number/list as separate text that
+  could quietly drift out of sync if the constant ever changes.
+- **DYNAMIC_ENTRIES**: an `answer_fn(user)` instead of a fixed string —
+  for the handful of questions whose true answer depends on *who's
+  asking* or on data that changes over time (an employee's own number,
+  who a report's supervisor is, which reports are pending review right
+  now). These read the database directly, scoped the same way every
+  other admin/employee view in this app scopes it — an admin's "who
+  owns the pending reports" answer only lists their own department
+  unless they're HR/general.
 """
 import re
+
+from expenses.policies import USD_MXN_RATE
 
 FALLBACK_ANSWER = (
     "I don't have an answer for that one. Check the Policies/Help tabs if "
     "you're an admin, or ask your supervisor/admin directly — see the "
     "README's admin-credentials section for who to contact."
 )
+
+
+def _expense_type_labels() -> str:
+    from expenses.models import TravelDocument
+
+    return ", ".join(label for _, label in TravelDocument.DocType.choices)
+
 
 FAQ_ENTRIES = [
     {
@@ -47,14 +72,26 @@ FAQ_ENTRIES = [
         ),
     },
     {
+        "audience": "all",
+        "keywords": ["expense", "types", "categories", "kind", "taxi", "meal", "flight", "hotel"],
+        "question": "What expense types can I use for a document?",
+        # Reads the model's own choices, so this can never list a type the
+        # form itself doesn't actually offer, or miss one that was added.
+        "answer": lambda: f"Every travel document is tagged with a type: {_expense_type_labels()} — pick whichever matches the receipt.",
+    },
+    {
         "audience": "employee",
         "keywords": ["currency", "peso", "pesos", "mxn", "dollar", "usd", "exchange", "rate"],
-        "question": "Which currency should I pick for a receipt?",
-        "answer": (
-            "Pick whichever currency the receipt was actually issued in (USD "
-            "or MXN) — don't convert it yourself. The app converts MXN to USD "
-            "automatically (at a fixed rate) for the $60/day check and your "
-            "report's total; your original peso amount is never changed."
+        "question": "Which currency should I pick for a receipt, and what's the exchange rate?",
+        "answer": lambda: (
+            f"Pick whichever currency the receipt was actually issued in (USD "
+            f"or MXN) — don't convert it yourself. If it's MXN, the app "
+            f"converts it to USD automatically at a fixed rate of "
+            f"{USD_MXN_RATE} pesos per dollar (the default/only rate this "
+            f"tool uses — there's no per-receipt rate to look up) for the "
+            f"$60/day check and your report's total; a USD receipt just uses "
+            f"a 1:1 rate. Your original amount is never changed, only "
+            f"compared."
         ),
     },
     {
@@ -111,7 +148,7 @@ FAQ_ENTRIES = [
     },
     {
         "audience": "all",
-        "keywords": ["login", "log", "email", "employee", "number", "password", "sign", "in"],
+        "keywords": ["login", "log", "email", "password", "sign", "in"],
         "question": "Can I log in with my employee number instead of my email?",
         "answer": (
             "Yes — the login field accepts either your email or your company "
@@ -172,7 +209,7 @@ FAQ_ENTRIES = [
     },
     {
         "audience": "admin",
-        "keywords": ["history", "download", "audit", "trail", "who", "when"],
+        "keywords": ["history", "download", "audit", "trail", "when"],
         "question": "Where can I see a report's full history?",
         "answer": (
             "Open the report → History tab for the on-screen log, or use the "
@@ -195,6 +232,61 @@ FAQ_ENTRIES = [
 ]
 
 
+def _employee_number_answer(user) -> str:
+    if user.employee_number:
+        return f"Your employee number is {user.employee_number}."
+    return "You don't have an employee number on file — that's unusual; contact an admin."
+
+
+def _supervisor_answer(user) -> str:
+    from expenses.models import ExpenseReport
+
+    latest = ExpenseReport.objects.filter(user=user).order_by("-created_at").first()
+    if not latest or not latest.supervisor_name:
+        return (
+            "Supervisor isn't a fixed field on your account — it's entered "
+            "per report when you create one, and you don't have a report "
+            "with a supervisor on file yet."
+        )
+    contact = f" ({latest.supervisor_email})" if latest.supervisor_email else ""
+    return f"On your most recent report (\"{latest.title}\"), the supervisor on file is {latest.supervisor_name}{contact}."
+
+
+def _pending_owners_answer(user) -> str:
+    from expenses.models import ExpenseReport
+
+    pending = ExpenseReport.objects.filter(status=ExpenseReport.Status.SUBMITTED).select_related("user")
+    if not user.is_superuser and user.supervised_department:
+        pending = pending.filter(user__department=user.supervised_department)
+
+    owners = sorted({report.user.get_full_name() or report.user.email for report in pending})
+    if not owners:
+        return "No reports are currently pending review (in your scope)."
+    return "Reports are currently pending review from: " + ", ".join(owners) + "."
+
+
+DYNAMIC_ENTRIES = [
+    {
+        "audience": "all",
+        "keywords": ["my", "employee", "number"],
+        "question": "What's my employee number?",
+        "answer_fn": _employee_number_answer,
+    },
+    {
+        "audience": "employee",
+        "keywords": ["my", "supervisor", "manager", "reviewer", "boss"],
+        "question": "Who is my supervisor?",
+        "answer_fn": _supervisor_answer,
+    },
+    {
+        "audience": "admin",
+        "keywords": ["who", "owns", "owners", "pending", "waiting"],
+        "question": "Who owns the reports currently pending review?",
+        "answer_fn": _pending_owners_answer,
+    },
+]
+
+
 def _tokenize(message: str) -> set:
     # Strips punctuation a real question naturally ends with ("...report?")
     # so it doesn't silently break an otherwise-exact keyword match.
@@ -205,20 +297,30 @@ def _score(message_words: set, keywords: list) -> int:
     return sum(1 for keyword in keywords if keyword in message_words)
 
 
-def find_answer(message: str, *, is_staff: bool) -> str:
-    """Matches a free-text question to the best FAQ_ENTRIES entry for this
-    user's role, by keyword overlap. Returns FALLBACK_ANSWER if nothing
-    scores above zero — never guesses at an answer that isn't already
-    documented elsewhere in the app."""
+def find_answer(message: str, *, user) -> str:
+    """Matches a free-text question to the best entry (dynamic first, then
+    static) for this user's role, by keyword overlap. Returns
+    FALLBACK_ANSWER if nothing scores above zero — never guesses at an
+    answer that isn't already documented, or isn't a real live lookup,
+    elsewhere in the app."""
     message_words = _tokenize(message)
-    audiences = {"all", "admin"} if is_staff else {"all", "employee"}
+    audiences = {"all", "admin"} if user.is_staff else {"all", "employee"}
 
-    best_entry, best_score = None, 0
-    for entry in FAQ_ENTRIES:
+    best_entry, best_score, best_is_dynamic = None, 0, False
+    for entry in DYNAMIC_ENTRIES + FAQ_ENTRIES:
         if entry["audience"] not in audiences:
             continue
         score = _score(message_words, entry["keywords"])
         if score > best_score:
             best_entry, best_score = entry, score
+            best_is_dynamic = "answer_fn" in entry
 
-    return best_entry["answer"] if best_entry else FALLBACK_ANSWER
+    if best_entry is None:
+        return FALLBACK_ANSWER
+    if best_is_dynamic:
+        return best_entry["answer_fn"](user)
+    # A handful of static entries interpolate a live policy constant
+    # (the FX rate, the expense-type list) via a zero-arg lambda instead
+    # of a fixed string — call it if that's what this entry has.
+    answer = best_entry["answer"]
+    return answer() if callable(answer) else answer

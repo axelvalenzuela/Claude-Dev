@@ -44,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **178 tests**.
+- Test framework de Django (basado en `unittest`): **187 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -630,6 +630,21 @@ conservan hasta entonces:
   `reset` POST), los tres con `LoginRequiredMixin` y escritos/leídos
   siempre contra `request.user` — nunca se puede ver ni borrar el chat de
   otra cuenta.
+- **También responde preguntas de datos "en vivo" de RH**, no solo texto
+  fijo (`DYNAMIC_ENTRIES` en `accounts/faq.py`, cada una con un
+  `answer_fn(user)` en vez de una respuesta fija):
+  - *"What's my employee number?"* — su propio número de empleado.
+  - *"Who is my supervisor?"* — el supervisor de su reporte más reciente
+    (el supervisor se captura por reporte, no es un campo del usuario).
+  - *"Who owns the reports pending review?"* (solo admins) — lista en
+    vivo de quién tiene reportes pendientes ahora mismo, con el mismo
+    alcance por departamento que ya usa el Dashboard
+    (`pending_reports_notification`) — un admin de departamento nunca ve
+    nombres de otro departamento a través del chat tampoco.
+  - Además, el tipo de gasto (Taxi/Meal/Flight/Hotel/Other) y el tipo de
+    cambio USD/MXN que responde el chat se leen directamente de
+    `TravelDocument.DocType` y `policies.USD_MXN_RATE` — nunca un número
+    o lista duplicada a mano que se pudiera desincronizar del valor real.
 
 ## Reglas de negocio (testeadas, `expenses/models.py`)
 
@@ -841,7 +856,7 @@ cd lab2
 python manage.py test
 ```
 
-178 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+187 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de

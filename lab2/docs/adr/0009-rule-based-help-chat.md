@@ -22,6 +22,20 @@ matched to a user's free-text message by keyword overlap, filtered by
 whether the asker is staff or not. No external API call, no model, no
 network dependency for the feature to work.
 
+"Rule-based" doesn't mean "static text only," though: a second set,
+`DYNAMIC_ENTRIES`, covers the handful of questions whose true answer is
+live data rather than a fixed fact — an employee's own employee number,
+who a report's supervisor is, which reports are currently pending review
+(scoped to the asking admin's department, same as everywhere else in the
+app). Each dynamic entry has an `answer_fn(user)` instead of a fixed
+string, read straight off the database at answer time — still no model
+call, still fully deterministic and testable, just backed by a query
+instead of a literal. A few *static* entries (the expense-type list, the
+MXN/USD rate) also interpolate a real constant/model choice at answer
+time rather than duplicating it as separate hardcoded text, so they can
+never drift out of sync with `TravelDocument.DocType` or
+`policies.USD_MXN_RATE` if either changes.
+
 ## Alternatives considered
 
 - **Call the Claude API for real open-ended Q&A**: genuinely more
@@ -63,3 +77,9 @@ network dependency for the feature to work.
   and devices until the user explicitly resets it — same durability
   expectation as every other per-account record in this app, and no
   different in kind whether the account is an employee's or an admin's.
+- Dynamic answers never reveal more than the asker could already see
+  through the normal UI: an employee's "my employee number"/"my
+  supervisor" only ever reads their *own* rows, and an admin's "who owns
+  the pending reports" reuses the exact same department-scoping query
+  `pending_reports_notification` already applies — the chat is a new way
+  to ask, not a new grant of access.

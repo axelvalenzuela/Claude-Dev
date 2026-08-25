@@ -989,29 +989,93 @@ tr:hover .badge {
     transform: translateX(4px);
 }
 
-/* Remove-attachment control on the new-report upload rows — lets someone
-   drop a single file they picked by mistake without re-selecting the whole
-   batch. */
-.document-row {
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+/* Per-file tabs on the new-report upload card (one tab per attached
+   file, each with its own live preview) — replaces a long stack of
+   near-identical cards, one per receipt, which got unwieldy past two or
+   three files. */
+.document-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 2px solid var(--brand-gray-border);
+    padding-bottom: 0;
+    list-style: none;
+    margin: 0;
+    padding-left: 0;
 }
-.document-row:hover {
-    border-color: var(--brand-red);
-}
-.remove-row {
+.document-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 180px;
+    padding: 8px 10px;
     border: none;
-    background: transparent;
-    color: #999;
+    border-bottom: 3px solid transparent;
+    background: none;
+    color: #555;
     font-size: 0.85rem;
-    line-height: 1;
-    padding: 3px 8px;
-    border-radius: 4px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.2s ease, background-color 0.15s ease;
+}
+.document-tab-btn:hover {
+    color: var(--brand-red);
+    background: rgba(213, 0, 28, 0.06);
+}
+.document-tab-btn.active {
+    color: var(--brand-red);
+    border-bottom-color: var(--brand-red);
+    font-weight: 600;
+}
+.document-tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.document-tab-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    color: #999;
+    flex-shrink: 0;
     transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
-.remove-row:hover {
+.document-tab-close:hover {
     color: var(--brand-white);
     background-color: var(--brand-red);
-    transform: scale(1.08);
+    transform: scale(1.15);
+}
+.document-tab-panes {
+    border: 1px solid var(--brand-gray-border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 14px;
+}
+.document-pane {
+    animation: help-chat-bubble-in 0.2s ease;
+}
+.document-preview {
+    margin-bottom: 10px;
+}
+.document-preview-img {
+    display: block;
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 6px;
+    border: 1px solid var(--brand-gray-border);
+}
+.document-preview-pdf {
+    width: 100%;
+    height: 220px;
+    border: 1px solid var(--brand-gray-border);
+    border-radius: 6px;
+}
+.document-preview-open-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.82rem;
 }
 
 /* File-picker drop zone gets an obvious hover/drag affordance instead of

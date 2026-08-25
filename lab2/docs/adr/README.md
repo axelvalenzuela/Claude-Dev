@@ -20,6 +20,7 @@ build against it, not the reverse.
 | [0006](0006-centralize-business-rules.md) | Every business rule lives in exactly one method, read everywhere else | Accepted |
 | [0007](0007-file-retention-policy.md) | Delete originals at approval; scheduled 90-day cleanup otherwise | Accepted |
 | [0008](0008-admin-access-model.md) | Admin access model: is_staff-wide Users & Groups, manual provisioning, dual-identifier login | Accepted |
+| [0009](0009-rule-based-help-chat.md) | A rule-based help-chat widget, not an LLM integration | Accepted |
 
 ## Format
 

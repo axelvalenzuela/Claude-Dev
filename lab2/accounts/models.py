@@ -89,3 +89,27 @@ class LoginEvent(models.Model):
     def __str__(self):
         status = "success" if self.success else "failed"
         return f"{self.email_attempted} · {status} · {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class HelpChatMessage(models.Model):
+    """One message in the floating help-chat widget's conversation
+    (accounts/faq.py builds the bot's replies; templates/help_chat/
+    widget.html is the UI). Persisted per account — not per session — so
+    an employee's or an admin's chat is exactly where they left it the
+    next time they open the widget, on any device, until they explicitly
+    reset it (see accounts/help_chat_views.py:HelpChatResetView)."""
+
+    class Role(models.TextChoices):
+        USER = "user", "You"
+        BOT = "bot", "Assistant"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="help_chat_messages")
+    role = models.CharField(max_length=10, choices=Role.choices)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.user_id} · {self.role} · {self.text[:40]}"

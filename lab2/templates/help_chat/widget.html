@@ -1,0 +1,135 @@
+{% comment %}
+  Floating help-chat widget — included from both templates/base.html
+  (employee portal) and templates/admin/base_site.html (admin), so it's
+  the same feature and the same backend (accounts/help_chat_views.py) on
+  both sides. Hidden entirely for anonymous users: the chat is tied to
+  request.user, so there's nothing to show before login.
+{% endcomment %}
+{% if user.is_authenticated %}
+<div id="help-chat-widget" class="help-chat-widget">
+    <button type="button" id="help-chat-toggle" class="help-chat-toggle" aria-expanded="false" aria-label="Open help chat">
+        <span class="help-chat-toggle-icon help-chat-toggle-icon-open">💬</span>
+        <span class="help-chat-toggle-icon help-chat-toggle-icon-close">✕</span>
+    </button>
+    <div id="help-chat-panel" class="help-chat-panel" role="dialog" aria-label="Help assistant">
+        <div class="help-chat-header">
+            <div>
+                <div class="help-chat-header-title">Help Assistant</div>
+                <div class="help-chat-header-subtitle">Ask how anything on the platform works</div>
+            </div>
+            <button type="button" id="help-chat-reset" class="help-chat-reset-btn" title="Start a new chat">New chat</button>
+        </div>
+        <div id="help-chat-log" class="help-chat-log" aria-live="polite"></div>
+        <form id="help-chat-form" class="help-chat-form">
+            <input type="text" id="help-chat-input" class="help-chat-input" placeholder="Ask a question…" maxlength="500" autocomplete="off">
+            <button type="submit" class="help-chat-send-btn" aria-label="Send">&#10148;</button>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    const widget = document.getElementById("help-chat-widget");
+    const toggle = document.getElementById("help-chat-toggle");
+    const panel = document.getElementById("help-chat-panel");
+    const resetBtn = document.getElementById("help-chat-reset");
+    const log = document.getElementById("help-chat-log");
+    const form = document.getElementById("help-chat-form");
+    const input = document.getElementById("help-chat-input");
+
+    const historyUrl = "{% url 'help_chat_history' %}";
+    const askUrl = "{% url 'help_chat_ask' %}";
+    const resetUrl = "{% url 'help_chat_reset' %}";
+    const csrfToken = "{{ csrf_token }}";
+    const welcomeText = "Hi! Ask me anything about how the platform works — reports, the $60/day policy, approvals, logging in, whatever you're not sure about.";
+
+    let historyLoaded = false;
+
+    function addBubble(role, text) {
+        const bubble = document.createElement("div");
+        bubble.className = "help-chat-bubble help-chat-bubble-" + role;
+        bubble.textContent = text;
+        log.appendChild(bubble);
+        log.scrollTop = log.scrollHeight;
+        return bubble;
+    }
+
+    function showWelcomeIfEmpty() {
+        if (!log.children.length) addBubble("bot", welcomeText);
+    }
+
+    function loadHistory() {
+        fetch(historyUrl, { credentials: "same-origin" })
+            .then((response) => response.json())
+            .then((data) => {
+                log.innerHTML = "";
+                (data.messages || []).forEach((message) => addBubble(message.role, message.text));
+                showWelcomeIfEmpty();
+                historyLoaded = true;
+            })
+            .catch(() => showWelcomeIfEmpty());
+    }
+
+    function openPanel() {
+        widget.classList.add("help-chat-open");
+        toggle.setAttribute("aria-expanded", "true");
+        if (!historyLoaded) loadHistory();
+        setTimeout(() => input.focus(), 150);
+    }
+
+    function closePanel() {
+        widget.classList.remove("help-chat-open");
+        toggle.setAttribute("aria-expanded", "false");
+    }
+
+    toggle.addEventListener("click", () => {
+        widget.classList.contains("help-chat-open") ? closePanel() : openPanel();
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && widget.classList.contains("help-chat-open")) closePanel();
+    });
+
+    resetBtn.addEventListener("click", () => {
+        if (!confirm("Start a new chat? This clears your current conversation.")) return;
+        fetch(resetUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, credentials: "same-origin" })
+            .then(() => {
+                log.innerHTML = "";
+                showWelcomeIfEmpty();
+            });
+    });
+
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+
+        addBubble("user", text);
+        input.value = "";
+        input.disabled = true;
+        const thinking = addBubble("bot", "…");
+        thinking.classList.add("help-chat-bubble-thinking");
+
+        fetch(askUrl, {
+            method: "POST",
+            headers: { "X-CSRFToken": csrfToken, "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ message: text }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                thinking.remove();
+                addBubble("bot", data.answer || "Sorry, something went wrong — try again.");
+            })
+            .catch(() => {
+                thinking.remove();
+                addBubble("bot", "Sorry, something went wrong — try again.");
+            })
+            .finally(() => {
+                input.disabled = false;
+                input.focus();
+            });
+    });
+})();
+</script>
+{% endif %}

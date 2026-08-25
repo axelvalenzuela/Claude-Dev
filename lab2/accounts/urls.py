@@ -6,6 +6,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from .forms import BrandedPasswordResetForm, LoginForm
+from .help_chat_views import HelpChatAskView, HelpChatHistoryView, HelpChatResetView
 from .views import PasswordResetConfirmView, SignUpView
 
 urlpatterns = [
@@ -42,4 +43,10 @@ urlpatterns = [
         auth_views.PasswordResetCompleteView.as_view(template_name="registration/password_reset_complete.html"),
         name="password_reset_complete",
     ),
+    # The floating help-chat widget (templates/help_chat/widget.html),
+    # included on both the employee portal and the admin — same three
+    # routes serve both, scoped to request.user either way.
+    path("help-chat/messages/", HelpChatHistoryView.as_view(), name="help_chat_history"),
+    path("help-chat/ask/", HelpChatAskView.as_view(), name="help_chat_ask"),
+    path("help-chat/reset/", HelpChatResetView.as_view(), name="help_chat_reset"),
 ]

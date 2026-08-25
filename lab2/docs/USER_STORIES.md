@@ -155,6 +155,19 @@ whole set is a consolidated view of the shipped app, not a backlog.
 
 ## Cross-cutting / platform
 
+- **(done)** As anyone with a login (employee or admin), I want a quick
+  way to ask "how does this work" without hunting through the admin's
+  Policies/Help tabs or the README, so that a question about the $60/day
+  policy, approving a report, or attaching a receipt gets answered right
+  where I am.
+  (`accounts/faq.py`, `accounts/help_chat_views.py`,
+  `templates/help_chat/widget.html`, `docs/adr/0009-rule-based-help-chat.md`)
+- **(done)** As anyone using the help chat, I want my conversation saved
+  to my own account and waiting for me next time, and a clear way to
+  start fresh when I don't need the old thread anymore, so that my
+  history isn't lost between visits but also isn't stuck cluttering the
+  widget forever.
+  (`accounts.models.HelpChatMessage`, `HelpChatResetView`)
 - **(done)** As anyone with a login, I want every login attempt —
   successful or not, against a real account or not — recorded with who,
   when, and from where, so that suspicious activity is traceable after

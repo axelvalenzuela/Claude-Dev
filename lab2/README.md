@@ -44,7 +44,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **158 tests**.
+- Test framework de Django (basado en `unittest`): **178 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -600,6 +600,37 @@ conservan hasta entonces:
 - Visible en el admin de usuarios, en el detalle del reporte, en el admin
   de reportes y en el Excel.
 
+### 21. Chat de ayuda flotante (`accounts/faq.py`, `accounts/help_chat_views.py`)
+- Un widget flotante, animado, presente tanto en el portal del empleado
+  como en el admin — mismo componente (`templates/help_chat/widget.html`),
+  mismo backend, en ambos lados. Escondido por completo para visitantes
+  no autenticados.
+- **Deliberadamente basado en reglas, no en un LLM real** — ver
+  [`docs/adr/0009-rule-based-help-chat.md`](docs/adr/0009-rule-based-help-chat.md)
+  para el porqué: cada respuesta ya es un hecho documentado en algún lado
+  de la app (el README, las pestañas Policies/Help), así que emparejar la
+  pregunta con la respuesta correcta no necesita un modelo, una API key,
+  costo por mensaje, ni conexión a internet — consistente con el resto de
+  la app (SQLite por default, Bootstrap vendorizado, sin CDN).
+- `accounts/faq.py:find_answer()` compara las palabras de la pregunta
+  contra `FAQ_ENTRIES` (cada entrada con sus propias palabras clave) y
+  devuelve la de mayor coincidencia — filtrado primero por rol
+  (`audience: "all" | "employee" | "admin"`), para que un empleado nunca
+  reciba una respuesta sobre gestionar Users & Groups, ni un admin reciba
+  la respuesta de "cómo creo un reporte" en vez de la suya. Sin
+  coincidencia, responde con un mensaje honesto de "no sé" en vez de
+  inventar algo.
+- **Se guarda en base de datos por cuenta, no por sesión**
+  (`HelpChatMessage`, un row por mensaje, ligado al `User`) — tanto para
+  empleados como para admins. La conversación sigue ahí la próxima vez
+  que se abre el widget, en cualquier dispositivo, hasta que se reinicia
+  explícitamente ("New chat" en el header del widget, que borra todos los
+  mensajes de esa cuenta — `HelpChatResetView`).
+- Tres endpoints bajo `/accounts/help-chat/` (`messages` GET, `ask` POST,
+  `reset` POST), los tres con `LoginRequiredMixin` y escritos/leídos
+  siempre contra `request.user` — nunca se puede ver ni borrar el chat de
+  otra cuenta.
+
 ## Reglas de negocio (testeadas, `expenses/models.py`)
 
 Viven como métodos del propio modelo `ExpenseReport`, no en las vistas ni en
@@ -761,15 +792,18 @@ lab2/
     forms.py                       # LoginForm/AdminLoginForm/reset — LockoutCheckMixin
     views.py                       # SignUpView, PasswordResetConfirmView (CBVs)
     admin.py                       # UserAdmin, GroupAdmin (re-registrado), LoginEventAdmin (solo lectura) — StaffManagedAdminMixin
+    faq.py                          # FAQ_ENTRIES + find_answer() — motor del chat de ayuda
+    help_chat_views.py              # HelpChatHistoryView/AskView/ResetView — /accounts/help-chat/*
     migrations/0002_seed_admin.py
     migrations/0005_backfill_employee_numbers.py
     migrations/0007_seed_org_admins.py   # Iris Cortez (RH) + Adrian Heymes (ICS)
     migrations/0008_seed_axel_mhp_employee.py  # Axel Valenzuela, identidad de dominio MHP (empleado, no admin)
     migrations/0009_seed_karen_admin.py     # Karen Plascencia (RH)
     migrations/0010_seed_steffan_widmer.py  # Steffan Widmer, CEO (RH)
+    migrations/0011_helpchatmessage.py      # modelo del chat de ayuda
     tests/                          # un archivo por concepto: signup, security, org_admin_seed,
                                      # department_scoping, notifications, approval_chart, server_lifecycle,
-                                     # employee_number_login...
+                                     # employee_number_login, help_chat...
   expenses/
     models.py                  # ExpenseReport (+ excel/word_snapshot), TravelDocument, AuditLog
     policies.py                 # DAILY_LIMIT_USD, USD_MXN_RATE, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
@@ -786,6 +820,7 @@ lab2/
     tests/                      # un archivo por vista/servicio probado — ver arriba
   templates/
     base.html                    # layout del portal del empleado (en inglés) + banner de notificaciones
+    help_chat/widget.html          # widget flotante del chat de ayuda — incluido en base.html y admin/base_site.html
     admin/base_site.html          # branding "MHP by Porsche" del panel admin
     admin/index.html               # banner de pendientes + donut chart de aprobación
     admin/login.html                # login admin con formato empresarial
@@ -806,7 +841,7 @@ cd lab2
 python manage.py test
 ```
 
-158 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+178 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de
@@ -832,7 +867,11 @@ bloqueo por intentos fallidos cuenta igual sin importar qué identificador
 se haya escrito en cada intento, la tabla Pending/Approved del Dashboard
 con su alcance por departamento, y que Users &amp; Groups sea accesible
 para cualquier cuenta `is_staff` (no solo `is_superuser`) incluyendo que
-un admin de departamento pueda otorgarle acceso de admin a alguien más.
+un admin de departamento pueda otorgarle acceso de admin a alguien más, y
+el chat de ayuda (`find_answer()` respetando el filtro por rol, cada
+endpoint (`help-chat/ask` / `messages` / `reset`) devolviendo solo los
+mensajes de `request.user`, y que el widget solo se renderiza para
+cuentas autenticadas).
 
 Lo que estos tests **no** cubren (y por qué): el render visual del front-end
 (nav responsive, estado "active" de los links, el badge de rol admin) — son

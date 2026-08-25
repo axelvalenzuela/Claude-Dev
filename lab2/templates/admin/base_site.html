@@ -24,3 +24,8 @@
 {% endblock %}
 
 {% block nav-global %}{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+{% include "help_chat/widget.html" %}
+{% endblock %}

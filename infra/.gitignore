@@ -1,0 +1,4 @@
+# Real parameter files may end up holding account-specific values
+# (subnet IDs, ARNs). Keep only the *.example.json templates in git.
+parameters/*.json
+!parameters/*.example.json

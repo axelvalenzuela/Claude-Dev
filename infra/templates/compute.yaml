@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  MHP expense-report portal — compute stack: a single EC2 instance
+  running the Django app in a private subnet (infra/docs/adr/0003,
+  infra/docs/adr/0005), fronted later by the ALB in edge.yaml.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: mhp-expenses
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  InstanceType:
+    Type: String
+    Default: t3.small
+    Description: Sized for an internal tool with well under 100 users (infra/docs/adr/0003). Adjust as needed.
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: Always resolves to the current Amazon Linux 2023 AMI at deploy time — includes the SSM Agent needed for keyless access (infra/docs/adr/0008).
+  AppPort:
+    Type: Number
+    Default: 8080
+    Description: Port the Django app listens on behind the ALB.
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Pass the PrivateSubnetIds output/export from network.yaml.
+  AppSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Pass the AppSecurityGroupId output/export from network.yaml.
+  AppInstanceProfileArn:
+    Type: String
+    Description: Pass the AppInstanceProfileArn output/export from security.yaml.
+
+Resources:
+  AppLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub "${ProjectName}-${Environment}-app-lt"
+      LaunchTemplateData:
+        ImageId: !Ref LatestAmiId
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Arn: !Ref AppInstanceProfileArn
+        SecurityGroupIds:
+          - !Ref AppSecurityGroupId
+        MetadataOptions:
+          HttpTokens: required # IMDSv2 only — infra/docs/adr/0009
+          HttpPutResponseHopLimit: 2
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 20
+              VolumeType: gp3
+              Encrypted: true
+              DeleteOnTermination: true
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub "${ProjectName}-${Environment}-app"
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            # Scaffold only — this installs nothing about the Django app
+            # itself. Replace with a real bootstrap (pull the app, install
+            # lab2/requirements.txt into a venv, run migrations, start the
+            # app under a process manager on ${AppPort}) or better, bake an
+            # AMI/use a CI-driven deploy so this instance doesn't need to
+            # build itself from scratch on every boot.
+            dnf update -y
+            dnf install -y python3.12
+
+  AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref AppLaunchTemplate
+        Version: !GetAtt AppLaunchTemplate.LatestVersionNumber
+      SubnetId: !Select [0, !Ref PrivateSubnetIds]
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-app"
+
+Outputs:
+  InstanceId:
+    Value: !Ref AppInstance
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-app-instance-id"
+  LaunchTemplateId:
+    Value: !Ref AppLaunchTemplate
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-app-lt-id"

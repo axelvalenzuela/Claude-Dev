@@ -1,0 +1,280 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  MHP expense-report portal — messaging/validation stack: SQS queue fed
+  by S3 upload events, a dead-letter queue, the file-validation Lambda,
+  and a custom resource that wires the S3 bucket notification to the
+  queue after both exist (infra/docs/adr/0006). Deploy after storage.yaml
+  and security.yaml.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: mhp-expenses
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  ValidationLambdaRoleArn:
+    Type: String
+    Description: >
+      ARN of the Lambda execution role from security.yaml
+      (ValidationLambdaRoleArn output / SSM-free cross-stack value — passed
+      as a parameter rather than Fn::ImportValue so this stack can be
+      redeployed without security.yaml's export ever locking, per
+      infra/docs/adr/0002; pass the value from `aws cloudformation
+      describe-stacks` at deploy time).
+  NotificationWiringLambdaRoleArn:
+    Type: String
+    Description: ARN of the notify-wiring Lambda role from security.yaml.
+  DlqAlarmTopicArn:
+    Type: String
+    Default: ""
+    Description: >
+      Optional SNS topic ARN to notify when messages land in the dead-letter
+      queue. Leave blank to skip alarm actions until you have a topic to
+      send to.
+
+Conditions:
+  HasDlqAlarmTopic: !Not [!Equals [!Ref DlqAlarmTopicArn, ""]]
+
+Resources:
+  # ---- Dead-letter queue: catches messages the validation Lambda
+  #      couldn't process after retries (infra/docs/adr/0006) ----
+
+  UploadValidationDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ProjectName}-${Environment}-upload-validation-dlq"
+      MessageRetentionPeriod: 1209600 # 14 days
+      SqsManagedSseEnabled: true
+
+  # ---- Main queue: one message per S3 ObjectCreated event ----
+
+  UploadNotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "${ProjectName}-${Environment}-upload-notifications"
+      VisibilityTimeout: 120
+      MessageRetentionPeriod: 345600 # 4 days
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt UploadValidationDlq.Arn
+        maxReceiveCount: 5
+
+  UploadNotificationQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref UploadNotificationQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowReportsBucketToSendMessages
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt UploadNotificationQueue.Arn
+            Condition:
+              ArnEquals:
+                "aws:SourceArn": !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${Environment}-reports-${AWS::AccountId}"
+              StringEquals:
+                "aws:SourceAccount": !Ref AWS::AccountId
+
+  # ---- Validation Lambda (infra/docs/adr/0006) ----
+  # The inline code below is a starting skeleton, not production logic —
+  # it acknowledges each message, records that it ran, and demonstrates
+  # the S3 -> DynamoDB write path. Replace with real validation mirroring
+  # lab2/expenses/pdf_analysis.py and image_analysis.py before relying on
+  # this in a real environment.
+
+  ValidationFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}-validate-upload"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !Ref ValidationLambdaRoleArn
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          VALIDATED_REPORTS_TABLE: !Sub "${ProjectName}-${Environment}-validated-reports"
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import time
+          import urllib.parse
+
+          import boto3
+
+          dynamodb = boto3.resource("dynamodb")
+          table = dynamodb.Table(os.environ["VALIDATED_REPORTS_TABLE"])
+
+
+          def handler(event, context):
+              """Validate each uploaded file referenced by an SQS-delivered
+              S3 event notification, and record the outcome in DynamoDB.
+
+              This is a scaffold: it confirms the object exists and is
+              non-empty, then writes a placeholder validation record. Swap
+              in real checks (file type, size limits, structural checks)
+              before using this against real uploads.
+              """
+              s3 = boto3.client("s3")
+              for record in event.get("Records", []):
+                  body = json.loads(record["body"])
+                  for s3_record in body.get("Records", []):
+                      bucket = s3_record["s3"]["bucket"]["name"]
+                      key = urllib.parse.unquote_plus(
+                          s3_record["s3"]["object"]["key"]
+                      )
+                      head = s3.head_object(Bucket=bucket, Key=key)
+                      is_valid = head["ContentLength"] > 0
+                      table.put_item(
+                          Item={
+                              "reportId": key,
+                              "employeeNumber": key.split("/")[0]
+                              if "/" in key
+                              else "unknown",
+                              "bucket": bucket,
+                              "sizeBytes": head["ContentLength"],
+                              "validatedAt": int(time.time()),
+                              "status": "validated" if is_valid else "rejected",
+                          }
+                      )
+              return {"statusCode": 200}
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-validate-upload"
+
+  ValidationFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ProjectName}-${Environment}-validate-upload"
+      RetentionInDays: 30
+
+  ValidationEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      EventSourceArn: !GetAtt UploadNotificationQueue.Arn
+      FunctionName: !Ref ValidationFunction
+      BatchSize: 5
+      MaximumBatchingWindowInSeconds: 5
+
+  # ---- CloudWatch alarm: notice when the DLQ actually has messages
+  #      (infra/docs/adr/0006's "not silently dropped" requirement) ----
+
+  DlqNotEmptyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "${ProjectName}-${Environment}-upload-validation-dlq-not-empty"
+      AlarmDescription: A file failed validation retries and landed in the dead-letter queue.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value: !GetAtt UploadValidationDlq.QueueName
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: !If
+        - HasDlqAlarmTopic
+        - [!Ref DlqAlarmTopicArn]
+        - !Ref AWS::NoValue
+
+  # ---- Custom resource: attach the S3 -> SQS notification after both
+  #      the bucket (storage.yaml) and this queue already exist. See
+  #      storage.yaml's note on why this can't be a plain
+  #      NotificationConfiguration property on the bucket itself. ----
+
+  NotificationWiringFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${ProjectName}-${Environment}-wire-bucket-notification"
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !Ref NotificationWiringLambdaRoleArn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import json
+          import urllib.request
+
+          import boto3
+
+          s3 = boto3.client("s3")
+
+
+          def send_response(event, context, status, reason=""):
+              body = json.dumps(
+                  {
+                      "Status": status,
+                      "Reason": reason or "See CloudWatch Logs",
+                      "PhysicalResourceId": event.get(
+                          "PhysicalResourceId", context.log_stream_name
+                      ),
+                      "StackId": event["StackId"],
+                      "RequestId": event["RequestId"],
+                      "LogicalResourceId": event["LogicalResourceId"],
+                  }
+              ).encode()
+              req = urllib.request.Request(
+                  url=event["ResponseURL"],
+                  data=body,
+                  method="PUT",
+                  headers={"Content-Type": ""},
+              )
+              urllib.request.urlopen(req)
+
+
+          def handler(event, context):
+              props = event["ResourceProperties"]
+              bucket = props["BucketName"]
+              queue_arn = props["QueueArn"]
+              try:
+                  if event["RequestType"] in ("Create", "Update"):
+                      s3.put_bucket_notification_configuration(
+                          Bucket=bucket,
+                          NotificationConfiguration={
+                              "QueueConfigurations": [
+                                  {
+                                      "QueueArn": queue_arn,
+                                      "Events": ["s3:ObjectCreated:*"],
+                                  }
+                              ]
+                          },
+                      )
+                  elif event["RequestType"] == "Delete":
+                      s3.put_bucket_notification_configuration(
+                          Bucket=bucket, NotificationConfiguration={}
+                      )
+                  send_response(event, context, "SUCCESS")
+              except Exception as exc:  # noqa: BLE001 - must always callback CFN
+                  send_response(event, context, "FAILED", reason=str(exc))
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-wire-bucket-notification"
+
+  BucketNotificationConfiguration:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt NotificationWiringFunction.Arn
+      BucketName: !Sub "${ProjectName}-${Environment}-reports-${AWS::AccountId}"
+      QueueArn: !GetAtt UploadNotificationQueue.Arn
+    DependsOn:
+      - UploadNotificationQueuePolicy
+
+Outputs:
+  UploadNotificationQueueArn:
+    Value: !GetAtt UploadNotificationQueue.Arn
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-upload-notifications-queue-arn"
+  UploadValidationDlqArn:
+    Value: !GetAtt UploadValidationDlq.Arn
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-upload-validation-dlq-arn"

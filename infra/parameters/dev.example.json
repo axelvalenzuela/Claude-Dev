@@ -1,0 +1,48 @@
+{
+  "_comment": "Example parameter overrides for the dev environment. Copy to dev.json (git-ignored) and fill in real values before deploying — nothing here is a real account/domain. Cross-stack values (VpcId, PrivateSubnetIds, etc.) come from the outputs of previously deployed stacks; fetch them with `aws cloudformation describe-stacks --stack-name <name> --query 'Stacks[0].Outputs'` and paste them in here rather than hardcoding blindly.",
+
+  "network": {
+    "ProjectName": "mhp-expenses",
+    "Environment": "dev",
+    "VpcCidr": "10.20.0.0/16"
+  },
+
+  "storage": {
+    "ProjectName": "mhp-expenses",
+    "Environment": "dev",
+    "DynamoDbPointInTimeRecovery": "true"
+  },
+
+  "security": {
+    "ProjectName": "mhp-expenses",
+    "Environment": "dev"
+  },
+
+  "messaging": {
+    "ProjectName": "mhp-expenses",
+    "Environment": "dev",
+    "ValidationLambdaRoleArn": "<paste ValidationLambdaRoleArn from the security stack's outputs>",
+    "NotificationWiringLambdaRoleArn": "<paste NotificationWiringLambdaRoleArn from the security stack's outputs>",
+    "DlqAlarmTopicArn": ""
+  },
+
+  "compute": {
+    "ProjectName": "mhp-expenses",
+    "Environment": "dev",
+    "InstanceType": "t3.small",
+    "PrivateSubnetIds": "<paste PrivateSubnetIds from the network stack's outputs>",
+    "AppSecurityGroupId": "<paste AppSecurityGroupId from the network stack's outputs>",
+    "AppInstanceProfileArn": "<paste AppInstanceProfileArn from the security stack's outputs>"
+  },
+
+  "edge": {
+    "ProjectName": "mhp-expenses",
+    "Environment": "dev",
+    "VpcId": "<paste VpcId from the network stack's outputs>",
+    "PublicSubnetIds": "<paste PublicSubnetIds from the network stack's outputs>",
+    "AlbSecurityGroupId": "<paste AlbSecurityGroupId from the network stack's outputs>",
+    "AppInstanceId": "<paste InstanceId from the compute stack's outputs>",
+    "DomainName": "expenses.example-mhp.internal",
+    "HostedZoneId": ""
+  }
+}

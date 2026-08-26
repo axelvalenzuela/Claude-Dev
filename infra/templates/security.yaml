@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  MHP expense-report portal — security stack: IAM roles only, no IAM
+  users or access keys (infra/docs/adr/0008). Defines the EC2 instance
+  role/profile and the Lambda execution role. Resource ARNs are
+  constructed from the ProjectName/Environment naming convention
+  (infra/docs/adr/0002), not imported, so this stack has no hard
+  dependency on storage.yaml or messaging.yaml having been deployed yet.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: mhp-expenses
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  # ---- EC2 instance role: S3 access to the reports bucket, SSM for
+  #      keyless remote access (infra/docs/adr/0008), CloudWatch Logs ----
+
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-${Environment}-app-instance-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: reports-bucket-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: ReadWriteReportFiles
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${Environment}-reports-${AWS::AccountId}/*"
+              - Sid: ListReportsBucket
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${Environment}-reports-${AWS::AccountId}"
+        - PolicyName: app-logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/${ProjectName}/${Environment}/app*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-app-instance-role"
+
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub "${ProjectName}-${Environment}-app-instance-profile"
+      Roles:
+        - !Ref AppInstanceRole
+
+  # ---- Lambda execution role for the file-validation function
+  #      (infra/docs/adr/0006): S3 read, DynamoDB write, SQS consume —
+  #      nothing broader. Kept VPC-free (no ENI permissions needed). ----
+
+  ValidationLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-${Environment}-validation-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: read-uploaded-files
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${Environment}-reports-${AWS::AccountId}/*"
+        - PolicyName: write-validated-reports
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                Resource: !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ProjectName}-${Environment}-validated-reports"
+        - PolicyName: consume-upload-queue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource: !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${ProjectName}-${Environment}-upload-notifications"
+        - PolicyName: lambda-logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ProjectName}-${Environment}-*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-validation-lambda-role"
+
+  # ---- Small role for the custom resource Lambda that wires the S3
+  #      bucket notification to the SQS queue after both exist
+  #      (see messaging.yaml and storage.yaml's note on this). ----
+
+  NotificationWiringLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${ProjectName}-${Environment}-notify-wiring-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: configure-bucket-notification
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketNotification
+                  - s3:PutBucketNotification
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ProjectName}-${Environment}-reports-${AWS::AccountId}"
+        - PolicyName: wiring-lambda-logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ProjectName}-${Environment}-*"
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-notify-wiring-lambda-role"
+
+Outputs:
+  AppInstanceProfileArn:
+    Value: !GetAtt AppInstanceProfile.Arn
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-app-instance-profile-arn"
+  ValidationLambdaRoleArn:
+    Value: !GetAtt ValidationLambdaRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-validation-lambda-role-arn"
+  NotificationWiringLambdaRoleArn:
+    Value: !GetAtt NotificationWiringLambdaRole.Arn
+    Export:
+      Name: !Sub "${ProjectName}-${Environment}-notify-wiring-lambda-role-arn"

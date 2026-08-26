@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  MHP expense-report portal — storage stack (S3 bucket for uploaded trip
+  files, DynamoDB table for Lambda-validated report data). See
+  infra/docs/adr/0007 for why user accounts are deliberately NOT stored
+  here, and infra/docs/adr/0009 for the encryption/hardening baseline.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: mhp-expenses
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+  DynamoDbPointInTimeRecovery:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Whether to enable DynamoDB point-in-time recovery (recommended; costs a small amount extra).
+
+Resources:
+  # ---- S3 bucket for uploaded trip report files ----
+  # Named by convention (infra/docs/adr/0002) so IAM policies in other
+  # stacks can construct this ARN without importing it.
+
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub "${ProjectName}-${Environment}-reports-${AWS::AccountId}"
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-multipart-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-reports"
+
+  # NOTE: the S3 -> SQS event notification (infra/docs/adr/0006) is
+  # deliberately NOT configured here. A bucket's NotificationConfiguration
+  # can only target a queue that already exists AND already has a policy
+  # granting s3.amazonaws.com permission to send it messages for this
+  # specific bucket ARN — so the queue (and its policy) must exist before
+  # the notification is attached. Per infra/docs/adr/0002's module split,
+  # this stack (storage) deploys before messaging, so the queue doesn't
+  # exist yet when this bucket is created; and CloudFormation has no
+  # native resource for "add a notification to a bucket owned by another
+  # stack." Both problems are solved together in messaging.yaml, which
+  # creates the queue + policy first and then attaches the notification
+  # to this bucket (referenced by the same constructed name/ARN convention,
+  # not an import) via a small custom resource. See messaging.yaml's
+  # "BucketNotificationConfiguration" custom resource and its Lambda for
+  # the real wiring.
+
+  ReportsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReportsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt ReportsBucket.Arn
+              - !Sub "${ReportsBucket.Arn}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": "false"
+
+  # ---- DynamoDB table for Lambda-validated report data (infra/docs/adr/0006, 0007) ----
+
+  ValidatedReportsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub "${ProjectName}-${Environment}-validated-reports"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: reportId
+          AttributeType: S
+        - AttributeName: employeeNumber
+          AttributeType: S
+      KeySchema:
+        - AttributeName: reportId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: by-employee-number
+          KeySchema:
+            - AttributeName: employeeNumber
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !Ref DynamoDbPointInTimeRecovery
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName}-${Environment}-validated-reports"
+
+Outputs:
+  ReportsBucketName:
+    Value: !Ref ReportsBucket
+  ReportsBucketArn:
+    Value: !GetAtt ReportsBucket.Arn
+  ValidatedReportsTableName:
+    Value: !Ref ValidatedReportsTable
+  ValidatedReportsTableArn:
+    Value: !GetAtt ValidatedReportsTable.Arn

@@ -11,6 +11,14 @@
 
 {% block nav-sidebar %}{% endblock %}
 
+{% comment %}
+Django's own index_title ("Reports awaiting approval", accounts/apps.py)
+would otherwise render as a plain <h1> right above the Dashboard's own
+styled greeting/KPI header — redundant now that this page has its own
+header, not a bare model-list title.
+{% endcomment %}
+{% block content_title %}{% endblock %}
+
 {% block content %}
 <div class="admin-dashboard-wrap">
 

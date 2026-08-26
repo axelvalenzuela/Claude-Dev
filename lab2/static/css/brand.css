@@ -122,6 +122,29 @@
     vertical-align: middle;
 }
 
+/* "My reports" link back to the employee portal, next to the admin
+   wordmark on every admin page — an admin account can submit its own
+   expense reports too (see e.g. axel.valenzuela@mhp.com), but had no way
+   back to /reports/ from inside /admin/ without typing the URL. */
+.admin-portal-link {
+    display: inline-block;
+    margin-left: 14px;
+    padding: 3px 12px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: var(--brand-white) !important;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-decoration: none;
+    vertical-align: middle;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.admin-portal-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
 /* Centers every admin page (dashboard, changelists, change forms) in a
    readable column instead of sitting flush to the left with empty space
    on the right — #content is Django admin's own top-level content wrapper
@@ -813,6 +836,26 @@ a.employee-row-action.button-muted:hover {
 #changelist table tbody tr:hover {
     background-color: #e8f2fb !important;
     transition: background-color 0.15s ease;
+}
+
+/* Django's default changelist table is tight (8px cell padding, 13px
+   font — admin/css/base.css) — cramped for a table whose columns now
+   include a colored status pill and dollar amounts, on a page that's
+   otherwise been widened. More room per cell, and numeric-looking
+   columns (amount, dates) get a touch more breathing space and line up
+   right so a column of numbers actually reads as a column. */
+#result_list th, #result_list td {
+    padding: 12px 14px;
+    font-size: 0.88rem;
+}
+#result_list thead th {
+    padding: 10px 14px;
+}
+#result_list .field-total_amount_display,
+#result_list .field-submitted_at,
+#result_list .field-employee_number {
+    text-align: right;
+    white-space: nowrap;
 }
 
 /* ---- Employee portal (Bootstrap-based templates) ------------------------ */

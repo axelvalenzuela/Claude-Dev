@@ -17,6 +17,9 @@
     {% if admin_scope_label %}
         <span class="admin-scope-badge">{{ admin_scope_label }}</span>
     {% endif %}
+    {% if user.is_authenticated %}
+        <a href="{% url 'reports:list' %}" class="admin-portal-link" title="Submit your own expense reports">&larr; My reports</a>
+    {% endif %}
 </div>
 {% if user.is_anonymous %}
   {% include "admin/color_theme_toggle.html" %}

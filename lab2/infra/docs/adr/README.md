@@ -1,6 +1,6 @@
 # Architecture Decision Records — infrastructure
 
-Same format and purpose as `lab2/docs/adr/`: one decision per file, with
+Same format and purpose as `docs/adr/`: one decision per file, with
 the context that forced it, the alternatives that lost, and the
 consequences (including the ones that aren't purely positive). These
 records exist because this infrastructure was designed before an AWS

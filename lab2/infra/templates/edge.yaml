@@ -29,7 +29,7 @@ Parameters:
   AppPort:
     Type: Number
     Default: 8000
-    Description: Matches the Dockerfile's gunicorn bind port (lab2/Dockerfile) and compute.yaml's AppPort.
+    Description: Matches the Dockerfile's gunicorn bind port and compute.yaml's AppPort.
   HealthCheckPath:
     Type: String
     Default: /healthz

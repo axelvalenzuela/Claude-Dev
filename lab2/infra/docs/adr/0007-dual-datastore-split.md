@@ -15,11 +15,13 @@ everything into one store later.
 
 - **Accounts, admin/supervisor roster, sessions, permissions** — stay
   exactly where they are today: the Django app's own relational database
-  (`lab2/mhp/settings.py`'s `DATABASES`, SQLite by default per the app's
-  own ADR 0002, upgradeable to RDS later without anything in this infra
-  project needing to change, since that's an application-level
-  decision). This infrastructure project does not provision a database
-  for user accounts at all.
+  (`config/settings.py`'s `DATABASES`, SQLite by default per
+  [`docs/adr/0002-database-sqlite-then-postgres.md`](../../docs/adr/0002-database-sqlite-then-postgres.md)
+  — a different ADR series from this infra project's own numbering),
+  upgradeable to RDS later without anything in this infra project
+  needing to change, since that's an application-level decision. This
+  infrastructure project does not provision a database for user
+  accounts at all.
 - **Validated report data** produced by the async pipeline (ADR 0006)
   goes into a DynamoDB table, keyed by a report identifier, because it's
   write-heavy from an event-driven Lambda, doesn't need relational joins

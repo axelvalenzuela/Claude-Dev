@@ -1,6 +1,6 @@
 # MHP Expense Portal — Infrastructure as Code
 
-CloudFormation templates for deploying the `lab2/` Django app
+CloudFormation templates for deploying this Django app
 ("MHP by Porsche") to AWS. This is **infrastructure scaffolding only** —
 no AWS account, region, or domain name was available when it was
 written, so every account-specific value is a clearly labeled
@@ -84,8 +84,10 @@ flowchart TB
 ## Layout
 
 ```
-infra/
-├── docs/adr/          Architecture Decision Records (read these first)
+lab2/infra/
+├── docs/
+│   ├── DEPLOYMENT_GUIDE.md  The file-by-file checklist of what's still needed for a real deploy
+│   └── adr/           Architecture Decision Records (read these first)
 ├── templates/         CloudFormation templates, one per concern
 │   ├── network.yaml    VPC, subnets, NAT, S3 Gateway Endpoint, security groups, flow logs
 │   ├── storage.yaml     S3 bucket (report files), DynamoDB table (validated reports)
@@ -139,7 +141,7 @@ no AWS account, credentials, or network access needed:
 ./scripts/lint-templates.ps1
 ```
 
-(`cfn-lint` is installed in `lab2/.venv`, not in `lab2/requirements.txt`
+(`cfn-lint` is installed in `.venv`, not in `requirements.txt`
 — it's a template-authoring tool, not a Django runtime dependency.)
 
 ## Before a real deploy, still to do
@@ -153,7 +155,7 @@ version:
 
 - ✅ Health check endpoint, the `AppPort`/8080→8000 mismatch across
   templates, and a TLS-terminating-proxy redirect-loop bug in
-  `lab2/config/settings.py` — all fixed (see the guide's "Done" section
+  `config/settings.py` — all fixed (see the guide's "Done" section
   for what each one was and why).
 - ⬜ Get the Docker image into an image registry (ECR) and have the EC2
   instance actually pull and run it — `compute.yaml`'s `UserData` only
@@ -163,11 +165,11 @@ version:
   (ADR 0008).
 - ⬜ Move off SQLite onto managed Postgres once this runs on EC2 (no RDS
   stack exists here yet) — already a documented requirement in
-  `lab2/docs/adr/0002-database-sqlite-then-postgres.md`, not a new
-  decision.
+  [`../docs/adr/0002-database-sqlite-then-postgres.md`](../docs/adr/0002-database-sqlite-then-postgres.md),
+  not a new decision.
 - ⬜ Move uploaded files off local disk onto the S3 bucket `storage.yaml`
-  already provisions — a real `django-storages` code change in `lab2/`,
-  not just infrastructure.
+  already provisions — a real `django-storages` code change in this
+  project, not just infrastructure.
 - ⬜ `DomainName` / `HostedZoneId` in `edge.yaml` are placeholders — the
   ACM certificate won't validate and no DNS record is created until
   these point at a domain/hosted zone you actually own.
@@ -178,5 +180,5 @@ version:
 - ⬜ Fill in real values in `parameters/<env>.json` as each stack's
   outputs become available.
 - ⬜ Extend `messaging.yaml`'s `ValidationFunction` past its current
-  skeleton to mirror `lab2/expenses/pdf_analysis.py` and
+  skeleton to mirror `expenses/pdf_analysis.py` and
   `image_analysis.py`'s real checks.

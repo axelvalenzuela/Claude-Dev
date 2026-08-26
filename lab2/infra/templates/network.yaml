@@ -243,7 +243,7 @@ Resources:
           FromPort: 8000
           ToPort: 8000
           SourceSecurityGroupId: !Ref AlbSecurityGroup
-          Description: App traffic from the ALB only (matches the Dockerfile's gunicorn bind port, lab2/Dockerfile)
+          Description: App traffic from the ALB only (matches the Dockerfile's gunicorn bind port)
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0

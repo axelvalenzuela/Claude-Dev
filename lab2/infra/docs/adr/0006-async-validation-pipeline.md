@@ -23,7 +23,7 @@ synchronously in the request/response cycle.
 - A Lambda function is subscribed to that queue via an
   **event source mapping**, and for each message: fetches the object
   from S3, runs validation (file type/size/structure checks — mirroring
-  the kind of checks `lab2/expenses/pdf_analysis.py` and
+  the kind of checks `expenses/pdf_analysis.py` and
   `image_analysis.py` already do at upload time, now also enforced
   server-side), and on success writes a validated-report record to
   DynamoDB.

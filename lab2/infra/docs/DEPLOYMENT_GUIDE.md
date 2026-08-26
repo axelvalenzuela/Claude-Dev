@@ -7,9 +7,9 @@ concrete steps between that scaffold and a real deploy, each one tied to
 an exact file so nothing has to be rediscovered later. Check items off
 as they're done — this file is meant to be edited, not just read.
 
-Two things already existed in `lab2/` before this infrastructure project
+Two things already existed in this project before this infrastructure work
 and this guide assumes them: a working `Dockerfile` (single container,
-gunicorn + WhiteNoise, `EXPOSE 8000`) and `lab2/docs/DEPLOYMENT.md`
+gunicorn + WhiteNoise, `EXPOSE 8000`) and `docs/DEPLOYMENT.md`
 (the existing intranet-deployment doc, in Spanish, written for a
 single always-on server with a Docker volume). Everything below is
 specifically about the *additional* gap between that intranet story and
@@ -19,17 +19,17 @@ the AWS architecture in `infra/templates/`.
 
 - [x] **Health check endpoint** — the ALB target group in `edge.yaml`
   needs `HealthCheckPath` (default `/healthz`) to return 200. Added
-  `lab2/config/views.py::health_check` (checks real DB connectivity, not
-  just "the process is alive") and wired it at `lab2/config/urls.py`
+  `config/views.py::health_check` (checks real DB connectivity, not
+  just "the process is alive") and wired it at `config/urls.py`
   (`path('healthz', health_check, ...)`, unauthenticated, no trailing
   slash — matches the ALB's exact request path with no redirect).
 - [x] **Port mismatch** — `network.yaml`, `compute.yaml`, and
   `edge.yaml` all defaulted `AppPort`/the security group rule to 8080;
   the real `Dockerfile` binds gunicorn to 8000. Fixed all three to 8000.
-- [x] **TLS-terminating-proxy redirect loop** — `lab2/config/settings.py`
+- [x] **TLS-terminating-proxy redirect loop** — `config/settings.py`
   turns on `SECURE_SSL_REDIRECT` whenever `DJANGO_HTTPS_ENABLED=True`,
   which is *always* the case when something in front of gunicorn (nginx/
-  Caddy per `lab2/docs/DEPLOYMENT.md`, or the ALB in `edge.yaml`)
+  Caddy per `docs/DEPLOYMENT.md`, or the ALB in `edge.yaml`)
   terminates TLS and forwards plain HTTP. Without telling Django to
   trust `X-Forwarded-Proto`, every request looks insecure to
   `request.is_secure()` and gets redirected back to HTTPS forever — the
@@ -52,7 +52,7 @@ registry stack (not yet written — a natural `infra/templates/registry.yaml`
 would be a single `AWS::ECR::Repository`) and a CI step that runs
 `docker build` + `docker push` on every merge, extending
 `.github/workflows/lab2-ci.yml` (which already does a `docker build` to
-confirm the image builds, per `lab2/docs/DEPLOYMENT.md`'s CI section —
+confirm the image builds, per `docs/DEPLOYMENT.md`'s CI section —
 it just doesn't push anywhere yet).
 
 ### 2. Get the app actually running on the instance
@@ -65,7 +65,7 @@ better, a systemd unit installed by `UserData`) needs to:
    `ecr:GetAuthorizationToken` + `ecr:BatchGetImage` added once the
    registry stack exists).
 2. `docker pull` the image and run it with the same environment
-   variables `lab2/docs/DEPLOYMENT.md` already documents for
+   variables `docs/DEPLOYMENT.md` already documents for
    `docker-compose.yml` (`DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
    `DJANGO_HTTPS_ENABLED=True`, `DATABASE_URL` — see item 4 below).
 3. Restart automatically on instance reboot (a systemd unit with
@@ -91,15 +91,15 @@ broader.
 
 ### 4. Move off SQLite
 
-[`lab2/docs/adr/0002-database-sqlite-then-postgres.md`](../../lab2/docs/adr/0002-database-sqlite-then-postgres.md)
+[`docs/adr/0002-database-sqlite-then-postgres.md`](../../docs/adr/0002-database-sqlite-then-postgres.md)
 already documents this decision and says it plainly: SQLite is fine for
 a single always-on server with a persistent Docker volume, but **is a
 hard requirement to leave, not just a nice-to-have, once this runs on
 any cloud container/VM story** — an EC2 instance replacement (a patch,
 an AMI update) has no guarantee the same EBS volume survives. No new
-infrastructure decision needed here — `lab2/docs/DEPLOYMENT.md` already
+infrastructure decision needed here — `docs/DEPLOYMENT.md` already
 says the code needs zero changes, just `psycopg[binary]` added to
-`lab2/requirements.txt` and a `DATABASE_URL` env var pointed at a
+`requirements.txt` and a `DATABASE_URL` env var pointed at a
 managed Postgres instance. This infrastructure project does not yet
 provision that Postgres instance (no `AWS::RDS::DBInstance` exists in
 any template here) — add an `infra/templates/database.yaml` when you're
@@ -108,13 +108,13 @@ ready, following the same naming convention as the others
 
 ### 5. Move uploaded files off local disk
 
-`lab2/docs/DEPLOYMENT.md` also already flags this one directly: receipts
+`docs/DEPLOYMENT.md` also already flags this one directly: receipts
 and generated Excel/Word files live under `MEDIA_ROOT` on local disk
 today (fine on the intranet server's dedicated Docker volume, not safe
 if the EC2 instance is ever replaced rather than just restarted). This
 **is a real code change**, not just configuration — add
-`django-storages` to `lab2/requirements.txt`, configure the `"default"`
-entry in `STORAGES` (`lab2/config/settings.py`) to use
+`django-storages` to `requirements.txt`, configure the `"default"`
+entry in `STORAGES` (`config/settings.py`) to use
 `storages.backends.s3.S3Storage` pointed at the bucket `storage.yaml`
 already provisions (`${ProjectName}-${Environment}-reports-${AWS::AccountId}`),
 toggled by an env var so local dev and the intranet Docker deployment
@@ -135,7 +135,7 @@ Once you have one, redeploy `edge.yaml` with both filled in.
 
 ### 7. Schedule the file-retention cleanup job
 
-`lab2/docs/DEPLOYMENT.md` documents `cleanup_old_documents` as a cron
+`docs/DEPLOYMENT.md` documents `cleanup_old_documents` as a cron
 job for the intranet server. On EC2, the equivalent is a systemd timer
 (installed alongside the app's own systemd unit from item 2) or an
 `AWS::Scheduler::Schedule` invoking a small Lambda / ECS task — either
@@ -166,8 +166,8 @@ reads from `parameters/<environment>.json` directly.
 `messaging.yaml`'s `ValidationFunction` is a working skeleton — it
 confirms the uploaded object exists and is non-empty, then writes a
 placeholder record to DynamoDB. Before trusting its output, extend it to
-mirror the real checks `lab2/expenses/pdf_analysis.py` and
-`lab2/expenses/image_analysis.py` already do at upload time (amount/
+mirror the real checks `expenses/pdf_analysis.py` and
+`expenses/image_analysis.py` already do at upload time (amount/
 date/vendor/currency extraction for PDFs, legibility/blur checks for
 images) — so a file that fails those checks server-side lands in the
 dead-letter queue instead of a false "validated" record.

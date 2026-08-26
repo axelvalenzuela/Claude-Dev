@@ -85,7 +85,7 @@ Resources:
   # The inline code below is a starting skeleton, not production logic —
   # it acknowledges each message, records that it ran, and demonstrates
   # the S3 -> DynamoDB write path. Replace with real validation mirroring
-  # lab2/expenses/pdf_analysis.py and image_analysis.py before relying on
+  # expenses/pdf_analysis.py and image_analysis.py before relying on
   # this in a real environment.
 
   ValidationFunction:

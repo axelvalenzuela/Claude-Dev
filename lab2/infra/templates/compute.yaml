@@ -23,7 +23,7 @@ Parameters:
   AppPort:
     Type: Number
     Default: 8000
-    Description: Port the Django app listens on behind the ALB — matches the Dockerfile's gunicorn bind port (lab2/Dockerfile), not the target's own runserver default.
+    Description: Port the Django app listens on behind the ALB — matches the Dockerfile's gunicorn bind port, not the target's own runserver default.
   PrivateSubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Pass the PrivateSubnetIds output/export from network.yaml.
@@ -64,9 +64,9 @@ Resources:
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
-            # Installs Docker Engine only — matching lab2/docs/DEPLOYMENT.md's
+            # Installs Docker Engine only — matching docs/DEPLOYMENT.md's
             # documented deployment model (a single container built from
-            # lab2/Dockerfile, gunicorn bound to port ${AppPort}). This
+            # Dockerfile, gunicorn bound to port ${AppPort}). This
             # script deliberately stops there: it does NOT clone the repo,
             # write a .env file, or run `docker compose up`, because doing
             # that safely needs a real secrets source (DJANGO_SECRET_KEY,

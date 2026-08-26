@@ -4,7 +4,7 @@
 
 ## Context
 
-The app (`lab2/`) needs to move from "runs on a laptop with SQLite" to a
+This app needs to move from "runs on a laptop with SQLite" to a
 real AWS deployment. Two mainstream ways to describe that infrastructure
 as code: AWS CloudFormation (native, YAML/JSON) or Terraform (HashiCorp,
 HCL, multi-cloud). No AWS account, region, or IAM setup exists yet — this

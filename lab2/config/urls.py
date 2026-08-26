@@ -9,7 +9,10 @@ from django.contrib.auth.decorators import login_required
 from django.urls import include, path
 from django.views.generic import RedirectView
 
+from .views import health_check
+
 urlpatterns = [
+    path('healthz', health_check, name='health-check'),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('reports/', include('expenses.urls')),

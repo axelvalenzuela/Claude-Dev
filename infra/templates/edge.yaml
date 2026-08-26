@@ -28,7 +28,8 @@ Parameters:
     Description: Pass the InstanceId output/export from compute.yaml.
   AppPort:
     Type: Number
-    Default: 8080
+    Default: 8000
+    Description: Matches the Dockerfile's gunicorn bind port (lab2/Dockerfile) and compute.yaml's AppPort.
   HealthCheckPath:
     Type: String
     Default: /healthz

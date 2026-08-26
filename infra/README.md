@@ -146,28 +146,37 @@ no AWS account, credentials, or network access needed:
 
 This baseline is deliberately incomplete in a few places that need a
 real AWS account/domain to finish, or that are application-level work
-outside this infrastructure project's scope:
+outside this infrastructure project's scope. The full checklist, each
+item tied to an exact file, lives in
+**[`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md)** — short
+version:
 
-- **`DomainName` / `HostedZoneId`** in `edge.yaml` are placeholders —
-  the ACM certificate won't validate and no DNS record will be created
-  until these point at a real domain/hosted zone you own.
-- **Health check endpoint**: the ALB target group checks
-  `HealthCheckPath` (default `/healthz`) — the Django app doesn't expose
-  this yet; add a simple unauthenticated health view before deploying
-  `edge.yaml`, or the target will never register healthy.
-- **App bootstrap**: `compute.yaml`'s instance `UserData` is a stub. It
-  doesn't install/run the Django app — that needs a real deploy
-  mechanism (baked AMI, CI-driven deploy, or a fuller bootstrap script)
-  before the instance behind the ALB actually serves anything.
-- **Validation Lambda logic**: `messaging.yaml`'s `ValidationFunction`
-  is a working skeleton (confirms the S3 object exists and is
-  non-empty), not the real validation rules — extend it to mirror
-  `lab2/expenses/pdf_analysis.py` and `image_analysis.py`'s checks
-  before trusting its DynamoDB output.
-- **WAF in COUNT mode first**: flip the managed rule groups from
-  `OverrideAction: None` to count-only, review sampled requests in the
-  WAF console for false positives against real app traffic, then
-  switch to blocking (see [ADR 0009](docs/adr/0009-security-baseline.md)).
-- **Real parameter files**: copy `parameters/dev.example.json` to
-  `parameters/dev.json` (git-ignored) and fill in your account's real
-  values as each stack's outputs become available.
+- ✅ Health check endpoint, the `AppPort`/8080→8000 mismatch across
+  templates, and a TLS-terminating-proxy redirect-loop bug in
+  `lab2/config/settings.py` — all fixed (see the guide's "Done" section
+  for what each one was and why).
+- ⬜ Get the Docker image into an image registry (ECR) and have the EC2
+  instance actually pull and run it — `compute.yaml`'s `UserData` only
+  installs Docker Engine today.
+- ⬜ Wire up real secrets (`DJANGO_SECRET_KEY`, DB credentials) via
+  Secrets Manager/SSM Parameter Store — none provisioned yet, on purpose
+  (ADR 0008).
+- ⬜ Move off SQLite onto managed Postgres once this runs on EC2 (no RDS
+  stack exists here yet) — already a documented requirement in
+  `lab2/docs/adr/0002-database-sqlite-then-postgres.md`, not a new
+  decision.
+- ⬜ Move uploaded files off local disk onto the S3 bucket `storage.yaml`
+  already provisions — a real `django-storages` code change in `lab2/`,
+  not just infrastructure.
+- ⬜ `DomainName` / `HostedZoneId` in `edge.yaml` are placeholders — the
+  ACM certificate won't validate and no DNS record is created until
+  these point at a domain/hosted zone you actually own.
+- ⬜ Schedule the `cleanup_old_documents` retention job on EC2 (systemd
+  timer or `AWS::Scheduler::Schedule`).
+- ⬜ Flip the WAF's managed rule groups from blocking to COUNT-only
+  first, review sampled requests, then switch back (ADR 0009).
+- ⬜ Fill in real values in `parameters/<env>.json` as each stack's
+  outputs become available.
+- ⬜ Extend `messaging.yaml`'s `ValidationFunction` past its current
+  skeleton to mirror `lab2/expenses/pdf_analysis.py` and
+  `image_analysis.py`'s real checks.

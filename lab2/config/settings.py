@@ -227,6 +227,15 @@ if HTTPS_ENABLED:
     SECURE_HSTS_SECONDS = env.int("DJANGO_HSTS_SECONDS", default=31536000)
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    # DJANGO_HTTPS_ENABLED is only ever turned on together with a reverse
+    # proxy or load balancer terminating TLS in front of this container
+    # (see docs/DEPLOYMENT.md) — gunicorn itself never does. Without this,
+    # request.is_secure() sees the plain-HTTP hop from the proxy to
+    # gunicorn, SECURE_SSL_REDIRECT redirects every request back to HTTPS,
+    # and the proxy sends it right back over HTTP — an infinite redirect
+    # loop for every user, and a failing health check for infra/templates/
+    # edge.yaml's ALB target group.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # pypdf logs a warning for every unparsable PDF (e.g. a scanned image with no
 # text layer, or a corrupt upload) — expected/handled in pdf_analysis.py, so

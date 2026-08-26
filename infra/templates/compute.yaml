@@ -22,8 +22,8 @@ Parameters:
     Description: Always resolves to the current Amazon Linux 2023 AMI at deploy time — includes the SSM Agent needed for keyless access (infra/docs/adr/0008).
   AppPort:
     Type: Number
-    Default: 8080
-    Description: Port the Django app listens on behind the ALB.
+    Default: 8000
+    Description: Port the Django app listens on behind the ALB — matches the Dockerfile's gunicorn bind port (lab2/Dockerfile), not the target's own runserver default.
   PrivateSubnetIds:
     Type: List<AWS::EC2::Subnet::Id>
     Description: Pass the PrivateSubnetIds output/export from network.yaml.
@@ -64,14 +64,21 @@ Resources:
         UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
-            # Scaffold only — this installs nothing about the Django app
-            # itself. Replace with a real bootstrap (pull the app, install
-            # lab2/requirements.txt into a venv, run migrations, start the
-            # app under a process manager on ${AppPort}) or better, bake an
-            # AMI/use a CI-driven deploy so this instance doesn't need to
-            # build itself from scratch on every boot.
+            # Installs Docker Engine only — matching lab2/docs/DEPLOYMENT.md's
+            # documented deployment model (a single container built from
+            # lab2/Dockerfile, gunicorn bound to port ${AppPort}). This
+            # script deliberately stops there: it does NOT clone the repo,
+            # write a .env file, or run `docker compose up`, because doing
+            # that safely needs a real secrets source (DJANGO_SECRET_KEY,
+            # DB credentials) that this scaffold intentionally does not
+            # provision (infra/docs/adr/0008 — no keys/secrets wiring yet).
+            # See infra/docs/DEPLOYMENT_GUIDE.md for the exact remaining
+            # steps (image registry, secrets, and the actual `docker compose
+            # up`/systemd unit that starts the app on boot).
             dnf update -y
-            dnf install -y python3.12
+            dnf install -y docker
+            systemctl enable --now docker
+            usermod -aG docker ec2-user
 
   AppInstance:
     Type: AWS::EC2::Instance

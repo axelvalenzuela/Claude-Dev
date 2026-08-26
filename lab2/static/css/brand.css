@@ -1111,6 +1111,32 @@ tr:hover .badge {
     color: #555;
 }
 
+/* Small hover-hint icon next to a form-field label (report_form.html) —
+   a Bootstrap tooltip does the actual explaining; this just makes it
+   obvious there's something to hover in the first place. */
+.hint-label {
+    cursor: help;
+}
+.hint-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--brand-gray-border);
+    color: #555;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.hint-label:hover .hint-icon {
+    background: var(--brand-red);
+    color: var(--brand-white);
+    transform: scale(1.15);
+}
+
 /* File-picker drop zone gets an obvious hover/drag affordance instead of
    looking like a static input. */
 .file-drop-zone {

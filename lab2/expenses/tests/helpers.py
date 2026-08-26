@@ -1,3 +1,29 @@
+def make_image_bytes(*, width=800, height=1000, blur_radius=0) -> bytes:
+    """A synthetic "receipt-like" JPEG — a high-contrast checkerboard
+    pattern (stands in for printed text/lines without needing a real
+    scanned receipt fixture), used by expenses/tests/test_image_analysis.py
+    to exercise the sharp/blurry distinction. `blur_radius` > 0 simulates
+    an out-of-focus photo (see expenses/image_analysis.py's calibration
+    comment for how this was tuned against exactly this kind of image)."""
+    from io import BytesIO
+
+    from PIL import Image, ImageDraw, ImageFilter
+
+    image = Image.new("L", (width, height), color=255)
+    draw = ImageDraw.Draw(image)
+    for y in range(0, height, 20):
+        for x in range(0, width, 40):
+            draw.rectangle([x, y, x + 20, y + 10], fill=0)
+    image = image.convert("RGB")
+
+    if blur_radius:
+        image = image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG")
+    return buffer.getvalue()
+
+
 def make_pdf_bytes(page_texts) -> bytes:
     """Hand-rolled minimal PDF (one or more pages, each with a text-showing
     operator), just enough for pypdf's text/page-count reading — used instead

@@ -8,21 +8,33 @@
     <div class="row">
         <div class="col-lg-5">
             <div class="mb-3">
-                <label class="form-label">{{ form.title.label }}</label>
+                <label class="form-label hint-label" data-bs-toggle="tooltip" data-bs-placement="right"
+                       title="A short name for this trip, e.g. &quot;Client visit — Guadalajara&quot;.">
+                    {{ form.title.label }} <span class="hint-icon">?</span>
+                </label>
                 {{ form.title }}
                 {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors|striptags }}</div>{% endif %}
             </div>
             <div class="mb-3">
-                <label class="form-label">{{ form.description.label }}</label>
+                <label class="form-label hint-label" data-bs-toggle="tooltip" data-bs-placement="right"
+                       title="Optional — any extra context for whoever reviews this report.">
+                    {{ form.description.label }} <span class="hint-icon">?</span>
+                </label>
                 {{ form.description }}
             </div>
             <div class="mb-3">
-                <label class="form-label">{{ form.supervisor_name.label }}</label>
+                <label class="form-label hint-label" data-bs-toggle="tooltip" data-bs-placement="right"
+                       title="Who this report is routed to for oversight — required.">
+                    {{ form.supervisor_name.label }} <span class="hint-icon">?</span>
+                </label>
                 {{ form.supervisor_name }}
                 {% if form.supervisor_name.errors %}<div class="text-danger small">{{ form.supervisor_name.errors|striptags }}</div>{% endif %}
             </div>
             <div class="mb-3">
-                <label class="form-label">{{ form.supervisor_email.label }}</label>
+                <label class="form-label hint-label" data-bs-toggle="tooltip" data-bs-placement="right"
+                       title="Optional — lets your supervisor get a copy/reference if you have their email.">
+                    {{ form.supervisor_email.label }} <span class="hint-icon">?</span>
+                </label>
                 {{ form.supervisor_email }}
                 {% if form.supervisor_email.errors %}<div class="text-danger small">{{ form.supervisor_email.errors|striptags }}</div>{% endif %}
             </div>
@@ -39,8 +51,11 @@
                     <input type="file" id="file-picker" name="files" multiple accept=".pdf,.jpg,.jpeg,.png" class="form-control visually-hidden">
                     <div class="form-text mt-2">
                         Each file gets its own tab below, with a preview, as soon as you attach it — a PDF's
-                        amount and expense type are detected automatically. Photos need the type and amount
-                        entered manually.
+                        amount, type, date, vendor, and currency are detected automatically where possible.
+                        There's no limit on how many files you can attach — add them one at a time or several
+                        at once, they all accumulate. A photo can't be read automatically (no text to scan),
+                        but a blurry or unusable one is flagged so you know to double-check it. Hover the
+                        <span class="hint-icon">?</span> next to any label for what to put there.
                     </div>
 
                     <ul class="nav document-tabs mt-3" id="document-tabs"></ul>
@@ -77,7 +92,10 @@
         </div>
         <div class="row g-2 mt-1">
             <div class="col-md-3">
-                <label class="form-label small">Type</label>
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="What kind of expense this is. Auto-filled from a PDF when detected.">
+                    Type <span class="hint-icon">?</span>
+                </label>
                 <select name="doc_type" class="form-select form-select-sm doc-type">
                     {% for value, label in doc_types %}
                         <option value="{{ value }}">{{ label }}</option>
@@ -85,15 +103,24 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label small">Expense date</label>
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="The date printed on the receipt, not necessarily today. Auto-filled from a PDF when detected.">
+                    Expense date <span class="hint-icon">?</span>
+                </label>
                 <input type="date" name="doc_date" class="form-control form-control-sm doc-date">
             </div>
             <div class="col-md-2">
-                <label class="form-label small">Amount</label>
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="The total printed on the receipt, before any currency conversion. Auto-filled from a PDF when detected.">
+                    Amount <span class="hint-icon">?</span>
+                </label>
                 <input type="number" step="0.01" min="0.01" name="doc_amount" class="form-control form-control-sm doc-amount">
             </div>
             <div class="col-md-1">
-                <label class="form-label small">Currency</label>
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="Whichever currency the receipt was actually issued in — don't convert it yourself.">
+                    Currency <span class="hint-icon">?</span>
+                </label>
                 <select name="doc_currency" class="form-select form-select-sm doc-currency">
                     <option value="USD" selected>USD</option>
                     <option value="MXN">MXN</option>
@@ -102,11 +129,17 @@
         </div>
         <div class="row g-2 mt-1">
             <div class="col-md-8">
-                <label class="form-label small">Vendor legal name</label>
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="The company's legal name as printed on the receipt, e.g. &quot;United Airlines, INC&quot;.">
+                    Vendor legal name <span class="hint-icon">?</span>
+                </label>
                 <input type="text" name="doc_vendor" class="form-control form-control-sm doc-vendor" placeholder="e.g. United Airlines, INC">
             </div>
             <div class="col-md-4">
-                <label class="form-label small">Backup</label>
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="Whether this receipt is a formal invoice or just a basic ticket/receipt with no invoice.">
+                    Backup <span class="hint-icon">?</span>
+                </label>
                 <select name="doc_backup" class="form-select form-select-sm doc-backup">
                     <option value="invoice" selected>Invoice</option>
                     <option value="no_invoice">No invoice</option>
@@ -117,6 +150,14 @@
 </template>
 
 <script>
+// This template's own <script> executes before base.html's Bootstrap
+// bundle <script> further down the page (browsers run inline scripts in
+// document order) — deferred to DOMContentLoaded so `bootstrap.Tooltip`
+// is guaranteed to exist by the time this runs; without it, referencing
+// `bootstrap` here would throw immediately and silently break every
+// other bit of this script too (drag-and-drop, file handling), not just
+// the tooltips.
+document.addEventListener("DOMContentLoaded", function () {
 (function () {
     const filePicker = document.getElementById("file-picker");
     const dropZone = document.getElementById("file-drop-zone");
@@ -135,11 +176,22 @@
     // filePicker.files is rebuilt from it afterward, never the reverse.
     let selectedFiles = [];
     let objectUrls = [];
+    let paneTooltips = [];
 
     function revokeObjectUrls() {
         objectUrls.forEach((url) => URL.revokeObjectURL(url));
         objectUrls = [];
     }
+
+    function initTooltips(root) {
+        return Array.from(root.querySelectorAll('[data-bs-toggle="tooltip"]')).map(
+            (el) => new bootstrap.Tooltip(el)
+        );
+    }
+
+    // Static, page-level field hints (title/description/supervisor) only
+    // need initializing once.
+    initTooltips(document);
 
     function syncFilePickerInput() {
         const dataTransfer = new DataTransfer();
@@ -220,6 +272,8 @@
 
     function rebuild(activeIndex) {
         revokeObjectUrls();
+        paneTooltips.forEach((tooltip) => tooltip.dispose());
+        paneTooltips = [];
         tabsList.innerHTML = "";
         panesContainer.innerHTML = "";
 
@@ -242,6 +296,7 @@
             pane.querySelector(".document-preview").appendChild(buildPreview(file));
             pane.querySelector(".doc-date").value = today;
             panesContainer.appendChild(pane);
+            paneTooltips = paneTooltips.concat(initTooltips(pane));
 
             analyzeFile(file, pane);
         });
@@ -252,24 +307,26 @@
         }
     }
 
-    // Pre-fills every field the receipt itself makes possible (amount,
-    // type, date, vendor, currency for a PDF) and, right above the
-    // fields, spells out exactly which of those are real detections vs.
-    // which are just this form's defaults — so a default never gets
-    // mistaken for something the app actually read off the receipt.
+    // Sends every PDF or photo to the same live-preview endpoint. A PDF
+    // comes back with whatever text it could read (amount/type/date/
+    // vendor/currency) to pre-fill the fields; a photo comes back with a
+    // legibility check only (readable? sharp? real size?) — there's no
+    // OCR of a photo, so its fields always need to be filled in by hand,
+    // but a blurry/corrupt one is called out immediately either way.
+    // Either way, the note sits *above* the fields and always separates
+    // what was actually detected from what's just this form's default,
+    // so a default never gets mistaken for a real reading off the file.
     function analyzeFile(file, pane) {
         const note = pane.querySelector(".preview-status-note");
-        const isPdf = file.name.toLowerCase().endsWith(".pdf");
+        const isKnownType = /\.(pdf|jpe?g|png)$/i.test(file.name);
 
-        if (!isPdf) {
-            note.textContent = "";
-            note.innerHTML = "Photo attached — nothing can be auto-detected. Defaults: " +
-                "<strong>today's date</strong> and <strong>USD</strong> — enter type, amount, and vendor, and correct the defaults if needed.";
-            note.className = "preview-status-note preview-status-note-default";
+        if (!isKnownType) {
+            note.textContent = "Unrecognized file type — every field below uses a default; please fill them in manually.";
+            note.className = "preview-status-note preview-status-note-warning";
             return;
         }
 
-        note.textContent = "Analyzing PDF…";
+        note.textContent = "Analyzing…";
         note.className = "preview-status-note preview-status-note-loading";
 
         const formData = new FormData();
@@ -277,14 +334,20 @@
 
         fetch(previewUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData })
             .then((response) => response.json())
-            .then((data) => applyAnalysis(pane, data, note))
+            .then((data) => {
+                if (data.is_image) {
+                    applyImageAnalysis(data, note);
+                } else {
+                    applyPdfAnalysis(pane, data, note);
+                }
+            })
             .catch(() => {
                 note.textContent = "Preview failed — enter every field manually, including the date/currency defaults.";
                 note.className = "preview-status-note preview-status-note-warning";
             });
     }
 
-    function applyAnalysis(pane, data, note) {
+    function applyPdfAnalysis(pane, data, note) {
         const detected = [];
         const defaulted = [];
 
@@ -332,6 +395,26 @@
             ? "preview-status-note preview-status-note-success"
             : "preview-status-note preview-status-note-warning";
     }
+
+    function applyImageAnalysis(data, note) {
+        if (!data.image_is_readable) {
+            note.textContent = "Couldn't read this image file — it may be corrupted. Every field below uses a default; please fill them in manually.";
+            note.className = "preview-status-note preview-status-note-warning";
+            return;
+        }
+
+        if (data.image_is_blurry) {
+            note.textContent = "This photo looks blurry or too small to rely on (" + data.image_width + "×" + data.image_height +
+                "px) — every field below uses a default. Please double-check the amount, type, date, and vendor by eye, or re-take the photo.";
+            note.className = "preview-status-note preview-status-note-warning";
+            return;
+        }
+
+        note.textContent = "Photo looks clear (" + data.image_width + "×" + data.image_height + "px), but a photo's text " +
+            "can't be read automatically — the fields below still use their defaults; please fill in type, amount, date, and vendor yourself.";
+        note.className = "preview-status-note preview-status-note-default";
+    }
 })();
+});
 </script>
 {% endblock %}

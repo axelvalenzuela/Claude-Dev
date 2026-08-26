@@ -11,6 +11,7 @@ from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 
+from ..image_analysis import analyze_image
 from ..models import TravelDocument, ExpenseReportAuditLog, log_action
 from ..pdf_analysis import analyze_pdf
 from ..policies import validate_trip_span
@@ -19,49 +20,75 @@ from .decorators import draft_only
 from .mixins import OwnedReportMixin
 
 
-EMPTY_PDF_ANALYSIS = {
+EMPTY_ANALYSIS = {
     "is_pdf": False,
+    "is_image": False,
     "extracted_amount": None,
     "detected_type": None,
     "detected_type_label": None,
     "extracted_date": None,
     "extracted_vendor": None,
     "detected_currency": None,
+    "image_is_readable": None,
+    "image_is_blurry": None,
+    "image_width": None,
+    "image_height": None,
 }
+
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")
 
 
 class PreviewDocumentView(LoginRequiredMixin, View):
-    """AJAX endpoint used while composing a new report: analyzes one PDF at
-    a time (as soon as it's attached, before the report is created or
-    anything is saved) and returns whatever it detected — amount, type,
-    date, vendor, currency — so the report can be pre-filled from the
-    receipt itself instead of the employee retyping what's already
-    printed on it."""
+    """AJAX endpoint used while composing a new report: analyzes one file
+    at a time (as soon as it's attached, before the report is created or
+    anything is saved). For a PDF, that's the amount/type/date/vendor/
+    currency it can read off the text layer (pdf_analysis.analyze_pdf) —
+    the report gets pre-filled from the receipt instead of the employee
+    retyping what's already printed on it. For a photo, there's no text
+    to read (this never does OCR — see expenses/image_analysis.py's
+    docstring for why), but it still checks whether the photo itself is
+    even legible (readable, sharp, a real size) so a blurry or corrupt
+    upload gets flagged immediately instead of only being noticed later."""
 
     def post(self, request):
         file = request.FILES.get("file")
         if not file:
             return JsonResponse({"error": "No file provided."}, status=400)
 
-        if not file.name.lower().endswith(".pdf"):
-            return JsonResponse(EMPTY_PDF_ANALYSIS)
+        name = file.name.lower()
+        if name.endswith(".pdf"):
+            return JsonResponse(self._pdf_response(file))
+        if name.endswith(IMAGE_EXTENSIONS):
+            return JsonResponse(self._image_response(file))
+        return JsonResponse(EMPTY_ANALYSIS)
 
+    def _pdf_response(self, file):
         analysis = analyze_pdf(file)
         detected_type_label = None
         if analysis.detected_type:
             detected_type_label = dict(TravelDocument.DocType.choices).get(analysis.detected_type)
 
-        return JsonResponse(
-            {
-                "is_pdf": True,
-                "extracted_amount": str(analysis.extracted_amount) if analysis.extracted_amount is not None else None,
-                "detected_type": analysis.detected_type,
-                "detected_type_label": detected_type_label,
-                "extracted_date": analysis.extracted_date.isoformat() if analysis.extracted_date else None,
-                "extracted_vendor": analysis.extracted_vendor,
-                "detected_currency": analysis.detected_currency,
-            }
-        )
+        return {
+            **EMPTY_ANALYSIS,
+            "is_pdf": True,
+            "extracted_amount": str(analysis.extracted_amount) if analysis.extracted_amount is not None else None,
+            "detected_type": analysis.detected_type,
+            "detected_type_label": detected_type_label,
+            "extracted_date": analysis.extracted_date.isoformat() if analysis.extracted_date else None,
+            "extracted_vendor": analysis.extracted_vendor,
+            "detected_currency": analysis.detected_currency,
+        }
+
+    def _image_response(self, file):
+        analysis = analyze_image(file)
+        return {
+            **EMPTY_ANALYSIS,
+            "is_image": True,
+            "image_is_readable": analysis.is_readable,
+            "image_is_blurry": analysis.is_blurry,
+            "image_width": analysis.width,
+            "image_height": analysis.height,
+        }
 
 
 class UploadDocumentView(LoginRequiredMixin, OwnedReportMixin, View):

@@ -44,7 +44,9 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
   con auditoría de sesiones y de reportes integrada.
 - **openpyxl** para generar los reportes `.xlsx`.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
-- Test framework de Django (basado en `unittest`): **199 tests**.
+- **Pillow** para el chequeo de calidad (no OCR) de recibos en foto — ver
+  [`docs/adr/0010-image-quality-check-not-ocr.md`](docs/adr/0010-image-quality-check-not-ocr.md).
+- Test framework de Django (basado en `unittest`): **207 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -236,6 +238,41 @@ que realmente atiende peticiones). Para desactivarlo, pon
   explícitamente qué se detectó de verdad contra qué quedó en su valor por
   default (fecha de hoy, USD) — para que un default nunca se confunda con
   un dato real leído del recibo.
+- **Chequeo de calidad para fotos** (`expenses/image_analysis.py`,
+  [`docs/adr/0010-image-quality-check-not-ocr.md`](docs/adr/0010-image-quality-check-not-ocr.md)):
+  una foto (JPG/PNG) no tiene texto que leer, así que **no** se le hace
+  OCR — deliberadamente, ver el ADR para el porqué (Tesseract es una
+  dependencia de sistema, no un paquete de pip; una API de OCR en la nube
+  tendría costo por llamada e internet obligatorio, el mismo trade-off ya
+  rechazado para el chat de ayuda). Lo que sí se revisa con Pillow: si el
+  archivo realmente abre como imagen, su resolución, y si se ve borrosa
+  (varianza de bordes sobre una copia en escala de grises, calibrada con
+  imágenes de prueba sintéticas — ver el comentario de
+  `BLUR_VARIANCE_THRESHOLD`). El resultado se muestra igual que el de un
+  PDF: una nota arriba de los campos de esa pestaña, dejando claro que
+  ningún campo se pre-llenó (solo la fecha/USD por default) y avisando si
+  la foto en sí no se ve confiable.
+- **Sin límite de archivos**: nada en el código limita cuántos PDFs/fotos
+  se pueden adjuntar a un reporte — se pueden ir agregando de uno en uno o
+  varios a la vez, en cualquier combinación, y todos se acumulan (ver el
+  bug fix de abajo). El único límite real es el tamaño por archivo
+  (`MAX_FILE_SIZE_MB` en `validators.py`, 10 MB) y el límite genérico de
+  Django de cuántos campos puede traer un POST
+  (`DATA_UPLOAD_MAX_NUMBER_FIELDS`, no modificado aquí a propósito — es
+  una protección contra agotamiento de memoria, y un viaje real no se
+  acerca ni de lejos a los cientos de documentos que haría falta para
+  tocarlo).
+- **Pistas al pasar el mouse**: cada campo de "New expense report" (título,
+  descripción, supervisor, y los de cada documento) tiene un ícono
+  `?` junto a la etiqueta — al pasar el mouse (tooltip de Bootstrap)
+  explica qué poner ahí, con un ejemplo cuando aplica.
+- **Corrección: adjuntar en más de una interacción ya no reemplazaba lo
+  anterior** — antes, arrastrar o seleccionar un archivo sustituía por
+  completo lo ya adjuntado (comportamiento nativo del input de archivos),
+  así que solo "sobrevivía" la última tanda. Ahora una lista propia en
+  JavaScript (`selectedFiles`) es la que manda; cada agregar/quitar pasa
+  por ahí primero y el input nativo se reconstruye a partir de ella, nunca
+  al revés.
 - **Supervisor**: cada reporte guarda `supervisor_name` (obligatorio) y
   `supervisor_email` (opcional) — a quién queda dirigido el envío. Visible
   en el detalle, en el admin y en el Excel.
@@ -835,6 +872,7 @@ lab2/
     policies.py                 # DAILY_LIMIT_USD, USD_MXN_RATE, SUBMISSION_WINDOW_DAYS, MAX_TRIP_SPAN_DAYS, CEO_NAME, validate_trip_span
     validators.py                # validate_file_size (genérico; el de páginas de PDF vive en pdf_analysis.py)
     pdf_analysis.py             # extracción de monto/tipo/fecha/proveedor/moneda (prioriza pág. 1-2) y límite de 4 páginas
+    image_analysis.py            # chequeo de calidad de fotos (legible/nítida/tamaño) — sin OCR, ver docs/adr/0010
     services.py                  # build_travel_document + finalize_approval (exports y borrado de originales, al aprobar)
     exporters.py                  # ReportExporter (interfaz) + ExcelExporter/WordExporter/HistoryExporter — ver "Interfaz enterprise"
     naming.py                     # export_basename() — convención de nombre de RH (empleado, fecha, número, APROBADO)
@@ -867,7 +905,7 @@ cd lab2
 python manage.py test
 ```
 
-199 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+207 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de

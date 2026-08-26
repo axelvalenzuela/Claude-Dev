@@ -46,7 +46,7 @@ recurso interno propio de la empresa, no incrustarlo en el repo.
 - **pypdf** para el análisis best-effort del contenido de los PDF subidos.
 - **Pillow** para el chequeo de calidad (no OCR) de recibos en foto — ver
   [`docs/adr/0010-image-quality-check-not-ocr.md`](docs/adr/0010-image-quality-check-not-ocr.md).
-- Test framework de Django (basado en `unittest`): **207 tests**.
+- Test framework de Django (basado en `unittest`): **212 tests**.
 
 ## Buenas prácticas de instalación de dependencias
 
@@ -275,7 +275,13 @@ que realmente atiende peticiones). Para desactivarlo, pon
   al revés.
 - **Supervisor**: cada reporte guarda `supervisor_name` (obligatorio) y
   `supervisor_email` (opcional) — a quién queda dirigido el envío. Visible
-  en el detalle, en el admin y en el Excel.
+  en el detalle, en el admin y en el Excel. En "New expense report" se
+  elige de un **combo box** poblado con el organigrama de admins reales
+  (`expenses/views/reports.py:_supervisor_choices()` — cualquier cuenta
+  `is_staff` activa), no texto libre; el campo de correo junto a él es
+  de **solo lectura** (gris) y se autocompleta con el correo real de
+  quien se eligió — nunca se escribe a mano, así que no puede
+  desincronizarse de a quién en verdad se le va a enviar.
 - **Enviar a revisión**: exige al menos un documento y respeta la **fecha
   límite de envío** (ver política de deadline abajo).
 - **Descarga a Excel** con el desglose diario de gastos.
@@ -905,7 +911,7 @@ cd lab2
 python manage.py test
 ```
 
-207 tests: reglas de transición de `ExpenseReport` (incluye deadline y
+212 tests: reglas de transición de `ExpenseReport` (incluye deadline y
 cláusula CEO), validación de rango de fechas del viaje (`validate_trip_span`),
 límite de páginas de PDF y priorización de las primeras 2 páginas, política
 de $60/día (incluida la excepción de vuelo/hotel), análisis de PDF (monto y tipo detectados, y el endpoint de

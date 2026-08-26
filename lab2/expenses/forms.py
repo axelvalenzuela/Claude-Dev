@@ -15,6 +15,15 @@ class ExpenseReportForm(forms.ModelForm):
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Mexico City trip - August 2026"}),
             "description": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            # These two are never rendered via {{ form.supervisor_name }} /
+            # {{ form.supervisor_email }} — report_form.html hand-renders a
+            # <select> (populated from the live admin roster,
+            # views/reports.py:_supervisor_choices()) and a read-only email
+            # input that a small script fills in from the selection, so an
+            # employee picks a supervisor instead of typing an email by
+            # hand. The widgets below stay CharField-shaped only so this
+            # form still behaves sensibly if something ever does render
+            # them directly.
             "supervisor_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Who should review this report"}),
             "supervisor_email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "optional"}),
         }

@@ -23,20 +23,39 @@
                 {{ form.description }}
             </div>
             <div class="mb-3">
-                <label class="form-label hint-label" data-bs-toggle="tooltip" data-bs-placement="right"
-                       title="Who this report is routed to for oversight — required.">
-                    {{ form.supervisor_name.label }} <span class="hint-icon">?</span>
+                <label class="form-label hint-label" for="id_supervisor_name" data-bs-toggle="tooltip" data-bs-placement="right"
+                       title="Who this report is routed to for oversight — required. Their email fills in on its own.">
+                    Supervisor <span class="hint-icon">?</span>
                 </label>
-                {{ form.supervisor_name }}
+                <select name="supervisor_name" id="id_supervisor_name" class="form-select" required>
+                    <option value="" {% if not form.supervisor_name.value %}selected{% endif %} disabled>Select a supervisor…</option>
+                    {% for supervisor in supervisors %}
+                        {% with supervisor_display=supervisor.get_full_name|default:supervisor.email %}
+                            <option value="{{ supervisor_display }}" data-email="{{ supervisor.email }}"
+                                    {% if supervisor_display == form.supervisor_name.value %}selected{% endif %}>
+                                {{ supervisor_display }}
+                            </option>
+                        {% endwith %}
+                    {% endfor %}
+                </select>
                 {% if form.supervisor_name.errors %}<div class="text-danger small">{{ form.supervisor_name.errors|striptags }}</div>{% endif %}
             </div>
             <div class="mb-3">
-                <label class="form-label hint-label" data-bs-toggle="tooltip" data-bs-placement="right"
-                       title="Optional — lets your supervisor get a copy/reference if you have their email.">
-                    {{ form.supervisor_email.label }} <span class="hint-icon">?</span>
+                <label class="form-label hint-label" for="id_supervisor_email" data-bs-toggle="tooltip" data-bs-placement="right"
+                       title="Filled in automatically once you pick a supervisor above.">
+                    Supervisor email <span class="hint-icon">?</span>
                 </label>
-                {{ form.supervisor_email }}
-                {% if form.supervisor_email.errors %}<div class="text-danger small">{{ form.supervisor_email.errors|striptags }}</div>{% endif %}
+                <input type="email" name="supervisor_email" id="id_supervisor_email"
+                       class="form-control supervisor-email-readonly" value="{{ form.supervisor_email.value|default:'' }}" readonly>
+            </div>
+
+            <button type="submit" name="action" value="draft" class="btn btn-outline-secondary">Save as draft</button>
+            <button type="submit" name="action" value="submit" class="btn btn-success">Create &amp; submit for review</button>
+            <a href="{% url 'reports:list' %}" class="btn btn-link">Cancel</a>
+            <div class="form-text mt-2">
+                Submitting sends the report for review — the attached files stay available until an admin
+                approves it, at which point they're archived into Excel/Word exports and removed from the server.
+                Saving as a draft keeps everything as-is so you can still edit it.
             </div>
         </div>
 
@@ -50,12 +69,8 @@
                     </label>
                     <input type="file" id="file-picker" name="files" multiple accept=".pdf,.jpg,.jpeg,.png" class="form-control visually-hidden">
                     <div class="form-text mt-2">
-                        Each file gets its own tab below, with a preview, as soon as you attach it — a PDF's
-                        amount, type, date, vendor, and currency are detected automatically where possible.
-                        There's no limit on how many files you can attach — add them one at a time or several
-                        at once, they all accumulate. A photo can't be read automatically (no text to scan),
-                        but a blurry or unusable one is flagged so you know to double-check it. Hover the
-                        <span class="hint-icon">?</span> next to any label for what to put there.
+                        Only attach what this trip actually needs, per company policy — check the Help chat
+                        (bottom-right, open it if you're not sure) before adding anything questionable.
                     </div>
 
                     <ul class="nav document-tabs mt-3" id="document-tabs"></ul>
@@ -63,15 +78,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <button type="submit" name="action" value="draft" class="btn btn-outline-secondary">Save as draft</button>
-    <button type="submit" name="action" value="submit" class="btn btn-success">Create &amp; submit for review</button>
-    <a href="{% url 'reports:list' %}" class="btn btn-link">Cancel</a>
-    <div class="form-text mt-2">
-        Submitting sends the report for review — the attached files stay available until an admin
-        approves it, at which point they're archived into Excel/Word exports and removed from the server.
-        Saving as a draft keeps everything as-is so you can still edit it.
     </div>
 </form>
 
@@ -86,10 +92,7 @@
 <template id="document-pane-template">
     <div class="document-pane">
         <div class="document-preview"></div>
-        <div class="preview-status-note preview-status-note-default">
-            Nothing auto-detected for a photo — check every field below, including the
-            <strong>today's date</strong> and <strong>USD</strong> defaults.
-        </div>
+        <div class="preview-status-note preview-status-note-default">Analyzing…</div>
         <div class="row g-2 mt-1">
             <div class="col-md-3">
                 <label class="form-label small hint-label" data-bs-toggle="tooltip"
@@ -192,6 +195,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // Static, page-level field hints (title/description/supervisor) only
     // need initializing once.
     initTooltips(document);
+
+    // The email field is read-only on purpose — it's never typed by hand,
+    // only ever set from the chosen supervisor's actual on-file address
+    // (views/reports.py:_supervisor_choices()), so it can't drift from
+    // who's really going to review this report.
+    const supervisorSelect = document.getElementById("id_supervisor_name");
+    const supervisorEmail = document.getElementById("id_supervisor_email");
+    if (supervisorSelect && supervisorEmail) {
+        supervisorSelect.addEventListener("change", () => {
+            const selected = supervisorSelect.selectedOptions[0];
+            supervisorEmail.value = (selected && selected.dataset.email) || "";
+        });
+    }
 
     function syncFilePickerInput() {
         const dataTransfer = new DataTransfer();
@@ -347,48 +363,51 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
+    // Kept short on purpose — this appears after every single file, so it
+    // only names *which* fields were detected vs. defaulted, not the
+    // full sentence explaining why (that lives in the tooltips instead).
     function applyPdfAnalysis(pane, data, note) {
         const detected = [];
         const defaulted = [];
 
         if (data.extracted_amount) {
             pane.querySelector(".doc-amount").value = data.extracted_amount;
-            detected.push("amount ($" + data.extracted_amount + ")");
+            detected.push("amount");
         } else {
             defaulted.push("amount");
         }
 
         if (data.detected_type) {
             pane.querySelector(".doc-type").value = data.detected_type;
-            detected.push("type (" + data.detected_type_label + ")");
+            detected.push("type");
         } else {
             defaulted.push("type");
         }
 
         if (data.extracted_date) {
             pane.querySelector(".doc-date").value = data.extracted_date;
-            detected.push("date (" + data.extracted_date + ")");
+            detected.push("date");
         } else {
-            defaulted.push("date (defaulted to today)");
+            defaulted.push("date");
         }
 
         if (data.extracted_vendor) {
             pane.querySelector(".doc-vendor").value = data.extracted_vendor;
-            detected.push("vendor (" + data.extracted_vendor + ")");
+            detected.push("vendor");
         } else {
-            defaulted.push("vendor (e.g. \"United Airlines, INC\")");
+            defaulted.push("vendor");
         }
 
         if (data.detected_currency) {
             pane.querySelector(".doc-currency").value = data.detected_currency;
-            detected.push("currency (" + data.detected_currency + ")");
+            detected.push("currency");
         } else {
-            defaulted.push("currency (defaulted to USD)");
+            defaulted.push("currency");
         }
 
         const parts = [];
-        if (detected.length) parts.push("Detected from the PDF: " + detected.join(", ") + ".");
-        if (defaulted.length) parts.push("Not detected, using a default — please check: " + defaulted.join(", ") + ".");
+        if (detected.length) parts.push("Detected: " + detected.join(", ") + ".");
+        if (defaulted.length) parts.push("Defaulted, please check: " + defaulted.join(", ") + ".");
 
         note.textContent = parts.join(" ");
         note.className = detected.length
@@ -398,20 +417,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function applyImageAnalysis(data, note) {
         if (!data.image_is_readable) {
-            note.textContent = "Couldn't read this image file — it may be corrupted. Every field below uses a default; please fill them in manually.";
+            note.textContent = "Couldn't read this file — every field below defaults, please fill in manually.";
             note.className = "preview-status-note preview-status-note-warning";
             return;
         }
-
         if (data.image_is_blurry) {
-            note.textContent = "This photo looks blurry or too small to rely on (" + data.image_width + "×" + data.image_height +
-                "px) — every field below uses a default. Please double-check the amount, type, date, and vendor by eye, or re-take the photo.";
+            note.textContent = "Looks blurry or too small — every field below defaults, please verify by eye.";
             note.className = "preview-status-note preview-status-note-warning";
             return;
         }
-
-        note.textContent = "Photo looks clear (" + data.image_width + "×" + data.image_height + "px), but a photo's text " +
-            "can't be read automatically — the fields below still use their defaults; please fill in type, amount, date, and vendor yourself.";
+        note.textContent = "Photo looks clear, but can't be auto-read — every field below defaults, please fill in manually.";
         note.className = "preview-status-note preview-status-note-default";
     }
 })();

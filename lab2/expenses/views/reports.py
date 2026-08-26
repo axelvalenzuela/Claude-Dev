@@ -8,6 +8,7 @@ split out because they're a different concern (a single file response)
 from the report-shaped views here, even though they hang off the same URLs.
 """
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -20,6 +21,16 @@ from ..models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_a
 from ..policies import validate_trip_span
 from ..services import DocumentUploadError, build_travel_document
 from .mixins import OwnedReportMixin
+
+
+def _supervisor_choices():
+    """Who a new report can be routed to for review (report_form.html's
+    supervisor dropdown) — this app's actual admins, since they're the
+    only accounts guaranteed a real, on-file email. That's what makes the
+    read-only, auto-filled supervisor-email field next to it possible at
+    all, instead of the employee typing an email in by hand."""
+    User = get_user_model()
+    return list(User.objects.filter(is_staff=True, is_active=True).order_by("first_name", "last_name", "email"))
 
 
 class ReportListView(LoginRequiredMixin, ListView):
@@ -64,12 +75,22 @@ class ReportCreateView(LoginRequiredMixin, View):
     template_name = "expenses/report_form.html"
 
     def get(self, request):
-        return render(request, self.template_name, {"form": ExpenseReportForm(), "doc_types": TravelDocument.DocType.choices})
+        context = {
+            "form": ExpenseReportForm(),
+            "doc_types": TravelDocument.DocType.choices,
+            "supervisors": _supervisor_choices(),
+        }
+        return render(request, self.template_name, context)
 
     def post(self, request):
         form = ExpenseReportForm(request.POST)
         if not form.is_valid():
-            return render(request, self.template_name, {"form": form, "doc_types": TravelDocument.DocType.choices})
+            context = {
+                "form": form,
+                "doc_types": TravelDocument.DocType.choices,
+                "supervisors": _supervisor_choices(),
+            }
+            return render(request, self.template_name, context)
 
         files = request.FILES.getlist("files")
         doc_types = request.POST.getlist("doc_type")
@@ -105,7 +126,12 @@ class ReportCreateView(LoginRequiredMixin, View):
         if errors:
             for error in errors:
                 messages.error(request, error)
-            return render(request, self.template_name, {"form": form, "doc_types": TravelDocument.DocType.choices})
+            context = {
+                "form": form,
+                "doc_types": TravelDocument.DocType.choices,
+                "supervisors": _supervisor_choices(),
+            }
+            return render(request, self.template_name, context)
 
         with transaction.atomic():
             report = form.save(commit=False)

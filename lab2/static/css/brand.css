@@ -1137,6 +1137,16 @@ tr:hover .badge {
     transform: scale(1.15);
 }
 
+/* Supervisor email on the new-report form (report_form.html) — always
+   read-only, filled in only from the chosen supervisor's real address,
+   so it needs to visibly read as "not an input you type into" rather
+   than an ordinary text field that happens to be empty. */
+.supervisor-email-readonly {
+    background-color: #e9ecef;
+    color: #555;
+    cursor: not-allowed;
+}
+
 /* File-picker drop zone gets an obvious hover/drag affordance instead of
    looking like a static input. */
 .file-drop-zone {

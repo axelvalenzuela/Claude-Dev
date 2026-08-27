@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ report.title }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-start mb-3">
@@ -171,88 +172,14 @@
     <div class="card mb-4">
         <div class="card-header">Add a travel document</div>
         <div class="card-body">
-            <form action="{% url 'reports:upload_document' report.pk %}" method="post" enctype="multipart/form-data" id="single-upload-form">
+            <form id="draft-upload-form" onsubmit="return false;">
                 {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="form-label">Type</label>
-                        {{ upload_form.type }}
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Expense date</label>
-                        {{ upload_form.document_date }}
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Amount</label>
-                        {{ upload_form.amount }}
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Currency</label>
-                        {{ upload_form.currency }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">File (PDF, JPG, PNG)</label>
-                        {{ upload_form.file }}
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label">Vendor legal name</label>
-                        {{ upload_form.vendor_name }}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Backup</label>
-                        {{ upload_form.backup_type }}
-                    </div>
-                </div>
-                <div class="form-text mt-2">
-                    Attaching a PDF previews the detected amount and expense type right here, live, before you
-                    upload it — an early check against company policy. <span id="single-preview-status"></span>
-                </div>
-                <button type="submit" class="btn btn-primary mt-3">Upload document</button>
+                {% include "expenses/_document_uploader.html" %}
+                <button type="button" id="draft-upload-submit" class="btn btn-primary mt-3" disabled>Upload document(s)</button>
+                <span id="draft-upload-status" class="text-muted ms-2"></span>
             </form>
         </div>
     </div>
-    <script>
-    (function () {
-        const fileInput = document.getElementById("id_file");
-        if (!fileInput) return;
-
-        const previewUrl = "{% url 'reports:preview_document' %}";
-        const csrfToken = document.querySelector("#single-upload-form [name=csrfmiddlewaretoken]").value;
-        const status = document.getElementById("single-preview-status");
-
-        fileInput.addEventListener("change", () => {
-            const file = fileInput.files[0];
-            status.textContent = "";
-            if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
-                return;
-            }
-
-            status.textContent = "Analyzing PDF…";
-            const formData = new FormData();
-            formData.append("file", file);
-
-            fetch(previewUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData })
-                .then((response) => response.json())
-                .then((data) => {
-                    let detected = [];
-                    if (data.extracted_amount) {
-                        document.getElementById("id_amount").value = data.extracted_amount;
-                        detected.push("$" + data.extracted_amount);
-                    }
-                    if (data.detected_type) {
-                        document.getElementById("id_type").value = data.detected_type;
-                        detected.push(data.detected_type_label);
-                    }
-                    status.textContent = detected.length
-                        ? "Detected: " + detected.join(" · ") + " (edit above if needed)"
-                        : "Couldn't detect anything — enter details manually.";
-                })
-                .catch(() => {
-                    status.textContent = "Preview failed — enter details manually.";
-                });
-        });
-    })();
-    </script>
 
     <form action="{% url 'reports:submit' report.pk %}" method="post" onsubmit="return confirm('Submit this report for review? You will no longer be able to edit it. The original receipt files stay available until an admin approves the report, at which point they are archived into Excel/Word and removed from the server.');">
         {% csrf_token %}
@@ -261,5 +188,76 @@
             <span class="text-muted ms-2">Add at least one document before submitting.</span>
         {% endif %}
     </form>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if report.status == "draft" %}
+<script src="{% static 'js/document-uploader.js' %}"></script>
+<script>
+(function () {
+    const submitBtn = document.getElementById("draft-upload-submit");
+    const statusEl = document.getElementById("draft-upload-status");
+    const csrfToken = document.querySelector("#draft-upload-form [name=csrfmiddlewaretoken]").value;
+    const uploadUrl = "{% url 'reports:upload_document' report.pk %}";
+
+    const uploader = initDocumentUploader({
+        filePickerId: "file-picker",
+        dropZoneId: "file-drop-zone",
+        tabsListId: "document-tabs",
+        panesContainerId: "document-tab-panes",
+        tabButtonTemplateId: "document-tab-button-template",
+        paneTemplateId: "document-pane-template",
+        previewUrl: "{% url 'reports:preview_document' %}",
+        csrfToken: csrfToken,
+        onChange: (files) => {
+            submitBtn.disabled = files.length === 0;
+        },
+    });
+
+    // Each file already attached to this report went through its own
+    // "add a document" request (services.build_travel_document,
+    // validate_trip_span) at the time it was added — a newly picked
+    // batch here is no different, so each one is still uploaded as its
+    // own POST to the same UploadDocumentView.post used since before this
+    // page had drag-and-drop, one at a time and in order, rather than
+    // inventing a second, batch-shaped endpoint that would have to
+    // re-implement (and keep in sync with) that same validation.
+    function uploadOne(file, pane) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("type", pane.querySelector(".doc-type").value);
+        formData.append("document_date", pane.querySelector(".doc-date").value);
+        formData.append("amount", pane.querySelector(".doc-amount").value);
+        formData.append("currency", pane.querySelector(".doc-currency").value);
+        formData.append("vendor_name", pane.querySelector(".doc-vendor").value);
+        formData.append("backup_type", pane.querySelector(".doc-backup").value);
+        return fetch(uploadUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData });
+    }
+
+    submitBtn.addEventListener("click", async () => {
+        const files = uploader.getSelectedFiles();
+        if (!files.length) return;
+
+        submitBtn.disabled = true;
+        for (let i = 0; i < files.length; i++) {
+            statusEl.textContent = "Uploading " + (i + 1) + " of " + files.length + "…";
+            try {
+                await uploadOne(files[i], uploader.getPane(i));
+            } catch (error) {
+                // Falls through to the reload below — any failure (this
+                // one or a validation error UploadDocumentView reports
+                // via messages.error) surfaces there, same as it always
+                // has for a single-document upload.
+            }
+        }
+        // A full reload, not just clearing the uploader in place, because
+        // every uploaded document — and any Django message a failed one
+        // set (e.g. a trip-span violation) — only renders once the
+        // documents table itself is re-fetched from the server.
+        window.location.reload();
+    });
+})();
+</script>
 {% endif %}
 {% endblock %}

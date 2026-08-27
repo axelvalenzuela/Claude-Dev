@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}New report{% endblock %}
 {% block content %}
 <h2>New expense report</h2>
@@ -63,138 +64,35 @@
             <div class="card mb-4">
                 <div class="card-header">Attach receipts (PDF or photo)</div>
                 <div class="card-body">
-                    <label for="file-picker" id="file-drop-zone" class="file-drop-zone d-block text-center border rounded p-4 mb-0">
-                        <div class="fw-semibold">Drag files here, or click to browse</div>
-                        <div class="text-muted small mt-1">PDF, JPG or PNG — you can attach several at once.</div>
-                    </label>
-                    <input type="file" id="file-picker" name="files" multiple accept=".pdf,.jpg,.jpeg,.png" class="form-control visually-hidden">
-                    <div class="form-text mt-2">
-                        Only attach what this trip actually needs, per company policy — check the Help chat
-                        (bottom-right, open it if you're not sure) before adding anything questionable.
-                    </div>
-
-                    <ul class="nav document-tabs mt-3" id="document-tabs"></ul>
-                    <div id="document-tab-panes" class="document-tab-panes"></div>
+                    {% include "expenses/_document_uploader.html" %}
                 </div>
             </div>
         </div>
     </div>
 </form>
+{% endblock %}
 
-<template id="document-tab-button-template">
-    <button type="button" class="document-tab-btn" role="tab">
-        <span class="document-tab-icon"></span>
-        <span class="document-tab-label"></span>
-        <span class="document-tab-close" title="Remove this file">&times;</span>
-    </button>
-</template>
-
-<template id="document-pane-template">
-    <div class="document-pane">
-        <div class="document-preview"></div>
-        <div class="preview-status-note preview-status-note-default">Analyzing…</div>
-        <div class="row g-2 mt-1">
-            <div class="col-md-3">
-                <label class="form-label small hint-label" data-bs-toggle="tooltip"
-                       title="What kind of expense this is. Auto-filled from a PDF when detected.">
-                    Type <span class="hint-icon">?</span>
-                </label>
-                <select name="doc_type" class="form-select form-select-sm doc-type">
-                    {% for value, label in doc_types %}
-                        <option value="{{ value }}">{{ label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small hint-label" data-bs-toggle="tooltip"
-                       title="The date printed on the receipt, not necessarily today. Auto-filled from a PDF when detected.">
-                    Expense date <span class="hint-icon">?</span>
-                </label>
-                <input type="date" name="doc_date" class="form-control form-control-sm doc-date">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small hint-label" data-bs-toggle="tooltip"
-                       title="The total printed on the receipt, before any currency conversion. Auto-filled from a PDF when detected.">
-                    Amount <span class="hint-icon">?</span>
-                </label>
-                <input type="number" step="0.01" min="0.01" name="doc_amount" class="form-control form-control-sm doc-amount">
-            </div>
-            <div class="col-md-1">
-                <label class="form-label small hint-label" data-bs-toggle="tooltip"
-                       title="Whichever currency the receipt was actually issued in — don't convert it yourself.">
-                    Currency <span class="hint-icon">?</span>
-                </label>
-                <select name="doc_currency" class="form-select form-select-sm doc-currency">
-                    <option value="USD" selected>USD</option>
-                    <option value="MXN">MXN</option>
-                </select>
-            </div>
-        </div>
-        <div class="row g-2 mt-1">
-            <div class="col-md-8">
-                <label class="form-label small hint-label" data-bs-toggle="tooltip"
-                       title="The company's legal name as printed on the receipt, e.g. &quot;United Airlines, INC&quot;.">
-                    Vendor legal name <span class="hint-icon">?</span>
-                </label>
-                <input type="text" name="doc_vendor" class="form-control form-control-sm doc-vendor" placeholder="e.g. United Airlines, INC">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small hint-label" data-bs-toggle="tooltip"
-                       title="Whether this receipt is a formal invoice or just a basic ticket/receipt with no invoice.">
-                    Backup <span class="hint-icon">?</span>
-                </label>
-                <select name="doc_backup" class="form-select form-select-sm doc-backup">
-                    <option value="invoice" selected>Invoice</option>
-                    <option value="no_invoice">No invoice</option>
-                </select>
-            </div>
-        </div>
-    </div>
-</template>
-
+{% block extra_js %}
+<script src="{% static 'js/document-uploader.js' %}"></script>
 <script>
-// This template's own <script> executes before base.html's Bootstrap
-// bundle <script> further down the page (browsers run inline scripts in
-// document order) — deferred to DOMContentLoaded so `bootstrap.Tooltip`
-// is guaranteed to exist by the time this runs; without it, referencing
-// `bootstrap` here would throw immediately and silently break every
-// other bit of this script too (drag-and-drop, file handling), not just
-// the tooltips.
-document.addEventListener("DOMContentLoaded", function () {
 (function () {
-    const filePicker = document.getElementById("file-picker");
-    const dropZone = document.getElementById("file-drop-zone");
-    const tabsList = document.getElementById("document-tabs");
-    const panesContainer = document.getElementById("document-tab-panes");
-    const tabButtonTemplate = document.getElementById("document-tab-button-template");
-    const paneTemplate = document.getElementById("document-pane-template");
-    const previewUrl = "{% url 'reports:preview_document' %}";
-    const csrfToken = document.querySelector("#report-form [name=csrfmiddlewaretoken]").value;
-    const today = new Date().toISOString().slice(0, 10);
+    initDocumentUploader({
+        filePickerId: "file-picker",
+        dropZoneId: "file-drop-zone",
+        tabsListId: "document-tabs",
+        panesContainerId: "document-tab-panes",
+        tabButtonTemplateId: "document-tab-button-template",
+        paneTemplateId: "document-pane-template",
+        previewUrl: "{% url 'reports:preview_document' %}",
+        csrfToken: document.querySelector("#report-form [name=csrfmiddlewaretoken]").value,
+    });
 
-    // The single source of truth for what's attached — the native file
-    // input can't accumulate across separate pick/drop interactions on
-    // its own (every dialog selection, or every drop, replaces .files
-    // wholesale), so every add/remove goes through this array first and
-    // filePicker.files is rebuilt from it afterward, never the reverse.
-    let selectedFiles = [];
-    let objectUrls = [];
-    let paneTooltips = [];
-
-    function revokeObjectUrls() {
-        objectUrls.forEach((url) => URL.revokeObjectURL(url));
-        objectUrls = [];
-    }
-
-    function initTooltips(root) {
-        return Array.from(root.querySelectorAll('[data-bs-toggle="tooltip"]')).map(
-            (el) => new bootstrap.Tooltip(el)
-        );
-    }
-
-    // Static, page-level field hints (title/description/supervisor) only
-    // need initializing once.
-    initTooltips(document);
+    // Static, page-level field hints (title/description/supervisor) —
+    // the uploader module only initializes tooltips inside its own
+    // per-file panes, so these are handled here instead.
+    Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(
+        (el) => new bootstrap.Tooltip(el)
+    );
 
     // The email field is read-only on purpose — it's never typed by hand,
     // only ever set from the chosen supervisor's actual on-file address
@@ -208,228 +106,6 @@ document.addEventListener("DOMContentLoaded", function () {
             supervisorEmail.value = (selected && selected.dataset.email) || "";
         });
     }
-
-    function syncFilePickerInput() {
-        const dataTransfer = new DataTransfer();
-        selectedFiles.forEach((file) => dataTransfer.items.add(file));
-        filePicker.files = dataTransfer.files;
-    }
-
-    function addFiles(newFiles) {
-        selectedFiles = selectedFiles.concat(Array.from(newFiles));
-        syncFilePickerInput();
-        rebuild(selectedFiles.length - 1);
-    }
-
-    function removeFileAt(index) {
-        selectedFiles.splice(index, 1);
-        syncFilePickerInput();
-        rebuild(Math.min(index, selectedFiles.length - 1));
-    }
-
-    // Fires only on a genuine native-dialog pick (clicking the drop
-    // zone label) — at that point filePicker.files is exactly the new
-    // batch just chosen, appended to whatever was already attached.
-    filePicker.addEventListener("change", () => addFiles(filePicker.files));
-
-    ["dragenter", "dragover"].forEach((eventName) => {
-        dropZone.addEventListener(eventName, (event) => {
-            event.preventDefault();
-            dropZone.classList.add("file-drop-zone-active");
-        });
-    });
-    ["dragleave", "drop"].forEach((eventName) => {
-        dropZone.addEventListener(eventName, (event) => {
-            event.preventDefault();
-            dropZone.classList.remove("file-drop-zone-active");
-        });
-    });
-    dropZone.addEventListener("drop", (event) => {
-        if (!event.dataTransfer || !event.dataTransfer.files.length) return;
-        addFiles(event.dataTransfer.files);
-    });
-
-    function activate(index) {
-        tabsList.querySelectorAll(".document-tab-btn").forEach((btn, i) => {
-            btn.classList.toggle("active", i === index);
-        });
-        panesContainer.querySelectorAll(".document-pane").forEach((pane, i) => {
-            pane.hidden = i !== index;
-        });
-    }
-
-    function buildPreview(file) {
-        const wrap = document.createElement("div");
-        const url = URL.createObjectURL(file);
-        objectUrls.push(url);
-
-        if (file.type.startsWith("image/")) {
-            const img = document.createElement("img");
-            img.src = url;
-            img.className = "document-preview-img";
-            img.alt = file.name;
-            wrap.appendChild(img);
-        } else {
-            const embed = document.createElement("embed");
-            embed.src = url;
-            embed.type = "application/pdf";
-            embed.className = "document-preview-pdf";
-            wrap.appendChild(embed);
-            const link = document.createElement("a");
-            link.href = url;
-            link.target = "_blank";
-            link.rel = "noopener";
-            link.className = "document-preview-open-link";
-            link.textContent = "Open full size ↗";
-            wrap.appendChild(link);
-        }
-        return wrap;
-    }
-
-    function rebuild(activeIndex) {
-        revokeObjectUrls();
-        paneTooltips.forEach((tooltip) => tooltip.dispose());
-        paneTooltips = [];
-        tabsList.innerHTML = "";
-        panesContainer.innerHTML = "";
-
-        selectedFiles.forEach((file, index) => {
-            const tabButton = tabButtonTemplate.content.firstElementChild.cloneNode(true);
-            tabButton.querySelector(".document-tab-icon").textContent = file.type.startsWith("image/") ? "🖼️" : "📄";
-            tabButton.querySelector(".document-tab-label").textContent = file.name;
-            tabButton.title = file.name;
-            tabButton.addEventListener("click", () => activate(index));
-            tabButton.querySelector(".document-tab-close").addEventListener("click", (event) => {
-                event.stopPropagation();
-                removeFileAt(index);
-            });
-            const tabItem = document.createElement("li");
-            tabItem.className = "nav-item";
-            tabItem.appendChild(tabButton);
-            tabsList.appendChild(tabItem);
-
-            const pane = paneTemplate.content.firstElementChild.cloneNode(true);
-            pane.querySelector(".document-preview").appendChild(buildPreview(file));
-            pane.querySelector(".doc-date").value = today;
-            panesContainer.appendChild(pane);
-            paneTooltips = paneTooltips.concat(initTooltips(pane));
-
-            analyzeFile(file, pane);
-        });
-
-        if (selectedFiles.length) {
-            const clampedIndex = Math.max(0, Math.min(activeIndex, selectedFiles.length - 1));
-            activate(clampedIndex);
-        }
-    }
-
-    // Sends every PDF or photo to the same live-preview endpoint. A PDF
-    // comes back with whatever text it could read (amount/type/date/
-    // vendor/currency) to pre-fill the fields; a photo comes back with a
-    // legibility check only (readable? sharp? real size?) — there's no
-    // OCR of a photo, so its fields always need to be filled in by hand,
-    // but a blurry/corrupt one is called out immediately either way.
-    // Either way, the note sits *above* the fields and always separates
-    // what was actually detected from what's just this form's default,
-    // so a default never gets mistaken for a real reading off the file.
-    function analyzeFile(file, pane) {
-        const note = pane.querySelector(".preview-status-note");
-        const isKnownType = /\.(pdf|jpe?g|png)$/i.test(file.name);
-
-        if (!isKnownType) {
-            note.textContent = "Unrecognized file type — every field below uses a default; please fill them in manually.";
-            note.className = "preview-status-note preview-status-note-warning";
-            return;
-        }
-
-        note.textContent = "Analyzing…";
-        note.className = "preview-status-note preview-status-note-loading";
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        fetch(previewUrl, { method: "POST", headers: { "X-CSRFToken": csrfToken }, body: formData })
-            .then((response) => response.json())
-            .then((data) => {
-                if (data.is_image) {
-                    applyImageAnalysis(data, note);
-                } else {
-                    applyPdfAnalysis(pane, data, note);
-                }
-            })
-            .catch(() => {
-                note.textContent = "Preview failed — enter every field manually, including the date/currency defaults.";
-                note.className = "preview-status-note preview-status-note-warning";
-            });
-    }
-
-    // Kept short on purpose — this appears after every single file, so it
-    // only names *which* fields were detected vs. defaulted, not the
-    // full sentence explaining why (that lives in the tooltips instead).
-    function applyPdfAnalysis(pane, data, note) {
-        const detected = [];
-        const defaulted = [];
-
-        if (data.extracted_amount) {
-            pane.querySelector(".doc-amount").value = data.extracted_amount;
-            detected.push("amount");
-        } else {
-            defaulted.push("amount");
-        }
-
-        if (data.detected_type) {
-            pane.querySelector(".doc-type").value = data.detected_type;
-            detected.push("type");
-        } else {
-            defaulted.push("type");
-        }
-
-        if (data.extracted_date) {
-            pane.querySelector(".doc-date").value = data.extracted_date;
-            detected.push("date");
-        } else {
-            defaulted.push("date");
-        }
-
-        if (data.extracted_vendor) {
-            pane.querySelector(".doc-vendor").value = data.extracted_vendor;
-            detected.push("vendor");
-        } else {
-            defaulted.push("vendor");
-        }
-
-        if (data.detected_currency) {
-            pane.querySelector(".doc-currency").value = data.detected_currency;
-            detected.push("currency");
-        } else {
-            defaulted.push("currency");
-        }
-
-        const parts = [];
-        if (detected.length) parts.push("Detected: " + detected.join(", ") + ".");
-        if (defaulted.length) parts.push("Defaulted, please check: " + defaulted.join(", ") + ".");
-
-        note.textContent = parts.join(" ");
-        note.className = detected.length
-            ? "preview-status-note preview-status-note-success"
-            : "preview-status-note preview-status-note-warning";
-    }
-
-    function applyImageAnalysis(data, note) {
-        if (!data.image_is_readable) {
-            note.textContent = "Couldn't read this file — every field below defaults, please fill in manually.";
-            note.className = "preview-status-note preview-status-note-warning";
-            return;
-        }
-        if (data.image_is_blurry) {
-            note.textContent = "Looks blurry or too small — every field below defaults, please verify by eye.";
-            note.className = "preview-status-note preview-status-note-warning";
-            return;
-        }
-        note.textContent = "Photo looks clear, but can't be auto-read — every field below defaults, please fill in manually.";
-        note.className = "preview-status-note preview-status-note-default";
-    }
 })();
-});
 </script>
 {% endblock %}

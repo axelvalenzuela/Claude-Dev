@@ -16,7 +16,7 @@ from django.shortcuts import redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from ..forms import ExpenseReportForm, TravelDocumentForm
+from ..forms import ExpenseReportForm
 from ..models import ExpenseReport, ExpenseReportAuditLog, TravelDocument, log_action
 from ..policies import validate_trip_span
 from ..services import DocumentUploadError, build_travel_document
@@ -171,7 +171,7 @@ class ReportDetailView(LoginRequiredMixin, OwnedReportMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["upload_form"] = TravelDocumentForm()
+        context["doc_types"] = TravelDocument.DocType.choices
         context["daily_totals"] = self.object.daily_totals()
         return context
 

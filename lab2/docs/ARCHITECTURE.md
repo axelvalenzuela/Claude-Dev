@@ -92,6 +92,49 @@ flowchart TB
   (`docker-compose.yml`), a real limitation in most cloud container
   platforms (see "Cloud hosting considerations" in `docs/DEPLOYMENT.md`).
 
+## Frontend JavaScript: shared vanilla modules, not a framework
+
+Both the employee portal and the admin interface are server-rendered
+Django templates — there is no React/Vue/SPA build step, no npm
+toolchain, no separate frontend deployment
+(`docs/adr/0012-shared-frontend-js-not-a-react-rewrite.md` covers why a
+React rewrite was considered and rejected). Client-side interactivity
+that genuinely needs it is added as small, dependency-free JS, following
+one convention consistently rather than growing organically per page:
+
+- **Reusable widgets live in `static/js/*.js`** as a single
+  `initSomething(config)` function taking element ids and any endpoint
+  URLs it needs, returning a small object with whatever the calling page
+  needs to read back (e.g. `getSelectedFiles()`). The module never
+  assumes which page it's on or what happens when the user is "done" —
+  that decision stays with the template that calls it, since the two
+  current pages that share `document-uploader.js`
+  (`report_form.html`, `report_detail.html`) each need genuinely
+  different submit behavior (see the ADR above).
+- **Matching shared markup lives in a `_`-prefixed template partial**
+  (e.g. `expenses/templates/expenses/_document_uploader.html`), included
+  via `{% include %}` wherever the matching JS module is used, so the
+  HTML the module queries for (`#file-drop-zone`, `#document-tabs`, …)
+  can't drift out of sync between the pages that share it.
+- **`templates/base.html`'s `{% block extra_js %}{% endblock %}`**, placed
+  after the Bootstrap bundle `<script>` tag, is where a page loads its
+  own shared module(s) and calls `init...()` — scripts placed there run
+  after both the DOM and Bootstrap are ready, so they don't need the
+  `DOMContentLoaded` + "is `bootstrap` defined yet" workaround that a
+  `<script>` embedded earlier in `{% block content %}` does (see
+  `report_form.html`'s original single-file version, prior to the
+  extraction, for what that workaround looked like).
+- **A simple, page-local interaction** (the Dashboard's tab switching,
+  the "Pending/Approved" subtab toggle, a client-side substring search
+  over a list already in the DOM) stays as a short inline `<script>` in
+  that page's own `extra_js`/`content` block — not every interactive bit
+  needs extracting into `static/js/`, only the ones actually duplicated
+  across more than one page. The search box on `report_list.html` and
+  the Employees-tab search on the admin Dashboard
+  (`templates/admin/index.html`) are the same ~10-line filter pattern
+  copied once, deliberately, rather than a shared module for something
+  that small.
+
 ## Admin UI architecture
 
 This section explains how the Django Admin approval interface is put

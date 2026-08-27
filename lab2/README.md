@@ -205,6 +205,10 @@ que realmente atiende peticiones). Para desactivarlo, pon
   `ExportExcelView` / `DownloadDocumentView` como `View` con un
   `OwnedReportMixin` compartido que garantiza que un empleado **solo puede
   ver/tocar sus propios reportes** (404 en cualquier otro caso).
+- **Buscador en "My reports"** (`report_list.html`): filtro por título o
+  estatus, del lado del cliente (sin ir al servidor), el mismo patrón que
+  ya usaba la pestaña Employees del Dashboard del admin. Solo aparece
+  pasando de 5 reportes — con menos, desplazarse ya es instantáneo.
 - **Crear reporte con adjuntos y preview en vivo** (`ReportCreateView` +
   `PreviewDocumentView`, `/reports/new/`): en la misma pantalla donde se
   captura título/descripción/supervisor, se pueden adjuntar **varios PDFs y
@@ -224,8 +228,18 @@ que realmente atiende peticiones). Para desactivarlo, pon
   el que se guarda; el preview del cliente es solo una ayuda visual.
 - Documento de viaje: tipo (**TAXI / MEAL / FLIGHT / HOTEL / OTHER**),
   fecha, monto, archivo (PDF/JPG/PNG) — se puede seguir agregando/quitando
-  documentos individualmente en el detalle del reporte mientras sigue en
-  `draft`.
+  documentos mientras el reporte sigue en `draft`, desde su propia página
+  de detalle. Este uploader (arrastrar/soltar, varios archivos a la vez,
+  preview en vivo, tabs por archivo) es **el mismo componente** que el de
+  crear un reporte nuevo — antes era un formulario de un solo archivo con
+  recarga de página completa; ahora comparten exactamente el mismo
+  `static/js/document-uploader.js` y la misma plantilla
+  `expenses/_document_uploader.html`, para que agregar un recibo a un
+  reporte que ya empezaste se sienta igual que empezar uno desde cero
+  (ver `docs/adr/0012-shared-frontend-js-not-a-react-rewrite.md`). Cada
+  archivo se sigue subiendo con su propia petición al mismo
+  `UploadDocumentView` de siempre — el uploader solo cambió cómo se ven y
+  arman esas peticiones, no la validación del servidor.
 - **Análisis del PDF al subirlo** (`expenses/pdf_analysis.py`): lee el texto
   del PDF y adivina el monto total y el tipo de gasto por palabras clave
   (`boarding pass`→flight, `hotel/check-in`→hotel, `uber/taxi`→taxi,

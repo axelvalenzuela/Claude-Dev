@@ -8,9 +8,13 @@
 {% if not reports %}
     <div class="alert alert-info">You don't have any reports yet. Create one to start uploading your travel documents.</div>
 {% else %}
-    <div class="portal-row-list">
+    {% if reports|length > 5 %}
+        <input type="text" id="report-search" class="form-control mb-3" placeholder="Search by title or status…" autofocus>
+    {% endif %}
+    <div class="portal-row-list" id="report-row-list">
         {% for report in reports %}
-            <a class="portal-row" href="{% url 'reports:detail' report.pk %}" style="text-decoration:none;">
+            <a class="portal-row" href="{% url 'reports:detail' report.pk %}" style="text-decoration:none;"
+               data-search="{{ report.title }} {{ report.status }}">
                 <div class="portal-row-main">
                     <span class="portal-row-title">{{ report.title }}</span>
                     <span class="portal-row-meta">{{ report.documents.count }} document{{ report.documents.count|pluralize }} &middot; created {{ report.created_at|date:"m/d/Y" }}</span>
@@ -28,5 +32,32 @@
             </a>
         {% endfor %}
     </div>
+    <p class="text-muted" id="report-search-no-results" hidden>No reports match that search.</p>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if reports|length > 5 %}
+<script>
+(function () {
+    // Same client-side filter pattern as the admin dashboard's Employees
+    // tab search (templates/admin/index.html) — a plain substring match
+    // over a data-search attribute, no server round trip. Only shown past
+    // 5 reports; below that, scrolling to find one is already instant.
+    const input = document.getElementById("report-search");
+    const rows = document.querySelectorAll("#report-row-list .portal-row");
+    const noResults = document.getElementById("report-search-no-results");
+    input.addEventListener("input", function () {
+        const query = input.value.toLowerCase();
+        let visibleCount = 0;
+        rows.forEach(function (row) {
+            const matches = row.dataset.search.toLowerCase().includes(query);
+            row.style.display = matches ? "" : "none";
+            if (matches) visibleCount += 1;
+        });
+        noResults.hidden = visibleCount !== 0;
+    });
+})();
+</script>
 {% endif %}
 {% endblock %}

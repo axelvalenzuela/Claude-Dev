@@ -1,0 +1,91 @@
+{% comment %}
+Drag-and-drop, multi-file, live-preview receipt picker — shared markup for
+report_form.html (new report) and report_detail.html (adding to an
+existing draft). Needs `doc_types` in the including template's context.
+Wired up by static/js/document-uploader.js's initDocumentUploader(); the
+including template is responsible for calling that with this markup's
+element ids and deciding what happens on submit.
+{% endcomment %}
+<label for="file-picker" id="file-drop-zone" class="file-drop-zone d-block text-center border rounded p-4 mb-0">
+    <div class="fw-semibold">Drag files here, or click to browse</div>
+    <div class="text-muted small mt-1">PDF, JPG or PNG — you can attach several at once.</div>
+</label>
+<input type="file" id="file-picker" name="files" multiple accept=".pdf,.jpg,.jpeg,.png" class="form-control visually-hidden">
+<div class="form-text mt-2">
+    Only attach what this trip actually needs, per company policy — check the Help chat
+    (bottom-right, open it if you're not sure) before adding anything questionable.
+</div>
+
+<ul class="nav document-tabs mt-3" id="document-tabs"></ul>
+<div id="document-tab-panes" class="document-tab-panes"></div>
+
+<template id="document-tab-button-template">
+    <button type="button" class="document-tab-btn" role="tab">
+        <span class="document-tab-icon"></span>
+        <span class="document-tab-label"></span>
+        <span class="document-tab-close" title="Remove this file">&times;</span>
+    </button>
+</template>
+
+<template id="document-pane-template">
+    <div class="document-pane">
+        <div class="document-preview"></div>
+        <div class="preview-status-note preview-status-note-default">Analyzing…</div>
+        <div class="row g-2 mt-1">
+            <div class="col-md-3">
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="What kind of expense this is. Auto-filled from a PDF when detected.">
+                    Type <span class="hint-icon">?</span>
+                </label>
+                <select name="doc_type" class="form-select form-select-sm doc-type">
+                    {% for value, label in doc_types %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="The date printed on the receipt, not necessarily today. Auto-filled from a PDF when detected.">
+                    Expense date <span class="hint-icon">?</span>
+                </label>
+                <input type="date" name="doc_date" class="form-control form-control-sm doc-date">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="The total printed on the receipt, before any currency conversion. Auto-filled from a PDF when detected.">
+                    Amount <span class="hint-icon">?</span>
+                </label>
+                <input type="number" step="0.01" min="0.01" name="doc_amount" class="form-control form-control-sm doc-amount">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="Whichever currency the receipt was actually issued in — don't convert it yourself.">
+                    Currency <span class="hint-icon">?</span>
+                </label>
+                <select name="doc_currency" class="form-select form-select-sm doc-currency">
+                    <option value="USD" selected>USD</option>
+                    <option value="MXN">MXN</option>
+                </select>
+            </div>
+        </div>
+        <div class="row g-2 mt-1">
+            <div class="col-md-8">
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="The company's legal name as printed on the receipt, e.g. &quot;United Airlines, INC&quot;.">
+                    Vendor legal name <span class="hint-icon">?</span>
+                </label>
+                <input type="text" name="doc_vendor" class="form-control form-control-sm doc-vendor" placeholder="e.g. United Airlines, INC">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small hint-label" data-bs-toggle="tooltip"
+                       title="Whether this receipt is a formal invoice or just a basic ticket/receipt with no invoice.">
+                    Backup <span class="hint-icon">?</span>
+                </label>
+                <select name="doc_backup" class="form-select form-select-sm doc-backup">
+                    <option value="invoice" selected>Invoice</option>
+                    <option value="no_invoice">No invoice</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</template>

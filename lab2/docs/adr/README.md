@@ -23,6 +23,7 @@ build against it, not the reverse.
 | [0009](0009-rule-based-help-chat.md) | A rule-based help-chat widget, not an LLM integration | Accepted |
 | [0010](0010-image-quality-check-not-ocr.md) | A lightweight image-quality check for photo receipts, not OCR | Accepted |
 | [0011](0011-jwt-web-authentication.md) | JWT-based authentication for the web portal; Django Admin keeps its own session login | Accepted |
+| [0012](0012-shared-frontend-js-not-a-react-rewrite.md) | Incremental shared frontend JS modules instead of a React rewrite | Accepted |
 
 ## Format
 

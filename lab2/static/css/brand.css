@@ -1359,6 +1359,11 @@ tr:hover .badge {
     line-height: 1.42;
     animation: help-chat-bubble-in 0.2s ease;
     word-wrap: break-word;
+    /* Bot answers are set via textContent (see help_chat/widget.html), so
+       a literal newline in the answer string only actually breaks the
+       line if this is set — needed for a short list-style answer (e.g.
+       "recent activity") to read as a list instead of one run-on line. */
+    white-space: pre-line;
 }
 @keyframes help-chat-bubble-in {
     from { opacity: 0; transform: translateY(6px); }

@@ -721,10 +721,21 @@ conservan hasta entonces:
     alcance por departamento que ya usa el Dashboard
     (`pending_reports_notification`) — un admin de departamento nunca ve
     nombres de otro departamento a través del chat tampoco.
+  - *"What's my recent activity?"* — las últimas 5 entradas del audit log
+    (`ExpenseReportAuditLog`) de sus propios reportes (creado, documento
+    subido/borrado, enviado…), con fecha y en qué reporte. La versión para
+    admins (*"What's the recent activity on reports I can see?"*) aplica
+    el mismo alcance por departamento que la pregunta de arriba — nunca
+    una forma nueva de ver más de lo que el Dashboard ya le mostraría.
   - Además, el tipo de gasto (Taxi/Meal/Flight/Hotel/Other) y el tipo de
     cambio USD/MXN que responde el chat se leen directamente de
     `TravelDocument.DocType` y `policies.USD_MXN_RATE` — nunca un número
     o lista duplicada a mano que se pudiera desincronizar del valor real.
+- **También responde dudas generales del portal** ("what is this app
+  for", "I'm lost") con una respuesta de una sola entrada FAQ que resume
+  el flujo completo (crear reporte → adjuntar recibos → enviar → revisar
+  → aprobar/rechazar) y sugiere qué más preguntar — pensada como el punto
+  de entrada para alguien que no sabe ni por dónde empezar a preguntar.
 
 ## Reglas de negocio (testeadas, `expenses/models.py`)
 

@@ -1,7 +1,7 @@
 """The floating help-chat widget: the rule-based answer engine
 (accounts/faq.py) — including the dynamic, live-data lookups (employee
-number, supervisor, pending-report owners) alongside the fixed FAQ
-entries — and its three per-account-scoped endpoints
+number, supervisor, pending-report owners, recent activity) alongside
+the fixed FAQ entries — and its three per-account-scoped endpoints
 (accounts/help_chat_views.py) — history, ask, reset."""
 import json
 
@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from accounts.faq import FALLBACK_ANSWER, find_answer
 from accounts.models import HelpChatMessage, User
-from expenses.models import ExpenseReport
+from expenses.models import ExpenseReport, ExpenseReportAuditLog, log_action
 from expenses.policies import USD_MXN_RATE
 
 TODAY = timezone.now().date()
@@ -138,6 +138,59 @@ class FindAnswerTests(TestCase):
         answer = find_answer("who owns the pending reports", user=adrian)
         self.assertIn("ics@example.com", answer)
         self.assertNotIn("ana@example.com", answer)
+
+    def test_recent_activity_employee_with_no_reports(self):
+        answer = find_answer("what's my recent activity", user=self.employee)
+        self.assertIn("No activity yet", answer)
+
+    def test_recent_activity_employee_lists_their_own_actions(self):
+        report = ExpenseReport.objects.create(user=self.employee, title="Puebla trip", supervisor_name="S")
+        log_action(report, self.employee, ExpenseReportAuditLog.Action.CREATED)
+
+        answer = find_answer("any recent activity on my reports?", user=self.employee)
+
+        self.assertIn("Puebla trip", answer)
+        self.assertIn("Created", answer)
+
+    def test_recent_activity_employee_never_sees_another_employees_activity(self):
+        other = User.objects.create_user(username="luis@example.com", email="luis@example.com", password="x")
+        report = ExpenseReport.objects.create(user=other, title="Luis's trip", supervisor_name="S")
+        log_action(report, other, ExpenseReportAuditLog.Action.CREATED)
+
+        answer = find_answer("what's my recent activity", user=self.employee)
+
+        self.assertNotIn("Luis's trip", answer)
+
+    def test_recent_activity_is_employee_only(self):
+        # Deliberately avoids "recent"/"activity" alone scoring for an
+        # admin-visible entry too — this checks the employee-only lookup
+        # itself never surfaces for an admin asking the employee phrasing.
+        answer = find_answer("what's my recent activity", user=self.admin)
+        self.assertNotIn("No activity yet", answer)
+
+    def test_recent_activity_admin_with_nothing_in_scope(self):
+        answer = find_answer("what's the recent activity lately", user=self.admin)
+        self.assertIn("No recent activity", answer)
+
+    def test_recent_activity_admin_respects_department_scope(self):
+        adrian = User.objects.get(email="adrian.heymes@mhp.com")
+        ics_employee = User.objects.create_user(
+            username="ics2@example.com", email="ics2@example.com", password="x", department="ICS"
+        )
+        finance_employee = self.employee
+        ics_report = ExpenseReport.objects.create(user=ics_employee, title="ICS trip", supervisor_name="S")
+        log_action(ics_report, ics_employee, ExpenseReportAuditLog.Action.CREATED)
+        finance_report = ExpenseReport.objects.create(user=finance_employee, title="Finance trip", supervisor_name="S")
+        log_action(finance_report, finance_employee, ExpenseReportAuditLog.Action.CREATED)
+
+        answer = find_answer("what's the recent activity", user=adrian)
+
+        self.assertIn("ICS trip", answer)
+        self.assertNotIn("Finance trip", answer)
+
+    def test_general_overview_question_gets_a_high_level_answer(self):
+        answer = find_answer("I'm lost, what is this portal for?", user=self.employee)
+        self.assertIn("travel-expense-report portal", answer)
 
 
 class HelpChatEndpointTests(TestCase):

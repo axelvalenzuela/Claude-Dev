@@ -79,7 +79,9 @@ never drift out of sync with `TravelDocument.DocType` or
   different in kind whether the account is an employee's or an admin's.
 - Dynamic answers never reveal more than the asker could already see
   through the normal UI: an employee's "my employee number"/"my
-  supervisor" only ever reads their *own* rows, and an admin's "who owns
-  the pending reports" reuses the exact same department-scoping query
-  `pending_reports_notification` already applies — the chat is a new way
-  to ask, not a new grant of access.
+  supervisor"/"my recent activity" only ever reads their *own* rows, and
+  an admin's "who owns the pending reports"/"recent activity" reuses the
+  exact same department-scoping query `pending_reports_notification`
+  already applies — the chat is a new way to ask, not a new grant of
+  access. This is the guarantee every new dynamic entry has to preserve,
+  not just the ones that existed when this ADR was written.

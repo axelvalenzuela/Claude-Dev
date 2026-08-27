@@ -27,10 +27,11 @@ Two kinds of entries:
   for the handful of questions whose true answer depends on *who's
   asking* or on data that changes over time (an employee's own number,
   who a report's supervisor is, which reports are pending review right
-  now). These read the database directly, scoped the same way every
-  other admin/employee view in this app scopes it — an admin's "who
-  owns the pending reports" answer only lists their own department
-  unless they're HR/general.
+  now, recent activity on the reports they can see). These read the
+  database directly, scoped the same way every other admin/employee view
+  in this app scopes it — an admin's "who owns the pending reports" (and
+  "recent activity") answer only covers their own department unless
+  they're HR/general.
 """
 import re
 
@@ -229,6 +230,25 @@ FAQ_ENTRIES = [
             "job removes just the file — the report and its data stay."
         ),
     },
+    {
+        "audience": "all",
+        # Deliberately excludes generic words like "what"/"how"/"does" —
+        # those appear in nearly every other question here too, and this
+        # entry should only win when someone is actually asking about the
+        # app/portal itself in general terms, not stealing a tied score
+        # from a more specific entry on an unrelated question that just
+        # happens to also start with "how".
+        "keywords": ["portal", "platform", "app", "overview", "started", "beginner", "lost", "confused"],
+        "question": "What is this platform for, generally?",
+        "answer": (
+            "This is the travel-expense-report portal: employees create a "
+            "report, attach their receipts, and submit it; their supervisor "
+            "reviews it in the admin and approves or rejects it. Ask me about "
+            "a specific step (creating a report, attaching receipts, the "
+            "$60/day policy, approving/rejecting) for more detail, or ask "
+            "\"what's my recent activity\" to see what's happened lately."
+        ),
+    },
 ]
 
 
@@ -265,6 +285,46 @@ def _pending_owners_answer(user) -> str:
     return "Reports are currently pending review from: " + ", ".join(owners) + "."
 
 
+RECENT_ACTIVITY_LIMIT = 5
+
+
+def _format_activity_lines(entries) -> str:
+    return "\n".join(
+        f"{entry.created_at:%b %d} — {entry.get_action_display()} on “{entry.report.title}”"
+        for entry in entries
+    )
+
+
+def _recent_activity_answer_employee(user) -> str:
+    from expenses.models import ExpenseReportAuditLog
+
+    entries = (
+        ExpenseReportAuditLog.objects.filter(report__user=user)
+        .select_related("report")
+        .order_by("-created_at")[:RECENT_ACTIVITY_LIMIT]
+    )
+    if not entries:
+        return "No activity yet — create a report to get started."
+    return "Your most recent activity:\n" + _format_activity_lines(entries)
+
+
+def _recent_activity_answer_admin(user) -> str:
+    from expenses.models import ExpenseReportAuditLog
+
+    # Same department-scoping rule as _pending_owners_answer above (and
+    # everywhere else in the app an admin sees report-shaped data) — an
+    # admin's "recent activity" is never a way to see more than the
+    # Dashboard/Reports tabs would already show them.
+    entries = ExpenseReportAuditLog.objects.select_related("report", "report__user").order_by("-created_at")
+    if not user.is_superuser and user.supervised_department:
+        entries = entries.filter(report__user__department=user.supervised_department)
+    entries = entries[:RECENT_ACTIVITY_LIMIT]
+
+    if not entries:
+        return "No recent activity on reports in your scope."
+    return "Recent activity in your scope:\n" + _format_activity_lines(entries)
+
+
 DYNAMIC_ENTRIES = [
     {
         "audience": "all",
@@ -283,6 +343,18 @@ DYNAMIC_ENTRIES = [
         "keywords": ["who", "owns", "owners", "pending", "waiting"],
         "question": "Who owns the reports currently pending review?",
         "answer_fn": _pending_owners_answer,
+    },
+    {
+        "audience": "employee",
+        "keywords": ["recent", "activity", "activities", "latest", "lately", "happened"],
+        "question": "What's my recent activity?",
+        "answer_fn": _recent_activity_answer_employee,
+    },
+    {
+        "audience": "admin",
+        "keywords": ["recent", "activity", "activities", "latest", "lately", "happened"],
+        "question": "What's the recent activity on reports I can see?",
+        "answer_fn": _recent_activity_answer_admin,
     },
 ]
 

@@ -163,6 +163,22 @@
     margin: 0 auto;
     box-sizing: border-box;
 }
+/* Django's own admin/css/base.css carries `.dashboard #content { width:
+   600px; }` — a hardcoded default for its own plain, single-column
+   dashboard (a title and a couple of link lists), never anticipating a
+   dashboard as content-heavy as this one's (KPI tiles, an expense-report
+   table, an employee directory). Because that selector is one class plus
+   one id, it's MORE specific than the bare `#content` rule above and
+   silently won it on this one page, capping the Dashboard specifically
+   at 600px — exactly the page an admin lands on right after logging in
+   — no matter how wide `#content` was set above. This is what was
+   actually still making the Dashboard (and its "before you even filter
+   anything" first impression) look cramped after the earlier width fix,
+   which only ever reached the changelist/change-form pages. */
+.dashboard #content {
+    max-width: 1800px;
+    width: 97%;
+}
 /* A clean, corporate sans-serif stack — Django's own default already
    leads with Segoe UI, but re-asserted explicitly (with Inter ahead of it
    as the more distinctly "enterprise software" face when available) so

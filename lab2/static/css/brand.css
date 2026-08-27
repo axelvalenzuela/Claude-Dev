@@ -145,17 +145,21 @@
     transform: translateY(-1px);
 }
 
-/* Centers every admin page (dashboard, changelists, change forms) in a
-   readable column instead of sitting flush to the left with empty space
-   on the right — #content is Django admin's own top-level content wrapper
-   on every page, so this applies everywhere, not just the dashboard.
-   1200px read as cramped on anything wider than a laptop screen, with the
-   Dashboard's tables and KPI tiles squeezed into a narrow center column
-   and a lot of unused space on either side — widened to give the tables
-   room to breathe instead of wrapping/crowding their columns. */
+/* #content is Django admin's own top-level content wrapper on every
+   page, so this applies everywhere — dashboard, changelists, change
+   forms alike. A narrower max-width (1200px, then 1440px) read as
+   cramped on anything wider than a laptop screen: report-review tables
+   and the changelist grid were squeezed into a centered column with a
+   lot of unused space on either side, which is the opposite of how a
+   data-dense enterprise console (SAP, Salesforce, Workday) actually uses
+   a wide monitor — those let tables use the real width available rather
+   than capping it artificially. Widened again, close to the full
+   viewport with just enough side margin to keep text off the very edge.
+   (Django's own left nav-sidebar is a separate, already-solved concern —
+   off site-wide via admin.site.enable_nav_sidebar in accounts/apps.py.) */
 #content {
-    max-width: 1440px;
-    width: 94%;
+    max-width: 1800px;
+    width: 97%;
     margin: 0 auto;
     box-sizing: border-box;
 }

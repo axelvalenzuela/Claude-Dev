@@ -80,14 +80,18 @@ before writing it, not worth guessing at here.
 
 Nothing in this project provisions a secrets store — deliberately, per
 [ADR 0008](adr/0008-iam-roles-not-users.md)'s "no keys for now."
-`DJANGO_SECRET_KEY` and the database credentials (item 4) need to come
-from somewhere other than a `.env` file baked into an AMI or pasted into
-`UserData` (both would leak secrets into a place other people/processes
-can read). When you're ready: AWS Secrets Manager or SSM Parameter
-Store (SecureString), read at container start, with
+`DJANGO_SECRET_KEY`, `DJANGO_JWT_SECRET_KEY` (the portal's JWT signing
+key — see `docs/adr/0011-jwt-web-authentication.md` in the app itself;
+defaults to `DJANGO_SECRET_KEY` if unset, so set both separately once
+there's a real secrets store, or rotating one silently invalidates every
+outstanding login token too), and the database credentials (item 4) need
+to come from somewhere other than a `.env` file baked into an AMI or
+pasted into `UserData` (both would leak secrets into a place other
+people/processes can read). When you're ready: AWS Secrets Manager or
+SSM Parameter Store (SecureString), read at container start, with
 `secretsmanager:GetSecretValue`/`ssm:GetParameter` added to
-`AppInstanceRole` in `security.yaml` for exactly that secret's ARN — no
-broader.
+`AppInstanceRole` in `security.yaml` for exactly those secrets' ARNs —
+no broader.
 
 ### 4. Move off SQLite
 
@@ -133,14 +137,16 @@ the ACM certificate won't validate and no Route53 record will be
 created until these point at a domain/hosted zone you actually own.
 Once you have one, redeploy `edge.yaml` with both filled in.
 
-### 7. Schedule the file-retention cleanup job
+### 7. Schedule the file-retention and expired-token cleanup jobs
 
-`docs/DEPLOYMENT.md` documents `cleanup_old_documents` as a cron
-job for the intranet server. On EC2, the equivalent is a systemd timer
-(installed alongside the app's own systemd unit from item 2) or an
-`AWS::Scheduler::Schedule` invoking a small Lambda / ECS task — either
-works; pick one and add it to `compute.yaml`. Not yet done anywhere in
-this infra project.
+`docs/DEPLOYMENT.md` documents `cleanup_old_documents` and
+`cleanup_expired_tokens` (the latter added alongside JWT-based
+authentication — see `docs/adr/0011-jwt-web-authentication.md` in the app
+itself) as cron jobs for the intranet server. On EC2, the equivalent is a
+systemd timer (installed alongside the app's own systemd unit from item
+2) or an `AWS::Scheduler::Schedule` invoking a small Lambda / ECS task —
+either works; pick one and add it to `compute.yaml`. Not yet done
+anywhere in this infra project.
 
 ### 8. Move the WAF from COUNT to BLOCK
 

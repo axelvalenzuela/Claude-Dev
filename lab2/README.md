@@ -185,7 +185,13 @@ que realmente atiende peticiones). Para desactivarlo, pon
   `department`. El username es el correo.
 - **Sign up** (`SignUpView`, CBV `CreateView`): cualquiera crea una cuenta de
   empleado. Nunca queda con `is_staff`/`is_superuser`.
-- **Log in / Log out** con el sistema de sesiones de Django.
+- **Log in / Log out** del portal vía **JWT** (cookies `HttpOnly` con
+  access token de corta duración + refresh token, `accounts/jwt_auth.py`)
+  en vez del sistema de sesiones de Django — ver
+  `docs/adr/0011-jwt-web-authentication.md`. El Admin de Django
+  (`/admin/`) sigue con su propio login de sesión, sin cambios: no hay
+  forma soportada de correr `django.contrib.admin` sobre un token sin
+  estado.
 - **`LoginEvent`**: cada intento de login (exitoso o fallido) se registra vía
   las señales `user_logged_in` / `user_login_failed` de Django
   (`accounts/signals.py`), con usuario (si aplica), correo intentado, IP,
@@ -605,6 +611,12 @@ conservan hasta entonces:
   `X_FRAME_OPTIONS = "DENY"`, `SECURE_CONTENT_TYPE_NOSNIFF` — además de lo
   que Django ya trae por default (CSRF en todos los POST, passwords
   hasheados, validadores de contraseña).
+- **Logout revoca de verdad**, no solo borra cookies: `JWTLogoutView`
+  además pone en lista negra (`accounts/models.py:BlacklistedToken`) el
+  refresh token de la sesión, para que no se pueda usar después de
+  cerrar sesión para renovar el access token silenciosamente. Programar
+  `manage.py cleanup_expired_tokens` (junto con `cleanup_old_documents`,
+  ver `docs/DEPLOYMENT.md`) para no acumular filas vencidas.
 
 ### 17. Generación de Excel (`expenses/excel.py`)
 - Encabezado con empleado, **número de empleado**, departamento, supervisor,

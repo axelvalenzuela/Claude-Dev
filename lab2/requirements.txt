@@ -7,6 +7,9 @@ pypdf==6.16.1
 python-docx==1.2.0
 PyMuPDF==1.24.14
 Pillow==12.3.0
+# JWT-based web authentication for the employee/admin portal (accounts/
+# jwt_auth.py) — see docs/adr/0011-jwt-web-authentication.md.
+PyJWT==2.13.0
 
 # Production/container-only (see docs/DEPLOYMENT.md); harmless in local dev,
 # where `manage.py runserver` is used instead of gunicorn.

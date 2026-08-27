@@ -1,15 +1,21 @@
-"""The two views this app defines on top of Django's built-ins: public
-signup, and a password-reset-confirm that also lifts an account lockout.
-Login/logout/most of the reset flow are Django's stock views, wired up
-directly in accounts/urls.py with our forms/templates — no need for a
-custom view class when there's no extra behavior to add."""
-from django.contrib.auth import login
+"""The views this app defines on top of Django's built-ins: public signup,
+a JWT-issuing login/logout pair for the web portal (see accounts/
+jwt_auth.py and docs/adr/0011-jwt-web-authentication.md), and a
+password-reset-confirm that also lifts an account lockout. Most of the
+reset flow is still Django's stock views, wired up directly in
+accounts/urls.py — no need for a custom view class when there's no extra
+behavior to add. Django Admin's own login/logout at /admin/ are untouched
+and stay session-based; nothing here affects them."""
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.signals import user_logged_in
+from django.middleware.csrf import rotate_token
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView
 
-from .forms import BrandedSetPasswordForm, SignUpForm
+from .forms import BrandedSetPasswordForm, LoginForm, SignUpForm
+from .jwt_auth import clear_auth_cookies, revoke_refresh_token, set_auth_cookies
 from .models import LoginEvent
 
 
@@ -29,7 +35,43 @@ class SignUpView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        login(self.request, self.object)
+        self.request.user = self.object
+        rotate_token(self.request)
+        user_logged_in.send(sender=self.object.__class__, request=self.request, user=self.object)
+        set_auth_cookies(response, self.object)
+        return response
+
+
+class JWTLoginView(auth_views.LoginView):
+    """Same form, same "?next=" handling, same redirect-if-already-
+    authenticated behavior as Django's stock LoginView — only how a
+    successful attempt is remembered changes: JWT cookies
+    (accounts/jwt_auth.py) instead of a session."""
+
+    form_class = LoginForm
+    template_name = "accounts/login.html"
+
+    def form_valid(self, form):
+        user = form.get_user()
+        self.request.user = user
+        rotate_token(self.request)
+        user_logged_in.send(sender=user.__class__, request=self.request, user=user)
+        response = redirect(self.get_success_url())
+        set_auth_cookies(response, user)
+        return response
+
+
+class JWTLogoutView(View):
+    """POST-only, matching the logout <form> in templates/base.html.
+    Clears both JWT cookies and blacklists the refresh token so it can't
+    silently mint new access tokens after this point — see
+    accounts/jwt_auth.py:revoke_refresh_token."""
+
+    def post(self, request, *args, **kwargs):
+        revoke_refresh_token(request)
+        rotate_token(request)
+        response = redirect("login")
+        clear_auth_cookies(response)
         return response
 
 

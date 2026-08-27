@@ -91,6 +91,25 @@ class LoginEvent(models.Model):
         return f"{self.email_attempted} · {status} · {self.created_at:%Y-%m-%d %H:%M}"
 
 
+class BlacklistedToken(models.Model):
+    """A refresh token (accounts/jwt_auth.py) revoked before its own
+    expiry — the only way logout can make a specific JWT stop working
+    immediately, since JWTs are otherwise stateless and valid until their
+    embedded `exp` regardless of anything the server does. Access tokens
+    aren't blacklisted individually: they're short-lived enough
+    (JWT_ACCESS_TOKEN_LIFETIME) that revoking the refresh token they'd
+    otherwise be silently renewed from is enough. `expires_at` mirrors the
+    token's own `exp` purely so cleanup_expired_tokens can prune rows for
+    tokens that would fail validation on their own merits anyway."""
+
+    jti = models.CharField(max_length=36, unique=True)
+    blacklisted_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return self.jti
+
+
 class HelpChatMessage(models.Model):
     """One message in the floating help-chat widget's conversation
     (accounts/faq.py builds the bot's replies; templates/help_chat/

@@ -72,9 +72,12 @@ flowchart TB
 
 - **One WSGI process serves everything** — the employee portal
   (Bootstrap templates) and the admin approval interface (reskinned
-  Django Admin) are the same Django project, same process, same
-  session/auth system; they're separated by URL prefix and by
-  `is_staff`, not by being separate deployments.
+  Django Admin) are the same Django project and process, separated by
+  URL prefix and by `is_staff`, not by being separate deployments. They
+  no longer share one authentication mechanism, though: the portal
+  authenticates from JWT cookies and Admin keeps Django's session-based
+  login, since `django.contrib.admin` has no supported way to run on a
+  stateless token (see docs/adr/0011-jwt-web-authentication.md).
 - **`accounts` is the lower-level app**: users, login, permissions,
   Dashboard context processors. `expenses` depends on it (every report
   belongs to a `User`); `accounts` never imports from `expenses` at

@@ -73,7 +73,12 @@ class EmployeeNumberTests(TestCase):
                 "password2": "clave-super-segura-1",
             },
         )
+        # client.logout() only clears the test client's session — signup now
+        # authenticates via JWT cookies (accounts/jwt_auth.py), which
+        # aren't session state, so they'd otherwise survive logout() and
+        # make the second signup's dispatch() think Ana is still logged in.
         self.client.logout()
+        self.client.cookies.clear()
         self.client.post(
             reverse("signup"),
             {

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -40,6 +41,16 @@ CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 # machine. See accounts/server_lifecycle.py for the implementation. Set to 0
 # (or a negative number) to disable.
 AUTO_SHUTDOWN_HOURS = env.float("AUTO_SHUTDOWN_HOURS", default=12)
+
+# The employee/admin web portal authenticates from a signed JWT in an
+# HttpOnly cookie instead of Django's session (accounts/jwt_auth.py) — see
+# docs/adr/0011-jwt-web-authentication.md. Falls back to SECRET_KEY so
+# nothing extra is required to run locally; set DJANGO_JWT_SECRET_KEY
+# separately in any environment where rotating one shouldn't rotate the other.
+JWT_SECRET_KEY = env.str("DJANGO_JWT_SECRET_KEY", default=SECRET_KEY)
+JWT_ALGORITHM = "HS256"
+JWT_ACCESS_TOKEN_LIFETIME = timedelta(minutes=env.int("DJANGO_JWT_ACCESS_MINUTES", default=15))
+JWT_REFRESH_TOKEN_LIFETIME = timedelta(days=env.int("DJANGO_JWT_REFRESH_DAYS", default=7))
 
 
 # Application definition
@@ -73,6 +84,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Overrides request.user from a JWT cookie for the employee/admin
+    # portal (everything outside /admin/) — see accounts/jwt_auth.py and
+    # docs/adr/0011-jwt-web-authentication.md. Must run after
+    # AuthenticationMiddleware, which it takes over from for those routes.
+    'accounts.jwt_auth.JWTAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

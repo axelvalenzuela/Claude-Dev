@@ -5,18 +5,14 @@ login, so there's a single reset flow for every account."""
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from .forms import BrandedPasswordResetForm, LoginForm
+from .forms import BrandedPasswordResetForm
 from .help_chat_views import HelpChatAskView, HelpChatHistoryView, HelpChatResetView
-from .views import PasswordResetConfirmView, SignUpView
+from .views import JWTLoginView, JWTLogoutView, PasswordResetConfirmView, SignUpView
 
 urlpatterns = [
     path("signup/", SignUpView.as_view(), name="signup"),
-    path(
-        "login/",
-        auth_views.LoginView.as_view(template_name="accounts/login.html", authentication_form=LoginForm),
-        name="login",
-    ),
-    path("logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
+    path("login/", JWTLoginView.as_view(), name="login"),
+    path("logout/", JWTLogoutView.as_view(), name="logout"),
     # Shared by the employee login and the Django Admin login ("Forgotten
     # your password?" on both points here) — one reset flow for every
     # account, admin or not. In local dev, EMAIL_BACKEND prints the reset

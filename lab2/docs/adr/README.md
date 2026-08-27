@@ -22,6 +22,7 @@ build against it, not the reverse.
 | [0008](0008-admin-access-model.md) | Admin access model: is_staff-wide Users & Groups, manual provisioning, dual-identifier login | Accepted |
 | [0009](0009-rule-based-help-chat.md) | A rule-based help-chat widget, not an LLM integration | Accepted |
 | [0010](0010-image-quality-check-not-ocr.md) | A lightweight image-quality check for photo receipts, not OCR | Accepted |
+| [0011](0011-jwt-web-authentication.md) | JWT-based authentication for the web portal; Django Admin keeps its own session login | Accepted |
 
 ## Format
 

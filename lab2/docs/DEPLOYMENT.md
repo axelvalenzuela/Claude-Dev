@@ -282,6 +282,21 @@ python manage.py cleanup_old_documents --dry-run # solo muestra qué borraría
   `docker compose exec web python manage.py cleanup_old_documents` con la
   misma cadencia.
 
+## Tokens JWT revocados (`cleanup_expired_tokens`)
+
+Desde que el portal autentica por JWT en vez de sesión
+(`docs/adr/0011-jwt-web-authentication.md`), cerrar sesión pone el
+refresh token en una lista negra (`accounts/models.py:BlacklistedToken`)
+en vez de simplemente borrar una cookie. Esas filas solo sirven mientras
+el token que bloquean no haya expirado por su cuenta — pasado ese punto
+son basura acumulada, y nada las borra automáticamente. Se programa
+igual que `cleanup_old_documents`, con el mismo cron/Task Scheduler:
+
+```bash
+python manage.py cleanup_expired_tokens           # borra
+python manage.py cleanup_expired_tokens --dry-run # solo muestra cuántas borraría
+```
+
 ## Pipeline de CI
 
 `.github/workflows/lab2-ci.yml` corre en cada push/PR que toque `lab2/`:

@@ -1,0 +1,21 @@
+{
+  "name": "lab3-mcp-browser",
+  "version": "1.0.0",
+  "description": "Servidor MCP basico que controla Chromium (via Puppeteer) para abrir paginas, leer su texto y tomar screenshots",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc && node dist/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "puppeteer": "^23.11.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2"
+  }
+}

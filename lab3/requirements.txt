@@ -1,0 +1,35 @@
+# requirements.txt — lab3 (equivalente informativo, no instalable)
+#
+# lab1 y lab2 de este repo son Python y usan requirements.txt + pip de
+# verdad. lab3 es Node.js/TypeScript — su manifiesto real de dependencias
+# es package.json (versiones exactas resueltas en package-lock.json),
+# y se instala con `npm install`, NO con `pip install -r requirements.txt`.
+#
+# Este archivo existe como referencia rápida en el mismo formato que ya
+# conoces de lab1/lab2: qué se instaló y en qué versión, y qué hace falta
+# tener en la máquina ANTES de correr npm install. Ver INSTRUCCIONES.md
+# para los pasos completos.
+
+# --- Runtime del sistema (instalar aparte, no via npm) -----------------
+# node                >= 18       (probado en 24.20.0)  https://nodejs.org/
+# npm                 >= 9        (probado en 11.19.0)  incluido con Node
+
+# --- Dependencias de la app (declaradas en package.json, resueltas en ---
+# --- package-lock.json — instaladas por `npm install`, no a mano) -------
+@modelcontextprotocol/sdk==1.30.0   # SDK oficial de Anthropic para servidores/clientes MCP
+puppeteer==23.11.1                   # Automatización de Chromium (CDP) + descarga su propio binario
+zod==3.25.76                          # Validacion de schemas de entrada de cada tool MCP
+
+# --- Dependencias de desarrollo (compilación, no van a producción) ------
+typescript==5.9.3                     # Compilador TS -> JS (src/ -> dist/)
+@types/node==22.20.1                  # Tipos de Node.js para TypeScript
+
+# --- Binario descargado por puppeteer (NO es un paquete npm) ------------
+# chromium            131.0.6778.204  (via `npm install`, cacheado en
+#                                      ~/.cache/puppeteer/chrome/ — ver
+#                                      docs/adr/0004-bundled-chromium.md)
+
+# --- Cómo instalar todo lo de arriba de una vez --------------------------
+#   cd lab3
+#   npm install
+#   npm run build

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "lab3-browser": {
+      "command": "node",
+      "args": ["dist/server.js"],
+      "cwd": "."
+    }
+  }
+}

@@ -123,6 +123,32 @@ Antes de dar el lab por armado se corrieron dos pruebas:
    screenshot en base64 — el mismo flujo que usaría Claude Desktop/Claude
    Code al conectarse.
 
+## Servidor Playwright añadido (comparación con uno prebuilt)
+
+Además del servidor propio (`lab3-browser`), `.mcp.json` registra también
+el servidor oficial **`@playwright/mcp`** (vía `npx @playwright/mcp@latest`).
+El objetivo es contrastar en la práctica el enfoque de ADR-0001 (escribir
+el servidor propio para entender las piezas de un MCP) con el de usar un
+servidor ya publicado: `@playwright/mcp` expone muchas más herramientas de
+golpe (`browser_navigate`, `browser_take_screenshot`, `browser_snapshot`,
+`browser_evaluate`, `browser_click`, etc.) sin escribir una sola línea de
+código, a costa de no ver cómo está construido por dentro.
+
+**Verificación hecha con `@playwright/mcp`**: se le pidió a Claude abrir
+`https://example.com`, confirmar que el título contiene "Example", tomar
+un screenshot de página completa, y luego navegar a
+`https://httpbin.org/html` y extraer el texto del primer párrafo con
+`browser_evaluate`. Los tres pasos funcionaron sin necesidad de tocar
+`src/`, confirmando que el servidor cubre casos de automatización web más
+generales que las 3 herramientas de `lab3-browser` (que están pensadas
+para una sola página a la vez con un flujo fijo `open_url` →
+`get_page_text`/`screenshot`).
+
+> Nota: `@playwright/mcp` descarga su propio Chromium por separado (vía
+> `npx playwright install chromium`), independiente del Chromium que
+> instala `puppeteer` para `lab3-browser` — son dos binarios distintos en
+> caché distinta.
+
 ## Estructura
 
 ```

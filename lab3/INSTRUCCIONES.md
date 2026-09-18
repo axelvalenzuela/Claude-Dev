@@ -62,6 +62,26 @@ como:
 Claude debería invocar `open_url` y luego `get_page_text` por su cuenta.
 Si quieres ver una captura, pide "tómale un screenshot".
 
+## 3.1 Servidor Playwright (además del propio)
+
+`.mcp.json` también registra `@playwright/mcp`, el servidor oficial de
+Playwright — no requiere `npm install`/`npm run build` porque se lanza
+con `npx @playwright/mcp@latest` directamente. La única instalación
+manual necesaria es la del navegador que usa por debajo:
+
+```bash
+npx playwright install chromium
+```
+
+Tras reiniciar el cliente MCP y aprobar el servidor `playwright`, prueba
+con algo como:
+
+> "Usa el servidor MCP de Playwright para abrir example.com, tomar un
+> screenshot y verificar que el título contiene 'Example'."
+
+Ver la sección "Servidor Playwright añadido" en `README.md` para el
+detalle de qué se verificó y por qué coexiste con `lab3-browser`.
+
 ## 4. El día a día: comandos comunes
 
 | Quiero... | Comando |

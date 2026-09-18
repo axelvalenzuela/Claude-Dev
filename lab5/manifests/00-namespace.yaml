@@ -1,0 +1,8 @@
+# Namespace dedicado del laboratorio: aísla todos los objetos de lab5
+# del resto del clúster (no comparte nombres con otros namespaces).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab5-k8s
+  labels:
+    lab: lab5

@@ -1,0 +1,64 @@
+# Deployment: la forma recomendada de correr Pods en producción.
+# Un Deployment NO administra Pods directamente: crea y administra un
+# ReplicaSet (ver 04-replicaset-standalone.yaml para un RS sin
+# Deployment encima), y es ese ReplicaSet el que mantiene vivas las
+# `replicas` copias del Pod. El Deployment además da rolling updates,
+# rollback (kubectl rollout undo) e historial de revisiones, cosas que
+# un ReplicaSet suelto no ofrece por sí solo.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: lab5-k8s
+  labels:
+    app: nginx-lab
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-lab
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-lab
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+              name: http
+          envFrom:
+            - configMapRef:
+                name: nginx-env
+          volumeMounts:
+            - name: html-content
+              mountPath: /usr/share/nginx/html
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      volumes:
+        - name: html-content
+          configMap:
+            name: nginx-html

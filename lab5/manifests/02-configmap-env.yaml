@@ -1,0 +1,18 @@
+# ConfigMap #2: variables de configuración no sensibles.
+# Se inyecta como VARIABLES DE ENTORNO en el contenedor (envFrom), a
+# diferencia del ConfigMap anterior que se monta como volumen. Nginx no
+# las usa para nada (sirve solo de demostración del mecanismo); si el
+# contenedor fuera una app propia, aquí irían sus parámetros de config.
+# Para datos sensibles (passwords, tokens) se usaría un Secret, no un
+# ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-env
+  namespace: lab5-k8s
+  labels:
+    app: nginx-lab
+data:
+  APP_ENV: "local"
+  APP_MESSAGE: "Lab 5 - Kubernetes"
+  LOG_LEVEL: "info"

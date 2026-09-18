@@ -1,0 +1,32 @@
+# Ingress: enrutamiento HTTP por host/path hacia Services internos
+# (ClusterIP), con un único punto de entrada (normalmente el puerto 80
+# del controlador de Ingress). Un Ingress por sí solo NO HACE NADA: se
+# necesita un Ingress Controller corriendo en el clúster que lea estos
+# objetos y configure el proxy real (ver INSTRUCCIONES.md, sección
+# "Instalar el Ingress Controller", para instalar ingress-nginx).
+#
+# Este ejemplo enruta el host "lab5.local" hacia el Service
+# nginx-clusterip. Requiere además un entry en el archivo hosts local
+# apuntando lab5.local -> 127.0.0.1 (instrucciones en INSTRUCCIONES.md).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-ingress
+  namespace: lab5-k8s
+  labels:
+    app: nginx-lab
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: lab5.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-clusterip
+                port:
+                  number: 80

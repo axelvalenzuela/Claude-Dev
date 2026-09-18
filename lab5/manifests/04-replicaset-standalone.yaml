@@ -1,0 +1,39 @@
+# ReplicaSet "suelto" (sin Deployment encima) — SOLO PARA FINES
+# DIDÁCTICOS. En la práctica casi nunca se crea un ReplicaSet a mano:
+# se deja que el Deployment lo cree y lo administre (ver 03-deployment.yaml).
+# Este objeto existe aquí para comparar ambos niveles:
+#   - El ReplicaSet garantiza que siempre haya N Pods con las labels del
+#     selector (self-healing: si borras un Pod, lo vuelve a crear).
+#   - Lo que el ReplicaSet NO sabe hacer es rolling update ni rollback;
+#     para eso hace falta el Deployment por encima.
+# Usa labels distintas (app: nginx-rs-demo) para no pisar el selector
+# del Deployment de 03-deployment.yaml.
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: nginx-rs-standalone
+  namespace: lab5-k8s
+  labels:
+    app: nginx-rs-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-rs-demo
+  template:
+    metadata:
+      labels:
+        app: nginx-rs-demo
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

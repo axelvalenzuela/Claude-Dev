@@ -1,0 +1,26 @@
+# ConfigMap #1: contenido estático servido por Nginx.
+# Se monta como VOLUMEN en el Deployment (03-deployment.yaml), sobre
+# /usr/share/nginx/html, reemplazando la página de bienvenida por
+# defecto de la imagen nginx. Cada key del data se convierte en un
+# archivo dentro del volumen (key = nombre de archivo).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-html
+  namespace: lab5-k8s
+  labels:
+    app: nginx-lab
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Lab 5 - Kubernetes</title>
+    </head>
+    <body style="font-family: sans-serif; text-align: center; margin-top: 10%;">
+      <h1>Lab 5 - Kubernetes local</h1>
+      <p>Servido por Nginx dentro de un Pod administrado por un Deployment.</p>
+      <p>Contenido inyectado vía ConfigMap montado como volumen.</p>
+    </body>
+    </html>

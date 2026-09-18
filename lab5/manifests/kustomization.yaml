@@ -1,0 +1,17 @@
+# Permite aplicar/eliminar todos los manifiestos de una sola vez con:
+#   kubectl apply -k manifests/
+#   kubectl delete -k manifests/
+# kubectl trae Kustomize integrado (kubectl kustomize / kubectl -k),
+# no requiere instalar nada extra.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 00-namespace.yaml
+  - 01-configmap-html.yaml
+  - 02-configmap-env.yaml
+  - 03-deployment.yaml
+  - 04-replicaset-standalone.yaml
+  - 05-service-clusterip.yaml
+  - 06-service-nodeport.yaml
+  - 07-ingress.yaml

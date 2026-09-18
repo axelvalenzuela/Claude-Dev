@@ -1,0 +1,21 @@
+# Service tipo ClusterIP (el default si no se especifica `type`):
+# expone el Deployment SOLO dentro del clúster, con una IP virtual
+# estable y balanceo de carga entre los Pods que matchean el selector.
+# No es alcanzable desde fuera del clúster salvo por `kubectl
+# port-forward` o a través de un Ingress (ver 07-ingress.yaml, que usa
+# este Service como backend).
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-clusterip
+  namespace: lab5-k8s
+  labels:
+    app: nginx-lab
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx-lab
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80

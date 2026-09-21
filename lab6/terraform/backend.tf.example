@@ -1,0 +1,10 @@
+# Copiar a backend.tf y ajustar. El bucket y la tabla deben existir antes.
+terraform {
+  backend "s3" {
+    bucket         = "mi-empresa-tfstate"
+    key            = "sap/s4hana/dev/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "mi-empresa-tfstate-lock"
+    encrypt        = true
+  }
+}

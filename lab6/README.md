@@ -13,7 +13,8 @@ Browser → Fiori Launchpad → UI5 → OData/API → S/4HANA → ABAP → HANA
 | Archivo | Qué contiene |
 |---|---|
 | [ARQUITECTURA.md](ARQUITECTURA.md) | Explicación capa por capa (diagrama, ejemplo de una petición completa, embedded vs. hub vs. cloud). |
-| [PREREQUISITOS.md](PREREQUISITOS.md) | Hoja de pre-requisitos por ruta: cuentas, hardware, software, red y checklist previo. |
+| [PREREQUISITOS.md](PREREQUISITOS.md) | Requerimientos detallados: licencias, sizing, almacenamiento, datos, replicación/HA/DR, seguridad, backup, red y checklist. |
+| [terraform/](terraform/) | Plantilla Terraform modular (AWS): red, seguridad/KMS, nodos HANA con HA opcional, servidores ABAP y backup en S3. Validada con `terraform validate`; no aplicada. |
 | [INSTALACION.md](INSTALACION.md) | Tres rutas de instalación (SAP CAL, BTP Trial, on-prem con SWPM), activación de Fiori, verificación y troubleshooting. |
 
 ## Nota importante

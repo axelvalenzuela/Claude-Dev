@@ -1,0 +1,98 @@
+---
+# hsr_action = enable  -> se ejecuta en el primario
+# hsr_action = register -> se ejecuta en el secundario
+- name: Rutas de trabajo de HANA
+  ansible.builtin.set_fact:
+    hdbsql_bin: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/exe/hdbsql"
+    hdbnsutil_bin: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/exe/hdbnsutil"
+    hana_adm_user: "{{ hana_sid | lower }}adm"
+    ssfs_dir: "/usr/sap/{{ hana_sid }}/SYS/global/security/rsecssfs"
+
+- name: Primario - backup inicial obligatorio antes de habilitar la replicacion
+  ansible.builtin.command:
+    argv:
+      - "{{ hdbsql_bin }}"
+      - -i
+      - "{{ sap_instance_number }}"
+      - -d
+      - SYSTEMDB
+      - -u
+      - SYSTEM
+      - -p
+      - "{{ hana_system_password }}"
+      - "BACKUP DATA USING FILE ('initial_hsr')"
+  become_user: "{{ hana_adm_user }}"
+  args:
+    creates: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/.hsr_initial_backup_done"
+  when: hsr_action == 'enable'
+  no_log: true
+
+- name: Primario - marcar backup inicial
+  ansible.builtin.file:
+    path: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/.hsr_initial_backup_done"
+    state: touch
+    mode: "0600"
+  when: hsr_action == 'enable'
+
+- name: Primario - habilitar System Replication
+  ansible.builtin.command: "{{ hdbnsutil_bin }} -sr_enable --name={{ hsr_site_primary }}"
+  become_user: "{{ hana_adm_user }}"
+  register: sr_enable
+  changed_when: "'successfully enabled' in sr_enable.stdout"
+  failed_when: sr_enable.rc != 0 and 'already' not in (sr_enable.stdout + sr_enable.stderr)
+  when: hsr_action == 'enable'
+
+- name: Primario - traer claves SSFS al runner (temporal)
+  ansible.builtin.fetch:
+    src: "{{ item }}"
+    dest: "{{ playbook_dir }}/../.ssfs_tmp/"
+    flat: false
+  loop:
+    - "{{ ssfs_dir }}/data/SSFS_{{ hana_sid }}.DAT"
+    - "{{ ssfs_dir }}/key/SSFS_{{ hana_sid }}.KEY"
+  when: hsr_action == 'enable'
+
+- name: Secundario - detener HANA
+  ansible.builtin.command: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/HDB stop"
+  become_user: "{{ hana_adm_user }}"
+  changed_when: true
+  when: hsr_action == 'register'
+
+- name: Secundario - copiar claves SSFS del primario
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../.ssfs_tmp/{{ groups['hana_primary'][0] }}{{ item.path }}"
+    dest: "{{ item.path }}"
+    owner: "{{ hana_adm_user }}"
+    group: sapsys
+    mode: "0600"
+  loop:
+    - { path: "{{ ssfs_dir }}/data/SSFS_{{ hana_sid }}.DAT" }
+    - { path: "{{ ssfs_dir }}/key/SSFS_{{ hana_sid }}.KEY" }
+  when: hsr_action == 'register'
+
+- name: Secundario - registrar contra el primario
+  ansible.builtin.command: >-
+    {{ hdbnsutil_bin }} -sr_register
+    --name={{ hsr_site_secondary }}
+    --remoteHost={{ hostvars[groups['hana_primary'][0]]['ansible_facts']['default_ipv4']['address'] }}
+    --remoteInstance={{ sap_instance_number }}
+    --replicationMode={{ hsr_replication_mode }}
+    --operationMode={{ hsr_operation_mode }}
+  become_user: "{{ hana_adm_user }}"
+  register: sr_register
+  changed_when: sr_register.rc == 0
+  when: hsr_action == 'register'
+
+- name: Secundario - iniciar HANA
+  ansible.builtin.command: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/HDB start"
+  become_user: "{{ hana_adm_user }}"
+  changed_when: true
+  when: hsr_action == 'register'
+
+- name: Eliminar claves SSFS temporales del runner
+  ansible.builtin.file:
+    path: "{{ playbook_dir }}/../.ssfs_tmp"
+    state: absent
+  delegate_to: localhost
+  become: false
+  when: hsr_action == 'register'

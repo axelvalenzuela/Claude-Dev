@@ -108,3 +108,7 @@ output "instance_ids" {
 output "private_ips" {
   value = { for k, i in aws_instance.app : k => i.private_ip }
 }
+
+output "usr_sap_volume_ids" {
+  value = { for k, v in aws_ebs_volume.usr_sap : k => v.id }
+}

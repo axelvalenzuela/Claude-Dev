@@ -8,3 +8,5 @@ override.tf.json
 *_override.tf
 backend.tf
 secrets.auto.tfvars
+
+*.generated.tfvars.json

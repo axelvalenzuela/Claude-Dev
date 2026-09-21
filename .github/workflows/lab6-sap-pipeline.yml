@@ -1,0 +1,205 @@
+name: lab6-sap-pipeline
+
+# Validacion automatica en cada cambio de lab6/. El despliegue (plan / apply /
+# configure) solo corre a mano (workflow_dispatch) y requiere credenciales AWS.
+# Detalle de variables, secretos y setup unico: lab6/pipelines/README.md
+
+on:
+  pull_request:
+    paths: ["lab6/**", ".github/workflows/lab6-sap-pipeline.yml"]
+  push:
+    paths: ["lab6/**", ".github/workflows/lab6-sap-pipeline.yml"]
+  workflow_dispatch:
+    inputs:
+      assessment_file:
+        description: "Ruta del assessment JSON (ver lab6/ASSESSMENT.md)"
+        required: true
+        default: "lab6/assessment/assessment.example.json"
+      action:
+        description: "Que ejecutar"
+        type: choice
+        options: [plan, apply, configure]
+        default: plan
+      run_s4_install:
+        description: "Instalar S/4HANA con SWPM en el paso configure"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_VERSION: "1.9.8"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Sizing de prueba con el assessment de ejemplo
+        run: node lab6/tools/sizing.js lab6/assessment/assessment.example.json
+
+      - name: Terraform fmt / init / validate
+        working-directory: lab6/terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: Sintaxis de Ansible
+        working-directory: lab6/ansible
+        run: |
+          pip install ansible-core
+          ansible-galaxy collection install -r requirements.yml
+          ansible-playbook -i localhost, playbooks/site.yml --syntax-check
+
+  prepare:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.env.outputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - id: env
+        run: echo "env=$(node -p "require('./${{ inputs.assessment_file }}').environment")" >> "$GITHUB_OUTPUT"
+
+  plan:
+    needs: prepare
+    if: inputs.action == 'plan' || inputs.action == 'apply'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Dimensionar (assessment -> tfvars)
+        run: node lab6/tools/sizing.js "${{ inputs.assessment_file }}"
+
+      - name: Terraform init (estado remoto)
+        working-directory: lab6/terraform
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="key=sap/${{ needs.prepare.outputs.env }}/terraform.tfstate" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform plan
+        working-directory: lab6/terraform
+        run: |
+          terraform plan -input=false \
+            -var-file=environments/${{ needs.prepare.outputs.env }}.generated.tfvars.json \
+            -out=tfplan
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ needs.prepare.outputs.env }}
+          path: lab6/terraform/tfplan
+          retention-days: 3
+
+  apply:
+    needs: [prepare, plan]
+    if: inputs.action == 'apply'
+    runs-on: ubuntu-latest
+    # Aprobacion manual: configurar "Required reviewers" en el entorno sap-<env>
+    environment: sap-${{ needs.prepare.outputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.prepare.outputs.env }}
+          path: lab6/terraform
+      - name: Terraform init
+        working-directory: lab6/terraform
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="key=sap/${{ needs.prepare.outputs.env }}/terraform.tfstate" \
+            -backend-config="encrypt=true"
+      - name: Terraform apply (plan aprobado)
+        working-directory: lab6/terraform
+        run: terraform apply -input=false tfplan
+
+  configure:
+    needs: [prepare, apply]
+    if: ${{ !cancelled() && (inputs.action == 'configure' || needs.apply.result == 'success') }}
+    runs-on: ubuntu-latest
+    environment: sap-${{ needs.prepare.outputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Leer outputs de Terraform y generar inventario
+        run: |
+          cd lab6/terraform
+          terraform init -input=false \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="key=sap/${{ needs.prepare.outputs.env }}/terraform.tfstate" \
+            -backend-config="encrypt=true"
+          terraform output -json > "$RUNNER_TEMP/tf-out.json"
+          cd ../..
+          node lab6/tools/tf-to-inventory.js "$RUNNER_TEMP/tf-out.json" > lab6/ansible/inventory.generated.yml
+
+      - name: Instalar Ansible y plugin de Session Manager
+        run: |
+          pip install ansible-core boto3 botocore
+          curl -sSfL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o ssm.deb
+          sudo dpkg -i ssm.deb
+          ansible-galaxy collection install -r lab6/ansible/requirements.yml
+
+      - name: Configurar SO, discos, HANA, replicacion (y S/4HANA si se pidio)
+        working-directory: lab6/ansible
+        run: |
+          ansible-playbook playbooks/site.yml \
+            -e run_s4_install=${{ inputs.run_s4_install }} \
+            -e swpm_product_id='${{ vars.SWPM_PRODUCT_ID }}'
+        env:
+          SAP_MEDIA_BUCKET: ${{ vars.SAP_MEDIA_BUCKET }}
+          HANA_SYSTEM_PASSWORD: ${{ secrets.HANA_SYSTEM_PASSWORD }}
+          HANA_SIDADM_PASSWORD: ${{ secrets.HANA_SIDADM_PASSWORD }}
+          HANA_SAPADM_PASSWORD: ${{ secrets.HANA_SAPADM_PASSWORD }}
+          S4_MASTER_PASSWORD: ${{ secrets.S4_MASTER_PASSWORD }}
+          HANA_LICENSE_TEXT: ${{ secrets.HANA_LICENSE_TEXT }}
+          S4_LICENSE_TEXT: ${{ secrets.S4_LICENSE_TEXT }}

@@ -250,6 +250,8 @@ Plantilla en [terraform/](terraform/) (AWS, modular). Requiere:
 | Cuotas de servicio | Cuota de vCPU para instancias con mucha memoria en la región |
 | Presupuesto | Alarma de costos antes de `terraform apply` |
 
+Para automatizar todo el flujo (assessment → sizing → pipeline → Ansible) ver [ASSESSMENT.md](ASSESSMENT.md) y [pipelines/README.md](pipelines/README.md).
+
 Terraform crea la **infraestructura** (red, seguridad, cómputo, discos,
 bucket de backup). La instalación de HANA/S/4HANA (`hdblcm`, SWPM) y el
 clúster Pacemaker se hacen después sobre esa infraestructura.

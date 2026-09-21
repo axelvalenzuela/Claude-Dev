@@ -1,0 +1,32 @@
+{
+  "environment": "dev",
+  "region": "us-east-1",
+  "project": "s4hana",
+  "sap_instance_number": "00",
+
+  "sizing": {
+    "hana_ram_gb_from_quicksizer": 200,
+    "growth_percent_per_year": 15,
+    "planning_years": 3,
+    "concurrent_users": 120
+  },
+
+  "continuity": {
+    "rpo_minutes": 60,
+    "rto_minutes": 480,
+    "dr_region_required": false
+  },
+
+  "backup": {
+    "retention_days": 365
+  },
+
+  "network": {
+    "vpc_cidr": "10.70.0.0/16",
+    "admin_cidrs": ["203.0.113.10/32"]
+  },
+
+  "os": {
+    "ami_id": null
+  }
+}

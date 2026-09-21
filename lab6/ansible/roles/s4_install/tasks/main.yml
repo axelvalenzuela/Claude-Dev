@@ -1,0 +1,72 @@
+---
+# Instalacion de S/4HANA con SWPM en modo desatendido.
+# SWPM depende mucho del release: el archivo de parametros (inifile) debe
+# generarse una vez con tu release (ver ASSESSMENT.md, seccion "SWPM") y
+# guardarse como ansible/files/s4_inifile.params. Este rol NO inventa parametros.
+- name: Validar prerequisitos de S/4HANA
+  ansible.builtin.assert:
+    that:
+      - swpm_product_id is defined
+      - s4_master_password | length > 0
+      - sap_media_bucket | length > 0
+    fail_msg: "Definir swpm_product_id (-e) y los secretos S4_MASTER_PASSWORD / SAP_MEDIA_BUCKET."
+  no_log: true
+
+- name: Sincronizar medios de S/4HANA y SWPM desde S3
+  ansible.builtin.command: >-
+    aws s3 sync s3://{{ sap_media_bucket }}/{{ s4_media_prefix }} {{ s4_media_dir }}
+  args:
+    creates: "{{ s4_media_dir }}/SWPM/sapinst"
+
+- name: Verificar que el archivo de parametros ya fue reemplazado por el real
+  ansible.builtin.assert:
+    that: "lookup('template', 's4_inifile.params.j2') is not search('^CAMBIAR_ANTES_DE_USAR = true', multiline=True)"
+    fail_msg: "s4_inifile.params.j2 sigue siendo la plantilla de ejemplo; reemplazarlo con el archivo real de SWPM."
+  no_log: true
+
+- name: Copiar archivo de parametros de SWPM
+  ansible.builtin.template:
+    src: s4_inifile.params.j2
+    dest: /tmp/s4_inifile.params
+    mode: "0600"
+  no_log: true
+
+- name: Ejecutar SWPM (sapinst) en modo desatendido
+  ansible.builtin.command:
+    argv:
+      - "{{ s4_media_dir }}/SWPM/sapinst"
+      - "SAPINST_INPUT_PARAMETERS_URL=/tmp/s4_inifile.params"
+      - "SAPINST_EXECUTE_PRODUCT_ID={{ swpm_product_id }}"
+      - SAPINST_SKIP_DIALOGS=true
+      - SAPINST_START_GUISERVER=false
+  args:
+    creates: "/usr/sap/{{ sap_sid }}/SYS/profile/DEFAULT.PFL"
+  no_log: true
+
+- name: Eliminar archivo de parametros (contiene la contrasena maestra)
+  ansible.builtin.file:
+    path: /tmp/s4_inifile.params
+    state: absent
+
+- name: Cargar licencia ABAP
+  when: s4_license_text | length > 0
+  block:
+    - name: Escribir licencia temporal
+      ansible.builtin.copy:
+        content: "{{ s4_license_text }}"
+        dest: /tmp/s4_license.txt
+        mode: "0600"
+        owner: "{{ sap_sid | lower }}adm"
+      no_log: true
+
+    - name: Instalar licencia con saplikey
+      ansible.builtin.command: >-
+        saplikey pf=/usr/sap/{{ sap_sid }}/SYS/profile/DEFAULT.PFL -install /tmp/s4_license.txt
+      become_user: "{{ sap_sid | lower }}adm"
+      changed_when: true
+
+  always:
+    - name: Eliminar licencia temporal
+      ansible.builtin.file:
+        path: /tmp/s4_license.txt
+        state: absent

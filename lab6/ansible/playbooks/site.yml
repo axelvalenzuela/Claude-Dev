@@ -1,0 +1,52 @@
+---
+# Orden: base (SO + discos) -> HANA -> replicacion (si hay HA) -> S/4HANA (opcional)
+# Ejecutar:  ansible-playbook playbooks/site.yml [--tags base,hana,hsr,s4] [-e run_s4_install=true]
+
+- name: Base del sistema operativo y discos
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - role: os_prepare
+      tags: [base]
+    - role: storage
+      tags: [base]
+
+- name: Instalar SAP HANA en los nodos de base de datos
+  hosts: hana
+  become: true
+  gather_facts: true
+  serial: 1
+  roles:
+    - role: hana_install
+      tags: [hana]
+
+- name: Habilitar System Replication en el primario
+  hosts: hana_primary
+  become: true
+  gather_facts: true
+  roles:
+    - role: hana_replication
+      vars:
+        hsr_action: enable
+      when: groups['hana_secondary'] | length > 0
+      tags: [hsr]
+
+- name: Registrar el secundario contra el primario
+  hosts: hana_secondary
+  become: true
+  gather_facts: true
+  roles:
+    - role: hana_replication
+      vars:
+        hsr_action: register
+      tags: [hsr]
+
+- name: Instalar S/4HANA (SWPM) y cargar licencia ABAP
+  hosts: app
+  become: true
+  gather_facts: true
+  roles:
+    - role: s4_install
+      when: run_s4_install | bool
+      tags: [s4]

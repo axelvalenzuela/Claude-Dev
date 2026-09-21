@@ -1,0 +1,10 @@
+; PLANTILLA - REEMPLAZAR con el archivo de parametros generado por SWPM para tu release.
+; Como obtenerlo: ejecutar SWPM una vez de forma interactiva hasta la fase de
+; resumen, guardar el "inifile.params" que genera y pegarlo aqui, sustituyendo
+; los secretos por variables Jinja como las de abajo.
+; El pipeline se detiene mientras exista la marca CAMBIAR_ANTES_DE_USAR.
+
+CAMBIAR_ANTES_DE_USAR = true
+
+; Ejemplo de como inyectar el secreto (el nombre real del parametro depende del producto):
+; NW_GetMasterPassword.masterPwd = {{ s4_master_password }}

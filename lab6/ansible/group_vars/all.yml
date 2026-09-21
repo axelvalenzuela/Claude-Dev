@@ -1,0 +1,42 @@
+---
+# Parametros del sistema SAP. Los SECRETOS nunca van aqui: se leen de variables
+# de entorno (en el pipeline vienen de los secrets del repositorio).
+sap_sid: "S4H"
+hana_sid: "HDB"
+hana_tenant_name: "S4H"
+
+# Medios de instalacion: SAP exige S-user para descargarlos, asi que se suben
+# UNA vez a un bucket propio y el pipeline los sincroniza a las maquinas.
+sap_media_bucket: "{{ lookup('env', 'SAP_MEDIA_BUCKET') }}"
+hana_media_prefix: "hana/"
+hana_media_dir: "/sapmedia/hana"
+hana_lcm_path: "{{ hana_media_dir }}/DATA_UNITS/HDB_LCM_LINUX_X86_64/hdblcm"
+s4_media_prefix: "s4hana/"
+s4_media_dir: "/sapmedia/s4hana"
+
+# Secretos (entorno del runner)
+hana_system_password: "{{ lookup('env', 'HANA_SYSTEM_PASSWORD') }}"
+hana_sidadm_password: "{{ lookup('env', 'HANA_SIDADM_PASSWORD') }}"
+hana_sapadm_password: "{{ lookup('env', 'HANA_SAPADM_PASSWORD') }}"
+s4_master_password: "{{ lookup('env', 'S4_MASTER_PASSWORD') }}"
+
+# Licencias (contenido del archivo de licencia; vacio = se omite el paso)
+hana_license_text: "{{ lookup('env', 'HANA_LICENSE_TEXT') }}"
+s4_license_text: "{{ lookup('env', 'S4_LICENSE_TEXT') }}"
+
+# Puntos de montaje por funcion de volumen
+mount_points:
+  data: /hana/data
+  log: /hana/log
+  shared: /hana/shared
+  backup: /backup
+  usr_sap: /usr/sap
+
+# Replicacion (solo si existe hana_secondary)
+hsr_site_primary: "SITE_A"
+hsr_site_secondary: "SITE_B"
+hsr_replication_mode: "syncmem"
+hsr_operation_mode: "logreplay"
+
+# La instalacion de S/4HANA con SWPM se ejecuta solo si se pide explicitamente
+run_s4_install: false

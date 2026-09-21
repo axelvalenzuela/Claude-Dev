@@ -1,0 +1,36 @@
+---
+- name: Verificar familia de SO soportada
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] in ['Suse', 'RedHat']
+    fail_msg: "Solo SLES for SAP o RHEL for SAP estan soportados por este rol."
+
+- name: Instalar paquetes base
+  ansible.builtin.package:
+    name:
+      - chrony
+      - xfsprogs
+      - unzip
+      - tar
+    state: present
+
+- name: Habilitar sincronizacion horaria
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+
+- name: Verificar AWS CLI (necesario para sincronizar medios)
+  ansible.builtin.command: aws --version
+  changed_when: false
+
+- name: Aplicar perfil SAP (saptune, SLES)
+  ansible.builtin.command: "saptune solution apply {{ 'HANA' if inventory_hostname in groups['hana'] else 'NETWEAVER' }}"
+  when: ansible_facts['os_family'] == 'Suse'
+  register: saptune_result
+  changed_when: "'already' not in (saptune_result.stdout | default(''))"
+  failed_when: saptune_result.rc not in [0, 1]
+
+- name: Aplicar perfil SAP (tuned, RHEL)
+  ansible.builtin.command: "tuned-adm profile {{ 'sap-hana' if inventory_hostname in groups['hana'] else 'sap-netweaver' }}"
+  when: ansible_facts['os_family'] == 'RedHat'
+  changed_when: true

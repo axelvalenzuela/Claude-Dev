@@ -1,0 +1,113 @@
+# Equivalente en GitLab CI del workflow de GitHub Actions
+# (.github/workflows/lab6-sap-pipeline.yml). Uso: copiarlo como .gitlab-ci.yml en
+# la raiz del repo GitLab, o incluirlo:
+#   include: { local: lab6/pipelines/gitlab-ci.yml }
+# Variables (Settings > CI/CD > Variables; las de secreto como "Masked" y "Protected"):
+#   ASSESSMENT_FILE, AWS_REGION, AWS_ROLE_ARN, TF_STATE_BUCKET, TF_STATE_LOCK_TABLE,
+#   SAP_MEDIA_BUCKET, SWPM_PRODUCT_ID, HANA_SYSTEM_PASSWORD, HANA_SIDADM_PASSWORD,
+#   HANA_SAPADM_PASSWORD, S4_MASTER_PASSWORD, HANA_LICENSE_TEXT, S4_LICENSE_TEXT
+# No ejecutado contra GitLab: revisar antes de usarlo en produccion.
+
+stages: [validate, plan, apply, configure]
+
+variables:
+  TF_VERSION: "1.9.8"
+  ASSESSMENT_FILE: "lab6/assessment/assessment.example.json"
+  TF_IN_AUTOMATION: "true"
+
+workflow:
+  rules:
+    - changes: ["lab6/**/*", ".gitlab-ci.yml"]
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+.tf_init: &tf_init
+  - cd lab6/terraform
+  - ENV=$(node -p "require('../../${ASSESSMENT_FILE}').environment")
+  - >
+    terraform init -input=false
+    -backend-config="bucket=${TF_STATE_BUCKET}"
+    -backend-config="dynamodb_table=${TF_STATE_LOCK_TABLE}"
+    -backend-config="region=${AWS_REGION}"
+    -backend-config="key=sap/${ENV}/terraform.tfstate"
+    -backend-config="encrypt=true"
+
+.assume_role: &assume_role >
+  export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+  $(aws sts assume-role-with-web-identity --role-arn "${AWS_ROLE_ARN}"
+  --role-session-name "gitlab-${CI_PIPELINE_ID}" --web-identity-token "${GITLAB_OIDC_TOKEN}"
+  --duration-seconds 3600
+  --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text))
+
+# Credenciales AWS por OIDC (ID token de GitLab). Configurar el rol IAM con confianza a GitLab.
+.aws_oidc: &aws_oidc
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  before_script:
+    - apk add --no-cache aws-cli nodejs
+    - *assume_role
+
+validate:
+  stage: validate
+  image:
+    name: hashicorp/terraform:1.9.8
+    entrypoint: [""]
+  script:
+    - apk add --no-cache nodejs
+    - node lab6/tools/sizing.js lab6/assessment/assessment.example.json
+    - cd lab6/terraform
+    - terraform fmt -check -recursive
+    - terraform init -backend=false -input=false
+    - terraform validate
+
+plan:
+  stage: plan
+  image: { name: "registry.gitlab.com/gitlab-org/terraform-images/stable:latest", entrypoint: [""] }
+  <<: *aws_oidc
+  script:
+    - node lab6/tools/sizing.js "${ASSESSMENT_FILE}"
+    - *tf_init
+    - terraform plan -input=false -var-file=environments/${ENV}.generated.tfvars.json -out=tfplan
+  artifacts:
+    paths: [lab6/terraform/tfplan]
+    expire_in: 3 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+apply:
+  stage: apply
+  image: { name: "registry.gitlab.com/gitlab-org/terraform-images/stable:latest", entrypoint: [""] }
+  <<: *aws_oidc
+  script:
+    - *tf_init
+    - terraform apply -input=false tfplan
+  needs: [plan]
+  when: manual # aprobacion manual antes de crear infraestructura
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
+
+configure:
+  stage: configure
+  image: { name: "python:3.12-slim", entrypoint: [""] }
+  needs: [apply]
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  script:
+    - apt-get update && apt-get install -y curl unzip nodejs awscli
+    - *assume_role
+    - curl -sSfL https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip -o tf.zip && unzip tf.zip -d /usr/local/bin
+    - curl -sSfL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o ssm.deb && dpkg -i ssm.deb
+    - pip install ansible-core boto3 botocore
+    - ansible-galaxy collection install -r lab6/ansible/requirements.yml
+    - *tf_init
+    - terraform output -json > /tmp/tf-out.json
+    - cd ../..
+    - node lab6/tools/tf-to-inventory.js /tmp/tf-out.json > lab6/ansible/inventory.generated.yml
+    - cd lab6/ansible
+    - ansible-playbook playbooks/site.yml -e run_s4_install=${RUN_S4_INSTALL:-false} -e swpm_product_id="${SWPM_PRODUCT_ID}"
+  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual

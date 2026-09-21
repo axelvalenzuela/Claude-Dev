@@ -14,7 +14,10 @@ Browser → Fiori Launchpad → UI5 → OData/API → S/4HANA → ABAP → HANA
 |---|---|
 | [ARQUITECTURA.md](ARQUITECTURA.md) | Explicación capa por capa (diagrama, ejemplo de una petición completa, embedded vs. hub vs. cloud). |
 | [PREREQUISITOS.md](PREREQUISITOS.md) | Requerimientos detallados: licencias, sizing, almacenamiento, datos, replicación/HA/DR, seguridad, backup, red y checklist. |
+| [ASSESSMENT.md](ASSESSMENT.md) | Requisitos de inicio: qué entregar (licencias, secretos, medios), cuestionario de assessment y reglas de dimensionamiento. Alimenta a [tools/sizing.js](tools/sizing.js). |
 | [terraform/](terraform/) | Plantilla Terraform modular (AWS): red, seguridad/KMS, nodos HANA con HA opcional, servidores ABAP y backup en S3. Validada con `terraform validate`; no aplicada. |
+| [ansible/](ansible/) | Configuración automatizada sobre la infraestructura: SO, discos, HANA (hdblcm), System Replication, licencias y S/4HANA (SWPM). No ejecutada. |
+| [pipelines/](pipelines/) | Pipelines (GitHub Actions en `.github/workflows/lab6-sap-pipeline.yml` y equivalente GitLab CI) que encadenan sizing → Terraform → Ansible con aprobación manual. |
 | [INSTALACION.md](INSTALACION.md) | Tres rutas de instalación (SAP CAL, BTP Trial, on-prem con SWPM), activación de Fiori, verificación y troubleshooting. |
 
 ## Nota importante

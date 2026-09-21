@@ -134,3 +134,12 @@ output "instance_ids" {
 output "private_ips" {
   value = { for k, i in aws_instance.hana : k => i.private_ip }
 }
+
+output "volume_ids" {
+  value = {
+    for node in keys(var.nodes) : node => {
+      for vol in keys(local.vol_defs) : vol => aws_ebs_volume.hana["${node}-${vol}"].id
+    }
+  }
+  description = "IDs de volumenes EBS por nodo y funcion (data/log/shared/backup)."
+}

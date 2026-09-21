@@ -16,6 +16,8 @@ Requisitos y su justificación: [../PREREQUISITOS.md](../PREREQUISITOS.md).
 > plataformas certificadas de SAP antes de aplicar. Las instancias con
 > mucha RAM son costosas.
 
+Los valores de `environments/*.tfvars` pueden generarse a partir de un assessment con [../tools/sizing.js](../tools/sizing.js) (ver [../ASSESSMENT.md](../ASSESSMENT.md)), y el despliegue completo se automatiza con [../pipelines/](../pipelines/README.md).
+
 ## Estructura
 
 ```
@@ -76,7 +78,9 @@ Destruir el laboratorio: `terraform destroy -var-file=environments/dev.tfvars`
 (el bucket de backup solo se borra con datos si `backup_force_destroy = true`,
 que `dev.tfvars` activa y `prd.tfvars` no).
 
-## Después de Terraform (fuera del alcance de la plantilla)
+## Después de Terraform
+
+Los pasos 1–3 los cubre la automatización de [../ansible/](../ansible/) (discos, HANA, System Replication, licencias); lo que falta es el clúster Pacemaker/fencing y Backint. Detalle en [../pipelines/README.md](../pipelines/README.md).
 
 1. Particionar y montar los discos (`/hana/data`, `/hana/log`, `/hana/shared`, `/backup`, `/usr/sap`) y validar KPIs con HCMT.
 2. Instalar HANA (`hdblcm`) y S/4HANA (SWPM); cargar licencia (`SLICENSE`).

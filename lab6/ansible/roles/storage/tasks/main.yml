@@ -1,0 +1,30 @@
+---
+# En instancias Nitro los discos EBS aparecen como NVMe; el enlace estable es
+# /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_<volume-id sin guion>.
+- name: Esperar los dispositivos de cada volumen
+  ansible.builtin.wait_for:
+    path: "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_{{ item.value | replace('-', '') }}"
+    timeout: 180
+  loop: "{{ sap_volume_ids | dict2items }}"
+
+- name: Crear sistema de archivos XFS
+  community.general.filesystem:
+    fstype: xfs
+    dev: "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_{{ item.value | replace('-', '') }}"
+  loop: "{{ sap_volume_ids | dict2items }}"
+
+- name: Crear puntos de montaje
+  ansible.builtin.file:
+    path: "{{ mount_points[item.key] }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ sap_volume_ids | dict2items }}"
+
+- name: Montar volumenes (persistente en fstab)
+  ansible.posix.mount:
+    path: "{{ mount_points[item.key] }}"
+    src: "/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_{{ item.value | replace('-', '') }}"
+    fstype: xfs
+    opts: "defaults,nofail,noatime"
+    state: mounted
+  loop: "{{ sap_volume_ids | dict2items }}"

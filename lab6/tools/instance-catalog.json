@@ -1,0 +1,18 @@
+{
+  "_nota": "Catalogo de referencia para el dimensionamiento. NINGUN tipo esta verificado contra el SAP Certified IaaS Platforms Directory: confirmar y ajustar antes de aplicar (certified_verified).",
+  "hana": [
+    { "type": "r6i.4xlarge",  "ram_gb": 128,  "certified_verified": false },
+    { "type": "r6i.8xlarge",  "ram_gb": 256,  "certified_verified": false },
+    { "type": "r6i.12xlarge", "ram_gb": 384,  "certified_verified": false },
+    { "type": "r6i.16xlarge", "ram_gb": 512,  "certified_verified": false },
+    { "type": "r6i.24xlarge", "ram_gb": 768,  "certified_verified": false },
+    { "type": "r6i.32xlarge", "ram_gb": 1024, "certified_verified": false },
+    { "type": "x2idn.24xlarge", "ram_gb": 1536, "certified_verified": false },
+    { "type": "x2idn.32xlarge", "ram_gb": 2048, "certified_verified": false }
+  ],
+  "app": [
+    { "type": "m6i.2xlarge", "max_concurrent_users_per_server": 150 },
+    { "type": "m6i.4xlarge", "max_concurrent_users_per_server": 300 },
+    { "type": "m6i.8xlarge", "max_concurrent_users_per_server": 600 }
+  ]
+}

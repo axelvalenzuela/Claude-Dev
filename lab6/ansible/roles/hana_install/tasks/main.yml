@@ -1,0 +1,111 @@
+---
+- name: Validar secretos requeridos
+  ansible.builtin.assert:
+    that:
+      - hana_system_password | length > 0
+      - hana_sidadm_password | length > 0
+      - hana_sapadm_password | length > 0
+      - sap_media_bucket | length > 0
+    fail_msg: >-
+      Faltan HANA_SYSTEM_PASSWORD, HANA_SIDADM_PASSWORD, HANA_SAPADM_PASSWORD o
+      SAP_MEDIA_BUCKET en el entorno del runner.
+  no_log: true
+
+- name: Sincronizar medios de HANA desde S3
+  ansible.builtin.command: >-
+    aws s3 sync s3://{{ sap_media_bucket }}/{{ hana_media_prefix }} {{ hana_media_dir }}
+  args:
+    creates: "{{ hana_lcm_path }}"
+
+- name: Verificar que hdblcm existe
+  ansible.builtin.stat:
+    path: "{{ hana_lcm_path }}"
+  register: hdblcm_stat
+
+- name: Fallar si el medio no contiene hdblcm en la ruta esperada
+  ansible.builtin.fail:
+    msg: "No se encontro {{ hana_lcm_path }}. Ajustar hana_lcm_path a la estructura de tu medio."
+  when: not hdblcm_stat.stat.exists
+
+- name: Instalar SAP HANA (hdblcm, modo batch)
+  ansible.builtin.command:
+    argv:
+      - "{{ hana_lcm_path }}"
+      - --batch
+      - --action=install
+      - "--sid={{ hana_sid }}"
+      - "--number={{ sap_instance_number }}"
+      - --components=server
+      - "--hostname={{ ansible_facts['hostname'] }}"
+      - --db_mode=multidb
+      - --use_master_password=n
+      - --read_password_from_stdin=xml
+      - --autostart=1
+  args:
+    stdin: "{{ lookup('template', 'hdblcm_passwords.xml.j2') }}"
+    creates: "/hana/shared/{{ hana_sid }}/HDB{{ sap_instance_number }}"
+  no_log: true
+
+- name: Rutas de trabajo de HANA
+  ansible.builtin.set_fact:
+    hdbsql_bin: "/usr/sap/{{ hana_sid }}/HDB{{ sap_instance_number }}/exe/hdbsql"
+    hana_adm_user: "{{ hana_sid | lower }}adm"
+
+- name: Comprobar si existe la base tenant
+  ansible.builtin.command:
+    argv:
+      - "{{ hdbsql_bin }}"
+      - -i
+      - "{{ sap_instance_number }}"
+      - -d
+      - SYSTEMDB
+      - -u
+      - SYSTEM
+      - -p
+      - "{{ hana_system_password }}"
+      - -a
+      - -x
+      - "SELECT COUNT(*) FROM SYS.M_DATABASES WHERE DATABASE_NAME = '{{ hana_tenant_name }}'"
+  become_user: "{{ hana_adm_user }}"
+  register: tenant_check
+  changed_when: false
+  when: hana_role == 'primary'
+  no_log: true
+
+- name: Crear base tenant
+  ansible.builtin.command:
+    argv:
+      - "{{ hdbsql_bin }}"
+      - -i
+      - "{{ sap_instance_number }}"
+      - -d
+      - SYSTEMDB
+      - -u
+      - SYSTEM
+      - -p
+      - "{{ hana_system_password }}"
+      - "CREATE DATABASE {{ hana_tenant_name }} SYSTEM USER PASSWORD \"{{ hana_system_password }}\""
+  become_user: "{{ hana_adm_user }}"
+  when:
+    - hana_role == 'primary'
+    - tenant_check.stdout | trim | replace('"', '') == '0'
+  no_log: true
+
+- name: Cargar licencia de HANA (solo primario; se replica al secundario)
+  ansible.builtin.command:
+    argv:
+      - "{{ hdbsql_bin }}"
+      - -i
+      - "{{ sap_instance_number }}"
+      - -d
+      - SYSTEMDB
+      - -u
+      - SYSTEM
+      - -p
+      - "{{ hana_system_password }}"
+      - "SET SYSTEM LICENSE '{{ hana_license_text }}'"
+  become_user: "{{ hana_adm_user }}"
+  when:
+    - hana_role == 'primary'
+    - hana_license_text | length > 0
+  no_log: true

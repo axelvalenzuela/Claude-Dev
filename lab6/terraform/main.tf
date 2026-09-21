@@ -93,18 +93,21 @@ module "hana_nodes" {
   instance_profile_name = module.security.instance_profile_name
   kms_key_arn           = module.security.kms_key_arn
   volumes               = var.hana_volumes
-  tags                  = local.tags
+
+  delete_volumes_on_termination = var.delete_volumes_on_termination
+  tags                          = local.tags
 }
 
 module "app_server" {
   source = "./modules/app_server"
 
-  name_prefix           = local.name_prefix
-  servers               = local.app_servers
-  ami_id                = local.ami_id
-  instance_type         = var.app_instance_type
-  security_group_ids    = [module.security.app_sg_id]
-  instance_profile_name = module.security.instance_profile_name
-  kms_key_arn           = module.security.kms_key_arn
-  tags                  = local.tags
+  name_prefix                   = local.name_prefix
+  servers                       = local.app_servers
+  ami_id                        = local.ami_id
+  instance_type                 = var.app_instance_type
+  security_group_ids            = [module.security.app_sg_id]
+  instance_profile_name         = module.security.instance_profile_name
+  kms_key_arn                   = module.security.kms_key_arn
+  delete_volumes_on_termination = var.delete_volumes_on_termination
+  tags                          = local.tags
 }

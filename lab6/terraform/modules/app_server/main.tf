@@ -40,15 +40,26 @@ variable "usr_sap_gb" {
   default = 100
 }
 
+variable "delete_volumes_on_termination" {
+  type    = bool
+  default = false
+}
+
 variable "tags" {
   type    = map(string)
   default = {}
 }
 
-resource "aws_instance" "app" {
+module "ec2" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 5.0"
+
   for_each = var.servers
 
+  name = "${var.name_prefix}-app-${each.key}"
+
   ami                    = var.ami_id
+  ignore_ami_changes     = true
   instance_type          = var.instance_type
   subnet_id              = each.value.subnet_id
   vpc_security_group_ids = var.security_group_ids
@@ -56,59 +67,46 @@ resource "aws_instance" "app" {
   ebs_optimized          = true
   monitoring             = true
 
-  metadata_options {
+  metadata_options = {
+    http_endpoint               = "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 1
   }
 
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = var.root_gb
-    encrypted   = true
-    kms_key_id  = var.kms_key_arn
-  }
+  root_block_device = [
+    {
+      volume_type = "gp3"
+      volume_size = var.root_gb
+      encrypted   = true
+      kms_key_id  = var.kms_key_arn
+    }
+  ]
 
-  tags = merge(var.tags, {
-    Name = "${var.name_prefix}-app-${each.key}"
-    Role = "app-${each.key}"
-  })
+  ebs_block_device = [
+    {
+      device_name           = "/dev/sdf"
+      volume_type           = "gp3"
+      volume_size           = var.usr_sap_gb
+      encrypted             = true
+      kms_key_id            = var.kms_key_arn
+      delete_on_termination = var.delete_volumes_on_termination
+      tags                  = merge(var.tags, { Role = "app-usr-sap" })
+    }
+  ]
 
-  lifecycle {
-    ignore_changes = [ami]
-  }
-}
-
-resource "aws_ebs_volume" "usr_sap" {
-  for_each = var.servers
-
-  availability_zone = each.value.az
-  size              = var.usr_sap_gb
-  type              = "gp3"
-  encrypted         = true
-  kms_key_id        = var.kms_key_arn
-
-  tags = merge(var.tags, {
-    Name = "${var.name_prefix}-app-${each.key}-usrsap"
-    Role = "app-usr-sap"
-  })
-}
-
-resource "aws_volume_attachment" "usr_sap" {
-  for_each = var.servers
-
-  device_name = "/dev/sdf"
-  volume_id   = aws_ebs_volume.usr_sap[each.key].id
-  instance_id = aws_instance.app[each.key].id
+  tags = merge(var.tags, { Role = "app-${each.key}" })
 }
 
 output "instance_ids" {
-  value = { for k, i in aws_instance.app : k => i.id }
+  value = { for k, m in module.ec2 : k => m.id }
 }
 
 output "private_ips" {
-  value = { for k, i in aws_instance.app : k => i.private_ip }
+  value = { for k, m in module.ec2 : k => m.private_ip }
 }
 
 output "usr_sap_volume_ids" {
-  value = { for k, v in aws_ebs_volume.usr_sap : k => v.id }
+  value = {
+    for k, m in module.ec2 : k => one([for b in m.ebs_block_device : b.volume_id if b.device_name == "/dev/sdf"])
+  }
 }

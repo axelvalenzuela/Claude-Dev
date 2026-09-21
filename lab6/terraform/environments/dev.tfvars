@@ -1,14 +1,15 @@
 # Sandbox / desarrollo: un nodo HANA, sin HA.
 # Verificar que el tipo de instancia este certificado para HANA en el
 # directorio de plataformas certificadas de SAP antes de aplicar.
-environment          = "dev"
-region               = "us-east-1"
-ha_enabled           = false
-hana_instance_type   = "r6i.8xlarge" # 256 GiB de RAM
-app_instance_type    = "m6i.2xlarge"
-app_servers          = ["ascs-pas"]
-admin_cidrs          = [] # agregar tu IP/32 o el rango de la VPN
-backup_force_destroy = true
+environment                   = "dev"
+region                        = "us-east-1"
+ha_enabled                    = false
+hana_instance_type            = "r6i.8xlarge" # 256 GiB de RAM
+app_instance_type             = "m6i.2xlarge"
+app_servers                   = ["ascs-pas"]
+admin_cidrs                   = [] # agregar tu IP/32 o el rango de la VPN
+backup_force_destroy          = true
+delete_volumes_on_termination = true
 
 hana_volumes = {
   data_gb         = 320 # >= 1.2 x RAM

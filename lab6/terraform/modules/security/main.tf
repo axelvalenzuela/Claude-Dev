@@ -34,134 +34,100 @@ variable "tags" {
 locals {
   nn = var.sap_instance_number
 
-  hana_sql_ports = [tonumber("3${local.nn}13"), tonumber("3${local.nn}15")]
-  hsr_from_port  = tonumber("4${local.nn}01")
-  hsr_to_port    = tonumber("4${local.nn}07")
+  hana_sql_from = tonumber("3${local.nn}13")
+  hana_sql_to   = tonumber("3${local.nn}15")
+  hsr_from      = tonumber("4${local.nn}01")
+  hsr_to        = tonumber("4${local.nn}07")
 
   app_admin_ports = {
     gui   = tonumber("32${local.nn}")
     https = tonumber("443${local.nn}")
   }
 
-  admin_rules = {
-    for pair in setproduct(var.admin_cidrs, keys(local.app_admin_ports)) :
-    "${pair[0]}-${pair[1]}" => { cidr = pair[0], port = local.app_admin_ports[pair[1]] }
-  }
+  admin_rules = [
+    for pair in setproduct(var.admin_cidrs, keys(local.app_admin_ports)) : {
+      from_port   = local.app_admin_ports[pair[1]]
+      to_port     = local.app_admin_ports[pair[1]]
+      protocol    = "tcp"
+      cidr_blocks = pair[0]
+      description = "Acceso administrativo controlado (${pair[1]})"
+    }
+  ]
 }
 
 # ---------- KMS ----------
-resource "aws_kms_key" "sap" {
+module "kms" {
+  source  = "terraform-aws-modules/kms/aws"
+  version = "~> 3.0"
+
   description             = "${var.name_prefix} cifrado de EBS y S3 para SAP"
   enable_key_rotation     = true
   deletion_window_in_days = 30
-  tags                    = var.tags
-}
+  enable_default_policy   = true
+  aliases                 = ["${var.name_prefix}-sap"]
 
-resource "aws_kms_alias" "sap" {
-  name          = "alias/${var.name_prefix}-sap"
-  target_key_id = aws_kms_key.sap.key_id
+  tags = var.tags
 }
 
 # ---------- Security groups ----------
-resource "aws_security_group" "hana" {
-  name        = "${var.name_prefix}-hana"
-  description = "Nodos SAP HANA"
-  vpc_id      = var.vpc_id
-  tags        = merge(var.tags, { Name = "${var.name_prefix}-hana-sg" })
-}
+module "app_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.0"
 
-resource "aws_security_group" "app" {
   name        = "${var.name_prefix}-app"
   description = "Servidores de aplicacion ABAP"
   vpc_id      = var.vpc_id
-  tags        = merge(var.tags, { Name = "${var.name_prefix}-app-sg" })
+
+  ingress_with_self = [
+    { rule = "all-all", description = "Trafico interno de la aplicacion" }
+  ]
+  ingress_with_cidr_blocks = local.admin_rules
+  egress_rules             = ["all-all"]
+
+  tags = var.tags
 }
 
-# App -> HANA (SQL)
-resource "aws_vpc_security_group_ingress_rule" "hana_sql_from_app" {
-  for_each                     = toset([for p in local.hana_sql_ports : tostring(p)])
-  security_group_id            = aws_security_group.hana.id
-  referenced_security_group_id = aws_security_group.app.id
-  ip_protocol                  = "tcp"
-  from_port                    = tonumber(each.value)
-  to_port                      = tonumber(each.value)
-  description                  = "HANA SQL desde la aplicacion"
-}
+module "hana_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 5.0"
 
-# HANA <-> HANA (System Replication + SQL entre nodos)
-resource "aws_vpc_security_group_ingress_rule" "hana_hsr_self" {
-  security_group_id            = aws_security_group.hana.id
-  referenced_security_group_id = aws_security_group.hana.id
-  ip_protocol                  = "tcp"
-  from_port                    = local.hsr_from_port
-  to_port                      = local.hsr_to_port
-  description                  = "HANA System Replication"
-}
+  name        = "${var.name_prefix}-hana"
+  description = "Nodos SAP HANA"
+  vpc_id      = var.vpc_id
 
-resource "aws_vpc_security_group_ingress_rule" "hana_sql_self" {
-  security_group_id            = aws_security_group.hana.id
-  referenced_security_group_id = aws_security_group.hana.id
-  ip_protocol                  = "tcp"
-  from_port                    = local.hana_sql_ports[0]
-  to_port                      = local.hana_sql_ports[1]
-  description                  = "HANA SQL entre nodos"
-}
+  # Aplicacion -> HANA (SQL). El ID del SG de la app se conoce hasta el apply.
+  computed_ingress_with_source_security_group_id = [
+    {
+      from_port                = local.hana_sql_from
+      to_port                  = local.hana_sql_to
+      protocol                 = "tcp"
+      description              = "HANA SQL desde la aplicacion"
+      source_security_group_id = module.app_sg.security_group_id
+    }
+  ]
+  number_of_computed_ingress_with_source_security_group_id = 1
 
-# Trafico interno entre servidores de aplicacion (ASCS/PAS/AAS)
-resource "aws_vpc_security_group_ingress_rule" "app_self" {
-  security_group_id            = aws_security_group.app.id
-  referenced_security_group_id = aws_security_group.app.id
-  ip_protocol                  = "-1"
-  description                  = "Trafico interno de la aplicacion"
-}
+  # HANA <-> HANA: System Replication y SQL entre nodos
+  ingress_with_self = [
+    {
+      from_port   = local.hsr_from
+      to_port     = local.hsr_to
+      protocol    = "tcp"
+      description = "HANA System Replication"
+    },
+    {
+      from_port   = local.hana_sql_from
+      to_port     = local.hana_sql_to
+      protocol    = "tcp"
+      description = "HANA SQL entre nodos"
+    }
+  ]
+  egress_rules = ["all-all"]
 
-# Administradores -> aplicacion (SAP GUI, HTTPS/Fiori)
-resource "aws_vpc_security_group_ingress_rule" "app_admin" {
-  for_each          = local.admin_rules
-  security_group_id = aws_security_group.app.id
-  cidr_ipv4         = each.value.cidr
-  ip_protocol       = "tcp"
-  from_port         = each.value.port
-  to_port           = each.value.port
-  description       = "Acceso administrativo controlado"
-}
-
-resource "aws_vpc_security_group_egress_rule" "hana_all" {
-  security_group_id = aws_security_group.hana.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-  description       = "Salida via NAT"
-}
-
-resource "aws_vpc_security_group_egress_rule" "app_all" {
-  security_group_id = aws_security_group.app.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-  description       = "Salida via NAT"
+  tags = var.tags
 }
 
 # ---------- IAM (acceso por SSM, sin llaves SSH) ----------
-data "aws_iam_policy_document" "assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "sap" {
-  name               = "${var.name_prefix}-sap-ec2"
-  assume_role_policy = data.aws_iam_policy_document.assume.json
-  tags               = var.tags
-}
-
-resource "aws_iam_role_policy_attachment" "ssm" {
-  role       = aws_iam_role.sap.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
 data "aws_iam_policy_document" "backup" {
   statement {
     sid       = "BackupBucketList"
@@ -176,33 +142,51 @@ data "aws_iam_policy_document" "backup" {
   statement {
     sid       = "BackupKms"
     actions   = ["kms:Encrypt", "kms:Decrypt", "kms:GenerateDataKey"]
-    resources = [aws_kms_key.sap.arn]
+    resources = [module.kms.key_arn]
   }
 }
 
-resource "aws_iam_role_policy" "backup" {
+module "backup_policy" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-policy"
+  version = "~> 5.0"
+
   name   = "${var.name_prefix}-backup-access"
-  role   = aws_iam_role.sap.id
   policy = data.aws_iam_policy_document.backup.json
+
+  tags = var.tags
 }
 
-resource "aws_iam_instance_profile" "sap" {
-  name = "${var.name_prefix}-sap-ec2"
-  role = aws_iam_role.sap.name
+module "sap_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role"
+  version = "~> 5.0"
+
+  create_role             = true
+  role_name               = "${var.name_prefix}-sap-ec2"
+  create_instance_profile = true
+  role_requires_mfa       = false
+  trusted_role_services   = ["ec2.amazonaws.com"]
+
+  custom_role_policy_arns = [
+    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+    module.backup_policy.arn,
+  ]
+  number_of_custom_role_policy_arns = 2
+
+  tags = var.tags
 }
 
 output "kms_key_arn" {
-  value = aws_kms_key.sap.arn
+  value = module.kms.key_arn
 }
 
 output "hana_sg_id" {
-  value = aws_security_group.hana.id
+  value = module.hana_sg.security_group_id
 }
 
 output "app_sg_id" {
-  value = aws_security_group.app.id
+  value = module.app_sg.security_group_id
 }
 
 output "instance_profile_name" {
-  value = aws_iam_instance_profile.sap.name
+  value = module.sap_role.iam_instance_profile_name
 }

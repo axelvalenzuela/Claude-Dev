@@ -136,6 +136,7 @@ function main() {
     app_servers: appServers,
     backup_retention_days: a.backup.retention_days,
     backup_force_destroy: a.environment === "dev",
+    delete_volumes_on_termination: a.environment === "dev",
   };
   if (a.os?.ami_id) tfvars.ami_id = a.os.ami_id;
 

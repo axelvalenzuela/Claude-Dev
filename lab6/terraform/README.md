@@ -10,7 +10,7 @@ clúster Pacemaker.
 Requisitos y su justificación: [../PREREQUISITOS.md](../PREREQUISITOS.md).
 
 > Estado: `terraform init -backend=false` y `terraform validate` pasan
-> (Terraform 1.9.8, provider AWS 5.x). **No se ejecutó `plan` ni `apply`**
+> (Terraform 1.9.8, provider AWS 5.x y los módulos del registry). **No se ejecutó `plan` ni `apply`**
 > contra una cuenta real. Los tipos de instancia y tamaños de disco de
 > los `tfvars` son ejemplos: confirmarlos con el sizing y el directorio de
 > plataformas certificadas de SAP antes de aplicar. Las instancias con
@@ -25,7 +25,7 @@ terraform/
 ├── versions.tf            versión de Terraform y provider AWS
 ├── variables.tf           variables de entrada (con validaciones)
 ├── main.tf                composición de módulos
-├── outputs.tf             IPs, bucket, KMS
+├── outputs.tf             IPs, IDs de instancias y volúmenes, bucket, KMS
 ├── backend.tf.example     estado remoto en S3 + DynamoDB
 ├── environments/
 │   ├── dev.tfvars         un nodo HANA, sin HA
@@ -38,15 +38,26 @@ terraform/
     └── app_server/        EC2 ABAP + volumen /usr/sap
 ```
 
-## Qué decide cada módulo
+## Módulos
 
-| Módulo | Recursos | Decisiones de seguridad |
+La composición vive en `main.tf`. Cada módulo propio (`modules/*`) es una capa
+fina de decisiones SAP (layout de discos HANA, puertos derivados del número de
+instancia, reglas de seguridad) que **delega la creación de recursos en módulos
+oficiales de [terraform-aws-modules](https://registry.terraform.io/namespaces/terraform-aws-modules)**
+con la versión fijada (`~>`). No hay recursos `aws_*` sueltos, salvo un
+`aws_iam_policy_document` (dato) y las consultas de AZ/AMI/cuenta.
+
+| Módulo propio | Módulos del registry que usa | Decisiones SAP / de seguridad |
 |---|---|---|
-| `network` | VPC, subredes, IGW, NAT, rutas | Todo en subredes privadas; sin IP pública en instancias |
-| `security` | KMS, SGs, IAM | Puertos derivados del número de instancia (`sap_instance_number`); HANA solo accesible desde la app y desde su par de replicación; acceso por SSM (sin SSH); `0.0.0.0/0` prohibido en `admin_cidrs` |
-| `backup_storage` | S3 + política | Cifrado KMS, versionado, bloqueo de acceso público, denegación de tráfico sin TLS, paso a Glacier y expiración |
-| `hana_nodes` | EC2, EBS gp3, attachments | Discos y raíz cifrados con KMS; IMDSv2 obligatorio; `secondary` solo si `ha_enabled = true`, en otra AZ |
-| `app_server` | EC2, EBS | Mismos controles; servidores repartidos entre AZ |
+| `network` | `vpc` ~> 5.0 | Subredes privadas en 2 AZ, una pública solo para NAT, sin IP pública en instancias |
+| `security` | `kms` ~> 3.0, `security-group` ~> 5.0 (x2), `iam/iam-policy` y `iam/iam-assumable-role` ~> 5.0 | Puertos derivados de `sap_instance_number`; HANA solo accesible desde la app y desde su par de replicación; acceso por SSM (sin SSH); `0.0.0.0/0` prohibido en `admin_cidrs` |
+| `backup_storage` | `s3-bucket` ~> 4.0 | Cifrado KMS, versionado, bloqueo de acceso público, solo TLS, paso a Glacier y expiración |
+| `hana_nodes` | `ec2-instance` ~> 5.0 | Discos data/log/shared/backup cifrados con KMS; IMDSv2 obligatorio; `secondary` solo si `ha_enabled = true`, en otra AZ |
+| `app_server` | `ec2-instance` ~> 5.0 | Mismos controles; volumen `/usr/sap`; servidores repartidos entre AZ |
+
+Los discos de datos se conservan al destruir las instancias
+(`delete_volumes_on_termination = false`); `dev.tfvars` lo pone en `true`.
+Al cambiar de versión de un módulo del registry, revisar su changelog y el `plan`.
 
 ## Uso
 

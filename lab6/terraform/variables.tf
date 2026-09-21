@@ -120,6 +120,12 @@ variable "backup_force_destroy" {
   description = "Permite destruir el bucket de backup con datos. Solo laboratorio."
 }
 
+variable "delete_volumes_on_termination" {
+  type        = bool
+  default     = false
+  description = "true borra tambien los discos de datos al destruir las instancias (usar solo en dev)."
+}
+
 variable "extra_tags" {
   type    = map(string)
   default = {}

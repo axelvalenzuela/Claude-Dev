@@ -1,8 +1,8 @@
 # Laboratorio 6 — SAP S/4HANA + Fiori: instalación y arquitectura
 
-Lab de documentación (sin código de aplicación). Explica cómo se monta
-un ambiente S/4HANA con Fiori y cómo viaja una petición por todas las
-capas:
+Explica cómo se monta un ambiente S/4HANA con Fiori, cómo viaja una
+petición por todas las capas, y aporta la automatización (Terraform,
+Ansible y pipelines) para desplegarlo:
 
 ```
 Browser → Fiori Launchpad → UI5 → OData/API → S/4HANA → ABAP → HANA
@@ -19,6 +19,23 @@ Browser → Fiori Launchpad → UI5 → OData/API → S/4HANA → ABAP → HANA
 | [ansible/](ansible/) | Configuración automatizada sobre la infraestructura: SO, discos, HANA (hdblcm), System Replication, licencias y S/4HANA (SWPM). No ejecutada. |
 | [pipelines/](pipelines/) | Pipelines (GitHub Actions en `.github/workflows/lab6-sap-pipeline.yml` y equivalente GitLab CI) que encadenan sizing → Terraform → Ansible con aprobación manual. |
 | [INSTALACION.md](INSTALACION.md) | Tres rutas de instalación (SAP CAL, BTP Trial, on-prem con SWPM), activación de Fiori, verificación y troubleshooting. |
+
+## Orden recomendado
+
+1. [ARQUITECTURA.md](ARQUITECTURA.md): entender las capas.
+2. [PREREQUISITOS.md](PREREQUISITOS.md): licencias, capacidad, datos, HA, seguridad.
+3. [ASSESSMENT.md](ASSESSMENT.md): llenar el cuestionario y correr `node tools/sizing.js`.
+4. [terraform/README.md](terraform/README.md) y [pipelines/README.md](pipelines/README.md): desplegar la infraestructura.
+5. [INSTALACION.md](INSTALACION.md): activar Fiori y verificar.
+
+## Estado de validación
+
+| Pieza | Estado |
+|---|---|
+| `tools/sizing.js`, `tools/tf-to-inventory.js` | Probados localmente |
+| Terraform (módulos del registry) | `terraform validate` pasa; sin `plan`/`apply` |
+| Ansible, GitHub Actions, GitLab CI | Sintaxis YAML verificada; no ejecutados |
+| Catálogo de instancias HANA | No verificado contra el directorio de plataformas certificadas de SAP |
 
 ## Nota importante
 

@@ -59,6 +59,16 @@ def generate_answer(prompt: str, temperature: float = 0.2) -> str:
     questions about internal documentation, not brainstorming, so we want
     consistent, grounded answers rather than creative ones.
     """
+    text, _usage = generate_answer_with_usage(prompt, temperature)
+    return text
+
+
+def generate_answer_with_usage(
+    prompt: str, temperature: float = 0.2
+) -> tuple[str, types.GenerateContentResponseUsageMetadata]:
+    """Same call as generate_answer, but also returns usage_metadata — the
+    actual prompt/response/total token counts Vertex AI billed for this
+    call. See src/count_tokens.py for a CLI that prints it."""
     response = _client.models.generate_content(
         model=settings.generation_model,
         contents=prompt,
@@ -67,4 +77,13 @@ def generate_answer(prompt: str, temperature: float = 0.2) -> str:
             max_output_tokens=1024,
         ),
     )
-    return response.text or ""
+    return response.text or "", response.usage_metadata
+
+
+def count_tokens(text: str, model: str | None = None) -> int:
+    """Count how many tokens `text` would use for `model` (default: the
+    generation model) WITHOUT calling generate_content — free, no quota
+    spent. Useful to budget a prompt (context window, cost) before sending
+    it for real."""
+    response = _client.models.count_tokens(model=model or settings.generation_model, contents=text)
+    return response.total_tokens

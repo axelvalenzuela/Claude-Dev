@@ -82,6 +82,19 @@ Si te saltas este paso, `src/main.py` lo hace automáticamente la primera
 vez que arranca el servidor (con unos segundos extra en el primer
 arranque) — ver el docstring de `lifespan()` en `src/main.py`.
 
+### Contar tokens antes de gastar cuota
+
+```bash
+python -m src.count_tokens "cual es el objetivo del programa Helios?"
+```
+
+Imprime dos cosas: el conteo de tokens de la pregunta ANTES de llamar al
+modelo (gratis, `client.models.count_tokens`), y el `usage_metadata` real
+que devuelve Gemini tras una llamada a `generate_content` (prompt,
+respuesta y total de tokens facturados). Útil para entender cuánto pesa
+un prompt, o para presupuestar costo antes de subir el volumen de
+llamadas. Ver `src/count_tokens.py` y `src/gemini_client.py`.
+
 ## 5. Correr localmente y probar
 
 ```bash

@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Built locally by src/ingest.py (embeddings + metadata). Rebuilt
+# automatically on first app startup too — see src/main.py. Never commit
+# it: it embeds the content of data/docs/, and it's cheap to regenerate.
+data/index/
+
+.pytest_cache/

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lab7 · Agente de Consulta (RAG + Vertex AI Gemini)</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>🔎 Agente de Consulta — Programa Helios</h1>
+    <p>
+      Responde preguntas sobre la migración ficticia de SAS a Python/GCP
+      de "Acme Analytics", usando RAG sobre los documentos en
+      <code>data/docs/</code>. Compara con el interruptor de abajo.
+    </p>
+  </header>
+
+  <main>
+    <label class="rag-toggle">
+      <input type="checkbox" id="use-rag" checked />
+      Usar RAG (si lo apagas, la pregunta va directo a Gemini sin
+      contexto — útil para ver la diferencia)
+    </label>
+
+    <div id="chat" aria-live="polite"></div>
+
+    <form id="chat-form">
+      <input
+        type="text"
+        id="question"
+        placeholder="Ej: ¿Cuál es el umbral de reconciliación para columnas numéricas?"
+        autocomplete="off"
+        required
+      />
+      <button type="submit">Preguntar</button>
+    </form>
+
+    <p class="hint">
+      Prueba también una pregunta que NO esté en los documentos (ej: "¿de
+      qué color es el logo de Acme Analytics?") para ver que, con RAG
+      activo, el agente admite que no lo sabe en vez de inventar.
+    </p>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

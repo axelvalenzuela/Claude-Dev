@@ -1,0 +1,20 @@
+[
+  {
+    "programa": "ventas.sas",
+    "tipos_regla_esperados": ["filtro", "calculo", "clasificacion", "agregacion"],
+    "construcciones_esperadas": ["DATA step", "PROC SQL"],
+    "debe_aprobar": true
+  },
+  {
+    "programa": "clientes.sas",
+    "tipos_regla_esperados": ["filtro", "calculo", "ordenamiento"],
+    "construcciones_esperadas": ["DATA step", "PROC SORT", "macro"],
+    "debe_aprobar": false
+  },
+  {
+    "programa": "inventario.sas",
+    "tipos_regla_esperados": ["calculo", "clasificacion", "agregacion"],
+    "construcciones_esperadas": ["DATA step", "PROC MEANS"],
+    "debe_aprobar": false
+  }
+]

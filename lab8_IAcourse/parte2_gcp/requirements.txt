@@ -1,0 +1,24 @@
+# Versiones fijas = instalaciones reproducibles (verificadas en sept. 2026).
+# Para actualizar: cambia la versión, corre `pytest`, y solo entonces haz commit.
+
+# SDK unificado de Google GenAI. Con vertexai=True habla con Vertex AI.
+google-genai==2.25.0
+# Esquemas de salida estructurada y validación.
+pydantic==2.13.5
+# Lee parte2_gcp/.env en desarrollo local.
+python-dotenv==1.2.3
+# Validación de código generado (lab 15) y datos tabulares.
+pandas==3.0.6
+
+# Lab 17 — BigQuery.   Lab 18 — Cloud Storage + Cloud Functions.
+google-cloud-bigquery==3.45.2
+google-cloud-storage==3.15.1
+functions-framework==3.10.2
+
+# Lab 19 — API en Cloud Run.
+fastapi==0.142.0
+uvicorn[standard]==0.54.0
+
+# Tests (lab 16) — httpx2 lo usa el TestClient de FastAPI.
+pytest==9.1.1
+httpx2==2.13.1

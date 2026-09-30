@@ -27,32 +27,57 @@ PALABRAS = {
 
 
 def coseno(a, b):
-    punto = sum(x * y for x, y in zip(a, b))
-    norma_a = math.sqrt(sum(x * x for x in a))
-    norma_b = math.sqrt(sum(y * y for y in b))
-    if norma_a == 0 or norma_b == 0:
+    """Similitud de coseno entre dos vectores de la misma longitud.
+
+    Fórmula:  (a · b) / (largo de a * largo de b)
+      * a · b ("producto punto") = suma de multiplicar posición por posición.
+        Sale grande cuando los dos vectores tienen valores altos en las MISMAS posiciones.
+      * Dividir entre los largos quita el efecto del tamaño: solo importa la
+        DIRECCIÓN. Así "perro" y "perro perro" se consideran igual de parecidos.
+    """
+    producto_punto = 0
+    for x, y in zip(a, b):          # zip recorre los dos vectores a la par
+        producto_punto += x * y
+
+    largo_a = math.sqrt(sum(x * x for x in a))   # teorema de Pitágoras en varias dimensiones
+    largo_b = math.sqrt(sum(y * y for y in b))
+    if largo_a == 0 or largo_b == 0:              # un vector de puros ceros no tiene dirección
         return 0.0
-    return punto / (norma_a * norma_b)
+    return producto_punto / (largo_a * largo_b)
 
 
 def parte_a():
     print("PARTE A — vectores a mano  [animal, fruta, tamaño, doméstico]\n")
-    for consulta in ("perro", "manzana"):
+    for consulta in ["perro", "manzana"]:
         print(f"Más parecidos a '{consulta}':")
-        ranking = sorted(
-            ((coseno(PALABRAS[consulta], v), p) for p, v in PALABRAS.items() if p != consulta),
-            reverse=True,
-        )
-        for sim, palabra in ranking:
-            barra = "#" * int(max(sim, 0) * 30)
-            print(f"  {palabra:<8} {sim:5.2f} {barra}")
+
+        # Calcular la similitud de la consulta contra cada otra palabra.
+        ranking = []
+        for palabra, vector in PALABRAS.items():
+            if palabra != consulta:
+                similitud = coseno(PALABRAS[consulta], vector)
+                ranking.append((similitud, palabra))
+        ranking.sort(reverse=True)   # de la más parecida a la menos
+
+        for similitud, palabra in ranking:
+            barra = "#" * int(max(similitud, 0) * 30)
+            print(f"  {palabra:<8} {similitud:5.2f} {barra}")
         print()
 
 
 # Parte B — vector = cuántas veces aparece cada palabra ("bolsa de palabras").
 def vector_conteo(frase, vocabulario):
+    """Convierte una frase en un vector contando palabras.
+
+    Ejemplo con vocabulario ["corre", "el", "perro"]:
+        "el perro corre"  ->  [1, 1, 1]
+        "el el perro"     ->  [0, 2, 1]
+    """
     conteo = Counter(frase.lower().split())
-    return [conteo[p] for p in vocabulario]
+    vector = []
+    for palabra in vocabulario:
+        vector.append(conteo[palabra])
+    return vector
 
 
 def parte_b():
@@ -63,12 +88,16 @@ def parte_b():
         "un can trota por la plaza",     # MISMO significado, otras palabras
         "el precio del dolar en el banco",  # otro tema, pero comparte "el" y "en"
     ]
-    vocabulario = sorted(set(" ".join([base] + otras).split()))
+
+    # El vocabulario son todas las palabras distintas de todas las frases, en orden alfabético.
+    todas_las_palabras = " ".join([base] + otras).split()
+    vocabulario = sorted(set(todas_las_palabras))
+
     v_base = vector_conteo(base, vocabulario)
     print(f"Frase base: '{base}'")
     for frase in otras:
-        sim = coseno(v_base, vector_conteo(frase, vocabulario))
-        print(f"  {sim:4.2f}  '{frase}'")
+        similitud = coseno(v_base, vector_conteo(frase, vocabulario))
+        print(f"  {similitud:4.2f}  '{frase}'")
 
     print("\nProblema: 'un can trota por la plaza' significa casi lo mismo pero da 0,")
     print("y la frase del dólar sale más parecida solo por compartir 'el' y 'en'.")
@@ -80,5 +109,5 @@ def parte_b():
 
 
 if __name__ == "__main__":
-    parte_a()   # PASO 1: con dimensiones que entendemos, el coseno encuentra lo parecido
-    parte_b()   # PASO 2: contando palabras falla -> por eso existen los modelos de embeddings
+    parte_a()   # PASO #1: con dimensiones que entendemos, el coseno encuentra lo parecido
+    parte_b()   # PASO #2: contando palabras falla -> por eso existen los modelos de embeddings

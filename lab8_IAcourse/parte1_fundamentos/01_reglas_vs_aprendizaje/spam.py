@@ -37,7 +37,12 @@ PRUEBAS = [
 # Método 1: regla escrita a mano
 # ---------------------------------------------------------------------------
 def clasificar_con_regla(texto):
-    palabras_sospechosas = {"gratis", "dinero"}
+    """Regla inventada por una persona: si aparece "gratis" o "dinero", es spam.
+
+    Funciona solo con lo que a esa persona se le ocurrió. Si el spam usa
+    otras palabras ("premio", "oferta"), la regla no lo detecta.
+    """
+    palabras_sospechosas = ["gratis", "dinero"]
     for palabra in texto.split():
         if palabra in palabras_sospechosas:
             return "spam"
@@ -48,54 +53,91 @@ def clasificar_con_regla(texto):
 # Método 2: aprender de los ejemplos (un "Naive Bayes" simplificado)
 # ---------------------------------------------------------------------------
 def entrenar(ejemplos):
-    """'Entrenar' aquí es solo CONTAR: cuántas veces aparece cada palabra en
-    mensajes spam y cuántas en mensajes normales."""
+    """'Entrenar' aquí es solo CONTAR palabras.
+
+    Regresa un diccionario con dos contadores, por ejemplo:
+        conteos["spam"]["dinero"]   -> 3  (apareció 3 veces en mensajes spam)
+        conteos["normal"]["dinero"] -> 0  (nunca apareció en mensajes normales)
+
+    Counter es un diccionario que empieza en 0 para cualquier palabra,
+    así que podemos sumar sin preocuparnos de si la palabra ya existía.
+    """
     conteos = {"spam": Counter(), "normal": Counter()}
     for texto, etiqueta in ejemplos:
-        conteos[etiqueta].update(texto.split())
+        for palabra in texto.split():
+            conteos[etiqueta][palabra] += 1
     return conteos
 
 
 def puntaje(texto, conteos, clase):
-    """Qué tan 'típico' de esa clase es el mensaje. Cada palabra suma
-    log(probabilidad de ver esa palabra en esa clase). El +1 evita que una
-    palabra nunca vista dé probabilidad cero."""
-    vocabulario = set(conteos["spam"]) | set(conteos["normal"])
-    total = sum(conteos[clase].values())
-    return sum(
-        math.log((conteos[clase][palabra] + 1) / (total + len(vocabulario)))
-        for palabra in texto.split()
-    )
+    """Qué tan 'típico' de una clase ("spam" o "normal") es el mensaje.
+
+    Idea: si las palabras del mensaje aparecían mucho en los ejemplos de
+    esa clase, el puntaje sale alto.
+
+    Para cada palabra calculamos:
+        probabilidad = (veces que apareció en la clase + 1) / (total de palabras de la clase + tamaño del vocabulario)
+
+      * El "+1" (suavizado de Laplace) evita que una palabra que nunca vimos
+        dé probabilidad 0, lo que arruinaría todo el cálculo.
+      * Usamos log() y SUMAMOS en lugar de multiplicar probabilidades:
+        multiplicar muchos números chicos da algo casi cero que la
+        computadora no puede representar bien; sumar logaritmos es
+        equivalente y no tiene ese problema.
+    El resultado es un número negativo: MÁS CERCA DE 0 = más típico de la clase.
+    """
+    vocabulario = set(conteos["spam"]) | set(conteos["normal"])   # todas las palabras distintas vistas
+    total_palabras_clase = sum(conteos[clase].values())
+
+    resultado = 0
+    for palabra in texto.split():
+        probabilidad = (conteos[clase][palabra] + 1) / (total_palabras_clase + len(vocabulario))
+        resultado += math.log(probabilidad)
+    return resultado
 
 
 def clasificar_aprendido(texto, conteos):
-    if puntaje(texto, conteos, "spam") > puntaje(texto, conteos, "normal"):
+    """Gana la clase cuyo puntaje sea más alto."""
+    puntaje_spam = puntaje(texto, conteos, "spam")
+    puntaje_normal = puntaje(texto, conteos, "normal")
+    if puntaje_spam > puntaje_normal:
         return "spam"
     return "normal"
 
 
 def main():
-    # PASO 1: "entrenar" = contar palabras en los ejemplos etiquetados
+    # PASO #1: "entrenar" = contar palabras en los ejemplos etiquetados
     conteos = entrenar(EJEMPLOS)
 
-    # PASO 2: ver qué aprendió (nadie le dijo estas palabras: salieron de los datos)
+    # PASO #2: ver qué aprendió (nadie le dijo estas palabras: salieron de los datos)
     print("Lo que el modelo 'aprendió' (palabras más frecuentes por clase):")
-    for clase in ("spam", "normal"):
-        top = ", ".join(p for p, _ in conteos[clase].most_common(6))
-        print(f"  {clase:>6}: {top}")
+    for clase in ["spam", "normal"]:
+        mas_comunes = conteos[clase].most_common(6)          # lista de (palabra, veces)
+        solo_palabras = [palabra for palabra, veces in mas_comunes]
+        print(f"  {clase:>6}: {', '.join(solo_palabras)}")
 
-    # PASO 3: probar AMBOS métodos con mensajes que ninguno vio
-    print("\n{:<40} {:>8} {:>10} {:>10}".format("Mensaje nuevo", "Real", "Regla", "Aprendido"))
+    # PASO #3: probar AMBOS métodos con mensajes que ninguno vio
+    print(f"\n{'Mensaje nuevo':<40} {'Real':>8} {'Regla':>10} {'Aprendido':>10}")
     print("-" * 71)
-    aciertos_regla = aciertos_ml = 0
+    aciertos_regla = 0
+    aciertos_ml = 0
     for texto, real in PRUEBAS:
-        r = clasificar_con_regla(texto)
-        m = clasificar_aprendido(texto, conteos)
-        aciertos_regla += r == real
-        aciertos_ml += m == real
-        marca_r = "ok" if r == real else "X"
-        marca_m = "ok" if m == real else "X"
-        print(f"{texto:<40} {real:>8} {r:>7} {marca_r:<2} {m:>7} {marca_m:<2}")
+        respuesta_regla = clasificar_con_regla(texto)
+        respuesta_ml = clasificar_aprendido(texto, conteos)
+
+        if respuesta_regla == real:
+            aciertos_regla += 1
+            marca_regla = "ok"
+        else:
+            marca_regla = "X"
+
+        if respuesta_ml == real:
+            aciertos_ml += 1
+            marca_ml = "ok"
+        else:
+            marca_ml = "X"
+
+        print(f"{texto:<40} {real:>8} {respuesta_regla:>7} {marca_regla:<2} {respuesta_ml:>7} {marca_ml:<2}")
 
     print(f"\nAciertos regla:     {aciertos_regla}/{len(PRUEBAS)}")
     print(f"Aciertos aprendido: {aciertos_ml}/{len(PRUEBAS)}")

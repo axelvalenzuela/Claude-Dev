@@ -6,9 +6,9 @@ viva en un servicio. Opciones en GCP, de más simple a más especializada:
     AlloyDB / Cloud SQL + pgvector
     Vertex AI Vector Search    (baja latencia a gran escala, pero cobra por nodo encendido)
 
-  PASO 1: reutilizar los fragmentos + embeddings del lab 13
-  PASO 2: cargarlos a la tabla `conocimiento` (columna embedding ARRAY<FLOAT64>)
-  PASO 3: embeber la pregunta y buscar con VECTOR_SEARCH (distancia coseno)
+  PASO #1: reutilizar los fragmentos + embeddings del lab 13
+  PASO #2: cargarlos a la tabla `conocimiento` (columna embedding ARRAY<FLOAT64>)
+  PASO #3: embeber la pregunta y buscar con VECTOR_SEARCH (distancia coseno)
 
 Correr (desde parte2_gcp/, con MODO=real y después de terraform apply):
     python 17_bigquery/rag_en_bigquery.py "¿cómo quito registros repetidos?"
@@ -45,7 +45,7 @@ def main():
     from rag_sas import construir_indice   # lab 13
 
     cliente = bq._cliente()
-    # PASO 1 y 2 — cargar fragmentos con su vector (WRITE_TRUNCATE = se puede repetir sin duplicar)
+    # PASO #1 y 2 — cargar fragmentos con su vector (WRITE_TRUNCATE = se puede repetir sin duplicar)
     filas = [{"fuente": f["fuente"], "texto": f["texto"], "embedding": f["vector"]} for f in construir_indice()]
     trabajo = cliente.load_table_from_json(
         filas, bq.tabla("conocimiento"),
@@ -54,7 +54,7 @@ def main():
     trabajo.result()
     print(f"{len(filas)} fragmentos cargados en {bq.tabla('conocimiento')}")
 
-    # PASO 3 — buscar
+    # PASO #3 — buscar
     pregunta = " ".join(sys.argv[1:]) or "¿Cómo quito registros repetidos de una tabla?"
     vector = llm.embeber([pregunta], tipo="RETRIEVAL_QUERY")[0]
     ajustes = bigquery.QueryJobConfig(

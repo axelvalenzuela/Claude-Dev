@@ -1,5 +1,9 @@
 # 10 — Preparar el entorno de GCP
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #15 de 26** · [← #14 Mini RAG](../../parte1_fundamentos/09_mini_rag/README.md) · [#16 Gemini con el SDK →](../11_gemini_sdk/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** qué piezas necesita tu código para hablar con Vertex AI y cómo
 diagnosticar cuando no puede.
 

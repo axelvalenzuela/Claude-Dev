@@ -1,5 +1,9 @@
 # 17 — BigQuery: SQL migrado, dry run, reconciliación y búsqueda vectorial
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #22 de 26** · [← #21 Evaluación y quality gate](../16_evaluacion/README.md) · [#23 Cloud Functions + Storage →](../18_cloud_functions_storage/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** convertir SAS a BigQuery SQL con IA y validarlo sin gastar; usar
 BigQuery como base vectorial; y la infraestructura como código que lo crea.
 

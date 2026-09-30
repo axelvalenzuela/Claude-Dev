@@ -7,9 +7,9 @@ Diferencia clave:
 
 El ciclo (esto es TODO lo que hay detrás de la palabra "agente"):
 
-    PASO 1: mandar la pregunta + la lista de herramientas
-    PASO 2: ¿el modelo pidió herramientas?
-              sí -> PASO 3: ejecutarlas NOSOTROS y devolverle los resultados -> volver al PASO 2
+    PASO #1: mandar la pregunta + la lista de herramientas
+    PASO #2: ¿el modelo pidió herramientas?
+              sí -> PASO #3: ejecutarlas NOSOTROS y devolverle los resultados -> volver al PASO #2
               no -> es la respuesta final
     Límite de pasos: sin él, un agente confundido puede ciclarse (y gastar) sin fin.
 
@@ -38,12 +38,12 @@ def ejecutar_agente(pregunta: str) -> str:
     sesion = SesionAgente(SISTEMA, HERRAMIENTAS)
     por_nombre = {f.__name__: f for f in HERRAMIENTAS}
 
-    paso = sesion.enviar(pregunta)                                    # PASO 1
+    paso = sesion.enviar(pregunta)                                    # PASO #1
     for numero in range(1, MAX_PASOS + 1):
-        if not paso.llamadas:                                         # PASO 2: respuesta final
+        if not paso.llamadas:                                         # PASO #2: respuesta final
             return paso.texto or ""
         resultados = []
-        for llamada in paso.llamadas:                                 # PASO 3: ejecutar herramientas
+        for llamada in paso.llamadas:                                 # PASO #3: ejecutar herramientas
             argumentos = json.dumps(llamada.argumentos, ensure_ascii=False)
             print(f"  [paso {numero}] el modelo pide: {llamada.nombre}({argumentos})")
             funcion = por_nombre.get(llamada.nombre)

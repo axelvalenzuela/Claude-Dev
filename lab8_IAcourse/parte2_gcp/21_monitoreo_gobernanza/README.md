@@ -1,5 +1,9 @@
 # 21 — Monitoreo, costos y gobernanza
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #26 de 26** · [← #25 Dataflow y Composer](../20_composer_dataflow/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** saber cuánto gasta, qué tan rápido responde y qué tan seguro es tu sistema de IA,
 con datos, y poner reglas (guardrails) alrededor del modelo.
 

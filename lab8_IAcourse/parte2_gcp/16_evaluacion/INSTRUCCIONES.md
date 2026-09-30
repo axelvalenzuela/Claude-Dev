@@ -1,25 +1,29 @@
 # 16 — Instrucciones
 
-## Paso 1 — Tests automáticos
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #21 de 26** · [← #20 Multi-agente SAS → Python](../15_multi_agente/README.md) · [#22 BigQuery →](../17_bigquery/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Tests automáticos
 
 ```bash
 pytest -v            # desde parte2_gcp/: 20 tests, ~10 segundos, siempre en simulado
 ```
 
-## Paso 2 — Evaluación con quality gate
+## Paso #2 — Evaluación con quality gate
 
 ```bash
 python 16_evaluacion/evaluar.py
 echo $?              # 0 = pasa, 1 = falla (CI usa este código de salida)
 ```
 
-## Paso 3 — Romperlo a propósito (la mejor forma de entenderlo)
+## Paso #3 — Romperlo a propósito (la mejor forma de entenderlo)
 
 1. En [casos_golden.json](casos_golden.json) agrega `"PROC FREQ"` a `construcciones_esperadas` de `ventas.sas`.
 2. Corre `evaluar.py`: baja el recall y el quality gate dice `FALLA`.
 3. Regresa el archivo como estaba.
 
-## Paso 4 — En real
+## Paso #4 — En real
 
 Con `MODO=real`, `evaluar.py` mide al Gemini de verdad. Córrelo **antes y después** de cambiar
 un prompt en `comun/agentes.py` y compara la tabla. Esa es la forma profesional de "mejorar un prompt".

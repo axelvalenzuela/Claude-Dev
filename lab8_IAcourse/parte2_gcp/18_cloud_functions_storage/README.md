@@ -1,5 +1,9 @@
 # 18 — Cloud Storage + Cloud Functions: IA disparada por eventos
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #23 de 26** · [← #22 BigQuery](../17_bigquery/README.md) · [#24 API en Cloud Run →](../19_cloud_run_api/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** arquitectura orientada a eventos: subir un archivo dispara el análisis
 automáticamente, sin servidores encendidos esperando.
 
@@ -30,7 +34,7 @@ gcloud storage cp ventas.sas gs://BUCKET/entrada/
 
 | Archivo | Qué hace |
 |---|---|
-| [funcion/main.py](funcion/main.py) | La función (PASO 1–4). Funciona local (simulado) y desplegada |
+| [funcion/main.py](funcion/main.py) | La función (PASO #1–4). Funciona local (simulado) y desplegada |
 | [probar_local.py](probar_local.py) | Arma el CloudEvent a mano y llama a la función |
 | [desplegar.sh](desplegar.sh) | Empaqueta con `comun/` y despliega con `gcloud` |
 

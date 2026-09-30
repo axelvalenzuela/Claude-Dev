@@ -1,8 +1,8 @@
 """Micro lab 21 — Guardrails: lo que NO debe entrar ni salir del modelo.
 
-  PASO 1 (entrada): redactar datos sensibles antes de mandarlos a un servicio externo
-  PASO 2 (salida):  revisar el código generado ANTES de ejecutarlo
-  PASO 3 (salida):  ver cómo el validador bloquea código peligroso aunque "funcione"
+  PASO #1 (entrada): redactar datos sensibles antes de mandarlos a un servicio externo
+  PASO #2 (salida):  revisar el código generado ANTES de ejecutarlo
+  PASO #3 (salida):  ver cómo el validador bloquea código peligroso aunque "funcione"
 
 El código está en comun/guardrails.py.
 
@@ -36,7 +36,7 @@ def transformar(df):
 
 
 def main():
-    print("PASO 1 — redactar antes de enviar")
+    print("PASO #1 — redactar antes de enviar")
     limpio, conteo = redactar_datos_sensibles(SAS_CON_DATOS)
     print(f"  encontrados: {conteo}\n  lo que SÍ se manda al modelo:\n")
     print("    " + limpio.replace("\n", "\n    "))

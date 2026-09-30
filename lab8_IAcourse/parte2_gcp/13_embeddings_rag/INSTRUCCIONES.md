@@ -1,6 +1,10 @@
 # 13 — Instrucciones
 
-## Paso 1 — Correr
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #18 de 26** · [← #17 Salida estructurada](../12_salida_estructurada/README.md) · [#19 Agente con herramientas →](../14_agente_herramientas/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Correr
 
 ```bash
 python 13_embeddings_rag/rag_sas.py
@@ -9,7 +13,7 @@ python 13_embeddings_rag/rag_sas.py "¿cómo convierto un IF THEN de SAS?"
 
 La primera vez construye el índice y lo guarda en `13_embeddings_rag/.indice_<modo>_<modelo>.json`.
 
-## Paso 2 — Leer el código (`PASO 1` a `PASO 4` en [rag_sas.py](rag_sas.py))
+## Paso #2 — Leer el código (`PASO #1` a `PASO #4` en [rag_sas.py](rag_sas.py))
 
 Compara con la parte 1, micro lab 09: es la misma estructura; cambian `vectorizar` (ahora un
 modelo) y `generar` (ahora Gemini).
@@ -25,7 +29,7 @@ En simulado, los "embeddings" son un truco con sinónimos escritos a mano
 ([comun/simulado.py](../comun/simulado.py)). En real, `gemini-embedding-001` aprendió esas
 relaciones solo.
 
-## Paso 3 — En real
+## Paso #3 — En real
 
 1. `MODO=real` y corre de nuevo (se crea otro índice, con vectores de ~3,072 dimensiones).
 2. **Recalibra `UMBRAL`**: imprime los puntajes de preguntas que SÍ y NO están en la base y pon el

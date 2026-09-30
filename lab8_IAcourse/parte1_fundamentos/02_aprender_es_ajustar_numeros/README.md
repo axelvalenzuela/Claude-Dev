@@ -1,5 +1,9 @@
 # 02 — Aprender = ajustar números
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #7 de 26** · [← #6 Reglas vs. aprendizaje](../01_reglas_vs_aprendizaje/README.md) · [#8 Una neurona →](../03_una_neurona/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** un modelo es una fórmula con **parámetros**. Entrenar es
 repetir *predecir → medir el error → mover los parámetros un poquito para
 que el error baje*. Eso se llama **descenso de gradiente**.

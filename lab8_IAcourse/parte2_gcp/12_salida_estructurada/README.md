@@ -1,5 +1,9 @@
 # 12 — Salida estructurada: extraer reglas de negocio de SAS
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #17 de 26** · [← #16 Gemini con el SDK](../11_gemini_sdk/README.md) · [#18 RAG con embeddings →](../13_embeddings_rag/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** hacer que el modelo responda JSON con una forma fija y validarlo.
 Es la base de cualquier agente que alimenta a otro programa.
 

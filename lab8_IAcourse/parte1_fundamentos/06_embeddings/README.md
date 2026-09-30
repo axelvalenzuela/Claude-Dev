@@ -1,5 +1,9 @@
 # 06 — Embeddings y similitud de coseno
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #11 de 26** · [← #10 Tokens](../05_tokens/README.md) · [#12 Siguiente palabra →](../07_siguiente_palabra/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** un **embedding** es un vector (lista de números) que representa
 el significado de un texto. Textos parecidos → vectores que apuntan en
 dirección parecida. La **similitud de coseno** lo mide: 1.0 = iguales,

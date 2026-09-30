@@ -1,5 +1,9 @@
 # 13 — RAG con embeddings de Vertex AI
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #18 de 26** · [← #17 Salida estructurada](../12_salida_estructurada/README.md) · [#19 Agente con herramientas →](../14_agente_herramientas/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** la versión real del mini RAG de la parte 1: embeddings de Vertex AI,
 índice cacheado, búsqueda por coseno, umbral de "no sé" y respuesta con fuentes.
 La base de conocimiento son equivalencias SAS → Python/BigQuery ([conocimiento/](conocimiento/)).

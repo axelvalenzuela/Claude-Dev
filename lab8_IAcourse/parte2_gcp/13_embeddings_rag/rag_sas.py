@@ -4,10 +4,10 @@ Es el micro lab 09 (parte 1) pero con las piezas reales:
     vectorizar = modelo de embeddings (gemini-embedding-001)
     generar    = Gemini
 
-  PASO 1: partir los documentos de conocimiento/ en fragmentos
-  PASO 2: embeber los fragmentos UNA vez (RETRIEVAL_DOCUMENT) y guardar el índice
-  PASO 3: embeber la pregunta (RETRIEVAL_QUERY) y buscar top-k por coseno
-  PASO 4: armar el prompt con CONTEXTO y generar la respuesta
+  PASO #1: partir los documentos de conocimiento/ en fragmentos
+  PASO #2: embeber los fragmentos UNA vez (RETRIEVAL_DOCUMENT) y guardar el índice
+  PASO #3: embeber la pregunta (RETRIEVAL_QUERY) y buscar top-k por coseno
+  PASO #4: armar el prompt con CONTEXTO y generar la respuesta
   EXTRA:  comparar contra búsqueda por palabras para ver por qué los embeddings ganan
 
 Correr (desde parte2_gcp/):
@@ -36,7 +36,7 @@ SISTEMA = (
 )
 
 
-# PASO 1 — cada párrafo es un fragmento; le pegamos el título para no perder contexto
+# PASO #1 — cada párrafo es un fragmento; le pegamos el título para no perder contexto
 def fragmentar() -> list[dict]:
     fragmentos = []
     for ruta in sorted((AQUI / "conocimiento").glob("*.md")):
@@ -47,7 +47,7 @@ def fragmentar() -> list[dict]:
     return fragmentos
 
 
-# PASO 2 — el índice se guarda en disco: embeber cuesta, no hay que repetirlo
+# PASO #2 — el índice se guarda en disco: embeber cuesta, no hay que repetirlo
 def construir_indice() -> list[dict]:
     archivo = AQUI / f".indice_{config.modo}_{config.modelo_embeddings}.json"
     if archivo.exists():
@@ -66,7 +66,7 @@ def coseno(a, b) -> float:
     return punto / norma if norma else 0.0
 
 
-# PASO 3 — buscar
+# PASO #3 — buscar
 def buscar(pregunta: str, indice: list[dict], k: int = TOP_K) -> list[tuple[float, dict]]:
     v = llm.embeber([pregunta], tipo="RETRIEVAL_QUERY")[0]
     return sorted(((coseno(v, f["vector"]), f) for f in indice), key=lambda x: x[0], reverse=True)[:k]
@@ -85,7 +85,7 @@ def buscar_por_palabras(pregunta: str, indice: list[dict]) -> tuple[float, dict]
     return max(puntuados, key=lambda x: x[0])
 
 
-# PASO 4 — generar con contexto
+# PASO #4 — generar con contexto
 def responder(pregunta: str, indice: list[dict]) -> None:
     print("=" * 72)
     print(f"PREGUNTA: {pregunta}\n")

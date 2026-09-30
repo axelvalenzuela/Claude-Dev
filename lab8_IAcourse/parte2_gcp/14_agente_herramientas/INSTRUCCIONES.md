@@ -1,21 +1,25 @@
 # 14 — Instrucciones
 
-## Paso 1 — Correr
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #19 de 26** · [← #18 RAG con embeddings](../13_embeddings_rag/README.md) · [#20 Multi-agente SAS → Python →](../15_multi_agente/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Correr
 
 ```bash
 python 14_agente_herramientas/agente.py
 python 14_agente_herramientas/agente.py "¿Qué hace clientes.sas y cómo lo migro?"
 ```
 
-## Paso 2 — Leer el código
+## Paso #2 — Leer el código
 
 1. [herramientas.py](herramientas.py): lee cada docstring como si fueras el modelo. ¿Sabrías cuándo usar cada una?
-2. [agente.py](agente.py): `PASO 1`, `PASO 2`, `PASO 3` y `MAX_PASOS`.
+2. [agente.py](agente.py): `PASO #1`, `PASO #2`, `PASO #3` y `MAX_PASOS`.
 3. [comun/llm.py](../comun/llm.py): clase `SesionAgente` → `enviar`, `enviar_resultados`, `_turno`.
 
 ## Qué observar
 
-- Paso 1: pide la lista. Paso 2: pide 3 herramientas **a la vez**. Paso 3: busca equivalencias. Luego responde.
+- Paso #1: pide la lista. Paso #2: pide 3 herramientas **a la vez**. Paso #3: busca equivalencias. Luego responde.
 - En simulado el orden es un guion fijo. En real, Gemini decide: con la segunda pregunta
   probablemente use `leer_programa_sas`, que el guion nunca usa.
 

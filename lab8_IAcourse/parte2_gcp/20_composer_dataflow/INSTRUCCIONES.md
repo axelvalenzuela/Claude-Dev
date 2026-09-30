@@ -1,6 +1,10 @@
 # 20 — Instrucciones
 
-## Paso 1 — Beam local (gratis)
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #25 de 26** · [← #24 API en Cloud Run](../19_cloud_run_api/README.md) · [#26 Monitoreo y gobernanza →](../21_monitoreo_gobernanza/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Beam local (gratis)
 
 Beam va en su propio entorno virtual (es pesado y choca con otras librerías):
 
@@ -13,7 +17,7 @@ python 20_composer_dataflow/pipeline_ventas_beam.py
 
 Salida esperada al final: `Reconciliación contra SAS: OK`. El resultado queda en `salida/beam_resumen_ventas.csv`.
 
-## Paso 2 — El mismo pipeline en Dataflow (real, ~0.05 USD)
+## Paso #2 — El mismo pipeline en Dataflow (real, ~0.05 USD)
 
 ```bash
 BUCKET=gs://$GCP_PROJECT_ID-migracion-sas
@@ -29,7 +33,7 @@ Míralo en **Dataflow > Trabajos** (tarda ~3–5 min: la mayor parte es levantar
 La cuenta de servicio necesita además `roles/dataflow.worker`:
 `gcloud projects add-iam-policy-binding $GCP_PROJECT_ID --member=serviceAccount:agente-migracion@$GCP_PROJECT_ID.iam.gserviceaccount.com --role=roles/dataflow.worker`
 
-## Paso 3 — El DAG de Composer
+## Paso #3 — El DAG de Composer
 
 **Opción A (gratis, recomendada para estudiar):** lee el DAG y explica cada tarea. Compila con
 `python -m py_compile 20_composer_dataflow/dag_migracion_sas.py`.

@@ -1,9 +1,9 @@
 """Micro lab 11 — Tu primera llamada a Gemini con el SDK google-genai.
 
 Tres llamadas, cada una agrega UNA idea:
-  PASO 1: prompt simple                    -> texto
-  PASO 2: + instrucción de sistema          -> controlas rol, tono y formato
-  PASO 3: leer tokens, costo y latencia     -> lo que te preguntan en producción
+  PASO #1: prompt simple                    -> texto
+  PASO #2: + instrucción de sistema          -> controlas rol, tono y formato
+  PASO #3: leer tokens, costo y latencia     -> lo que te preguntan en producción
 
 El código que habla con Vertex está en comun/llm.py (función generar). Léelo
 después de correr esto: son ~30 líneas.
@@ -23,21 +23,21 @@ SAS_EJEMPLO = (Path(__file__).resolve().parents[1] / "comun" / "sas" / "ventas.s
 def main():
     print(f"Modo {config.modo} | modelo {config.modelo}\n")
 
-    # PASO 1 — prompt simple
+    # PASO #1 — prompt simple
     r = llm.generar("En 3 oraciones: ¿qué implica migrar SAS a Python en Google Cloud?")
-    print("PASO 1 — prompt simple\n", r.texto, "\n")
+    print("PASO #1 — prompt simple\n", r.texto, "\n")
 
-    # PASO 2 — instrucción de sistema: define QUIÉN es el modelo y sus reglas.
+    # PASO #2 — instrucción de sistema: define QUIÉN es el modelo y sus reglas.
     # Va separada del prompt del usuario y pesa más que él.
     sistema = (
         "Eres un ingeniero senior de migración SAS->Python. Respondes en español, "
         "en viñetas, máximo 5 viñetas, sin introducción."
     )
     r = llm.generar(f"Explica qué hace este programa SAS:\n\n{SAS_EJEMPLO}", sistema=sistema)
-    print("PASO 2 — con instrucción de sistema\n", r.texto, "\n")
+    print("PASO #2 — con instrucción de sistema\n", r.texto, "\n")
 
-    # PASO 3 — métricas de la llamada (vienen en response.usage_metadata)
-    print("PASO 3 — métricas de la última llamada")
+    # PASO #3 — métricas de la llamada (vienen en response.usage_metadata)
+    print("PASO #3 — métricas de la última llamada")
     print(f"  tokens de entrada: {r.tokens_entrada}")
     print(f"  tokens de salida:  {r.tokens_salida}   (incluye 'thinking tokens')")
     print(f"  latencia:          {r.latencia_s} s")

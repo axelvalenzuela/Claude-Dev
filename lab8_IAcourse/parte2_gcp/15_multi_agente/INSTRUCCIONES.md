@@ -1,6 +1,10 @@
 # 15 — Instrucciones
 
-## Paso 1 — Correr en simulado
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #20 de 26** · [← #19 Agente con herramientas](../14_agente_herramientas/README.md) · [#21 Evaluación y quality gate →](../16_evaluacion/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Correr en simulado
 
 ```bash
 python 15_multi_agente/migrar.py                  # ventas.sas: falla 1 vez, se corrige, APROBADO
@@ -9,7 +13,7 @@ python 15_multi_agente/migrar.py clientes.sas     # sin datos de prueba: REQUIER
 
 Resultados en `salida/<programa>/`: `transformar.py`, `DOCUMENTACION.md`, `analisis.json`, `bitacora.txt`.
 
-## Paso 2 — Leer el código en este orden
+## Paso #2 — Leer el código en este orden
 
 1. [comun/orquestador.py](../comun/orquestador.py) → función `migrar`: los pasos 1, 2 y 3.
 2. [comun/agentes.py](../comun/agentes.py) → las 3 instrucciones de sistema (`SISTEMA_*`) y cómo se arma la `RETROALIMENTACION`.
@@ -23,7 +27,7 @@ Resultados en `salida/<programa>/`: `transformar.py`, `DOCUMENTACION.md`, `anali
 - El error sembrado es realista: **una venta de 8,700 no pasa 10,000, pero con IVA (10,092) sí**.
   Es el tipo de error que un revisor humano no ve y la reconciliación sí.
 
-## Paso 3 — En real
+## Paso #3 — En real
 
 `MODO=real` y corre otra vez. Gemini puede acertar al primer intento o no. Prueba también con un
 modelo más barato/caro en `GEMINI_MODEL` y compara intentos y costo.

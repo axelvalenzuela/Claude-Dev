@@ -4,14 +4,14 @@
 modelo MEJORA o EMPEORA la migración, se corre siempre el mismo conjunto de
 casos con respuesta conocida (golden set) y se miden cosas objetivas:
 
-  PASO 1: cargar casos_golden.json (programa + lo que DEBERÍA salir)
-  PASO 2: correr el flujo multi-agente del lab 15 en cada caso
-  PASO 3: métricas deterministas
+  PASO #1: cargar casos_golden.json (programa + lo que DEBERÍA salir)
+  PASO #2: correr el flujo multi-agente del lab 15 en cada caso
+  PASO #3: métricas deterministas
             - recall de reglas:         ¿encontró los tipos de regla esperados?
             - recall de construcciones: ¿detectó macro, PROC SORT...?
             - estado correcto:          ¿aprobó solo lo que debía aprobar?
-  PASO 4: métrica con "LLM como juez" para lo subjetivo (calidad de la documentación)
-  PASO 5: QUALITY GATE: si las métricas bajan del umbral, el script sale con
+  PASO #4: métrica con "LLM como juez" para lo subjetivo (calidad de la documentación)
+  PASO #5: QUALITY GATE: si las métricas bajan del umbral, el script sale con
           código 1 -> en CI eso bloquea el merge (ver .github/workflows/lab8-ci.yml)
 
 Correr (desde parte2_gcp/):   python 16_evaluacion/evaluar.py
@@ -44,10 +44,10 @@ def recall(esperados: list[str], obtenidos: list[str]) -> float:
 
 def evaluar_caso(caso: dict) -> dict:
     codigo_sas = (RAIZ / "comun" / "sas" / caso["programa"]).read_text(encoding="utf-8")
-    resultado = migrar(codigo_sas, caso["programa"], avisar=lambda _m: None)      # PASO 2
+    resultado = migrar(codigo_sas, caso["programa"], avisar=lambda _m: None)      # PASO #2
 
-    tipos = [r.tipo for r in resultado.analisis.reglas]                            # PASO 3
-    juez = llm.generar(                                                            # PASO 4
+    tipos = [r.tipo for r in resultado.analisis.reglas]                            # PASO #3
+    juez = llm.generar(                                                            # PASO #4
         f"Documentación a evaluar:\n\n{resultado.documentacion}",
         rol="juez", sistema=SISTEMA_JUEZ, esquema=EvaluacionJuez,
     ).como(EvaluacionJuez)
@@ -65,7 +65,7 @@ def evaluar_caso(caso: dict) -> dict:
 
 
 def main() -> int:
-    casos = json.loads((Path(__file__).parent / "casos_golden.json").read_text(encoding="utf-8"))   # PASO 1
+    casos = json.loads((Path(__file__).parent / "casos_golden.json").read_text(encoding="utf-8"))   # PASO #1
     print(f"Modo {config.modo} | modelo {config.modelo} | {len(casos)} casos\n")
     filas = [evaluar_caso(c) for c in casos]
 
@@ -84,7 +84,7 @@ def main() -> int:
     print(f"\nPromedios: reglas {prom_reglas:.0%} | construcciones {prom_constr:.0%} | juez {prom_juez:.1f}/5"
           f" | costo total ${sum(f['costo_usd'] for f in filas):.6f}")
 
-    # PASO 5 — quality gate
+    # PASO #5 — quality gate
     fallas = []
     if prom_reglas < UMBRAL_RECALL:
         fallas.append(f"recall de reglas {prom_reglas:.0%} < {UMBRAL_RECALL:.0%}")

@@ -1,5 +1,9 @@
 # 19 — API REST del migrador en Cloud Run
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #24 de 26** · [← #23 Cloud Functions + Storage](../18_cloud_functions_storage/README.md) · [#25 Dataflow y Composer →](../20_composer_dataflow/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** exponer el flujo multi-agente como un servicio REST en contenedor,
 desplegado en Cloud Run con autenticación, límites y escalado a cero.
 

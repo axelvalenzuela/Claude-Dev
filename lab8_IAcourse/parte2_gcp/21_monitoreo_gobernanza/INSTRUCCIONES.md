@@ -1,12 +1,16 @@
 # 21 — Instrucciones
 
-## Paso 1 — Guardrails
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #26 de 26** · [← #25 Dataflow y Composer](../20_composer_dataflow/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Guardrails
 
 ```bash
 python 21_monitoreo_gobernanza/demo_guardrails.py
 ```
 
-## Paso 2 — Reporte de costos
+## Paso #2 — Reporte de costos
 
 Corre antes algunos labs (11–19) para tener registros, y luego:
 
@@ -17,7 +21,7 @@ python 21_monitoreo_gobernanza/reporte_costos.py --programas 5000
 
 Los registros viven en `.registros/llamadas.jsonl` (una línea JSON por llamada). Bórralo para empezar de cero.
 
-## Paso 3 — Ver los logs en vivo
+## Paso #3 — Ver los logs en vivo
 
 Pon `LOG_NIVEL=INFO` en `.env` y corre cualquier lab: cada llamada imprime una línea JSON en
 stderr. Así se ven en Cloud Logging cuando corren en Cloud Run o Functions.
@@ -30,7 +34,7 @@ jsonPayload.rol="convertidor" AND jsonPayload.costo_usd > 0.01
 severity>=WARNING
 ```
 
-## Paso 4 — Auditoría en BigQuery (real)
+## Paso #4 — Auditoría en BigQuery (real)
 
 ```bash
 python 21_monitoreo_gobernanza/reporte_costos.py --bigquery

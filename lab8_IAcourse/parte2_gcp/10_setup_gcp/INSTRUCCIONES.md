@@ -1,8 +1,12 @@
 # 10 — Instrucciones
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #15 de 26** · [← #14 Mini RAG](../../parte1_fundamentos/09_mini_rag/README.md) · [#16 Gemini con el SDK →](../11_gemini_sdk/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 Todos los comandos de la parte 2 se corren **desde `parte2_gcp/`**.
 
-## Paso 1 — Entorno de Python (una sola vez)
+## Paso #1 — Entorno de Python (una sola vez)
 
 ```bash
 cd lab8_IAcourse/parte2_gcp
@@ -13,7 +17,7 @@ pip install -r requirements.txt
 
 ¿Sin Python? Con `uv`: `uv venv --python 3.12 .venv` y `uv pip install -r requirements.txt`.
 
-## Paso 2 — Modo simulado (gratis)
+## Paso #2 — Modo simulado (gratis)
 
 ```bash
 python 10_setup_gcp/verificar_entorno.py
@@ -22,7 +26,7 @@ python 10_setup_gcp/verificar_entorno.py
 Debes ver `[ OK ]` en Python y paquetes, y un `[AVISO]` por no tener `.env` (normal).
 Con eso ya puedes hacer los labs 11–21 en simulado.
 
-## Paso 3 — Modo real
+## Paso #3 — Modo real
 
 1. Sigue [docs/CONECTAR_GCP.md](../../docs/CONECTAR_GCP.md) (proyecto, facturación, ADC, Terraform).
 2. `cp .env.example .env` y edita `MODO=real` y `GCP_PROJECT_ID`.

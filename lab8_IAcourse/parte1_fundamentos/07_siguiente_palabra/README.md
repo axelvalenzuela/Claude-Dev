@@ -1,5 +1,9 @@
 # 07 — Un modelo de lenguaje predice la siguiente palabra
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #12 de 26** · [← #11 Embeddings](../06_embeddings/README.md) · [#13 Temperatura →](../08_temperatura/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** Gemini, Claude y GPT hacen, en el fondo, una sola cosa en ciclo:
 
 ```

@@ -3,9 +3,9 @@
 Construye a mano el mismo evento (CloudEvent) que Cloud Storage le mandaría
 a la función al subir un archivo, y la llama directamente.
 
-  PASO 1: "subir" ventas.sas a un bucket simulado (carpeta local)
-  PASO 2: mandar el evento de entrada/ventas.sas     -> se analiza
-  PASO 3: mandar el evento de resultados/ventas.json -> se IGNORA (sin ciclo infinito)
+  PASO #1: "subir" ventas.sas a un bucket simulado (carpeta local)
+  PASO #2: mandar el evento de entrada/ventas.sas     -> se analiza
+  PASO #3: mandar el evento de resultados/ventas.json -> se IGNORA (sin ciclo infinito)
 
 Correr (desde parte2_gcp/):   python 18_cloud_functions_storage/probar_local.py
 """
@@ -34,17 +34,17 @@ def main():
     if config.es_real:
         sys.exit("Esta prueba local es para MODO=simulado. En real, sube el archivo con gcloud (ver INSTRUCCIONES.md).")
 
-    # PASO 1
+    # PASO #1
     destino = RAIZ / "salida" / "gcs_simulado" / BUCKET / "entrada" / "ventas.sas"
     destino.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(RAIZ / "comun" / "sas" / "ventas.sas", destino)
-    print(f"PASO 1: archivo en {destino.relative_to(RAIZ)}\n")
+    print(f"PASO #1: archivo en {destino.relative_to(RAIZ)}\n")
 
-    # PASO 2
-    print("PASO 2: evento entrada/ventas.sas")
+    # PASO #2
+    print("PASO #2: evento entrada/ventas.sas")
     analizar_sas(evento("entrada/ventas.sas"))
 
-    # PASO 3
+    # PASO #3
     print("\nPASO 3: evento resultados/ventas.json (lo que la función acaba de escribir)")
     analizar_sas(evento("resultados/ventas.json"))
 

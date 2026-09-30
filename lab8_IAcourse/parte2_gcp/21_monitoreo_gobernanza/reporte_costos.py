@@ -3,10 +3,10 @@
 Cada llamada que hicieron los labs 11-19 quedó registrada en
 .registros/llamadas.jsonl (ver comun/observabilidad.py). Este script lo resume:
 
-  PASO 1: leer el registro
-  PASO 2: agrupar por rol del agente y modelo -> llamadas, tokens, costo, latencia
-  PASO 3: proyectar: ¿cuánto costaría migrar N programas?
-  PASO 4 (MODO=real, opcional): mandar el registro a BigQuery para tableros y auditoría
+  PASO #1: leer el registro
+  PASO #2: agrupar por rol del agente y modelo -> llamadas, tokens, costo, latencia
+  PASO #3: proyectar: ¿cuánto costaría migrar N programas?
+  PASO #4 (MODO=real, opcional): mandar el registro a BigQuery para tableros y auditoría
 
 Correr (desde parte2_gcp/):
     python 21_monitoreo_gobernanza/reporte_costos.py
@@ -30,12 +30,12 @@ def main():
     parser.add_argument("--bigquery", action="store_true", help="exportar el registro a BigQuery")
     args = parser.parse_args()
 
-    registros = leer_registro()                                                     # PASO 1
+    registros = leer_registro()                                                     # PASO #1
     if not registros:
         print(f"No hay registros en {ruta_legible(ARCHIVO_REGISTRO)}. Corre antes los labs 11-19.")
         return
 
-    grupos = defaultdict(list)                                                      # PASO 2
+    grupos = defaultdict(list)                                                      # PASO #2
     for r in registros:
         grupos[(r["modo"], r["tipo"], r["rol"], r["modelo"])].append(r)
 
@@ -50,7 +50,7 @@ def main():
     total = sum(r["costo_usd"] for r in registros)
     print(f"\nTotal: {len(registros)} llamadas, ${total:.6f} USD")
 
-    migraciones = [r for r in registros if r["rol"] == "analista"]                  # PASO 3
+    migraciones = [r for r in registros if r["rol"] == "analista"]                  # PASO #3
     if migraciones:
         costo_programa = sum(r["costo_usd"] for r in registros if r["rol"] in
                              ("analista", "convertidor", "documentador")) / len(migraciones)
@@ -58,7 +58,7 @@ def main():
         print(f"            -> {args.programas:,} programas ≈ ${costo_programa * args.programas:,.2f} USD en tokens")
         print("            (los programas reales son más largos: mide con 10-20 reales antes de presupuestar)")
 
-    if args.bigquery:                                                               # PASO 4
+    if args.bigquery:                                                               # PASO #4
         exportar_a_bigquery(registros)
 
 

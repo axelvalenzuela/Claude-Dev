@@ -1,6 +1,10 @@
 # 17 — Instrucciones
 
-## Paso 1 — En simulado (SQLite local)
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #22 de 26** · [← #21 Evaluación y quality gate](../16_evaluacion/README.md) · [#23 Cloud Functions + Storage →](../18_cloud_functions_storage/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — En simulado (SQLite local)
 
 ```bash
 python 17_bigquery/sas_a_bigquery.py
@@ -8,7 +12,7 @@ python 17_bigquery/sas_a_bigquery.py
 
 Verás los 5 pasos; el SQL aprobado queda en `salida/resumen_ventas.sql`.
 
-## Paso 2 — Crear la infraestructura (Terraform)
+## Paso #2 — Crear la infraestructura (Terraform)
 
 ```bash
 cd ../infra
@@ -21,7 +25,7 @@ cd ../parte2_gcp
 
 Revisa en la consola: **BigQuery > Studio > tu proyecto > migracion_sas**.
 
-## Paso 3 — En real
+## Paso #3 — En real
 
 ```bash
 # .env con MODO=real
@@ -29,7 +33,7 @@ python 17_bigquery/sas_a_bigquery.py
 python 17_bigquery/rag_en_bigquery.py "¿cómo saco el promedio por grupo?"
 ```
 
-En el PASO 3 verás los bytes que leería la consulta (unos cientos de bytes → se factura el mínimo
+En el PASO #3 verás los bytes que leería la consulta (unos cientos de bytes → se factura el mínimo
 de 10 MB → ~0.00006 USD, y cae en el TiB gratis).
 
 Consultas útiles para pegar en BigQuery Studio:

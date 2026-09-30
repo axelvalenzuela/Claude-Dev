@@ -60,18 +60,18 @@ def analizar_sas(cloud_event):
     datos = cloud_event.data
     bucket, nombre = datos["bucket"], datos["name"]
 
-    # PASO 1: filtrar. Todo lo que no sea entrada/*.sas se ignora (evita el ciclo infinito).
+    # PASO #1: filtrar. Todo lo que no sea entrada/*.sas se ignora (evita el ciclo infinito).
     if not (nombre.startswith(CARPETA_ENTRADA) and nombre.endswith(".sas")):
         _log("INFO", "archivo ignorado", archivo=nombre)
         return
 
-    # PASO 2: leer el programa SAS del bucket
+    # PASO #2: leer el programa SAS del bucket
     codigo = _leer(bucket, nombre)
 
-    # PASO 3: analizar con el agente (mismo código que el lab 15)
+    # PASO #3: analizar con el agente (mismo código que el lab 15)
     analisis, respuesta = analista(codigo)
 
-    # PASO 4: guardar el resultado en resultados/
+    # PASO #4: guardar el resultado en resultados/
     destino = CARPETA_RESULTADOS + Path(nombre).stem + ".json"
     _escribir(bucket, destino, analisis.model_dump_json(indent=2))
     _log("INFO", "programa analizado", archivo=nombre, destino=destino, reglas=len(analisis.reglas),

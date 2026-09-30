@@ -1,5 +1,9 @@
 # 04 — Red neuronal (XOR resuelto)
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #9 de 26** · [← #8 Una neurona](../03_una_neurona/README.md) · [#10 Tokens →](../05_tokens/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** si una neurona solo traza una recta, **varias neuronas en capas**
 pueden combinar varias rectas y separar formas más complicadas.
 

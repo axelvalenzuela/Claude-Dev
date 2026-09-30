@@ -1,5 +1,9 @@
 # 15 — Flujo multi-agente: migrar SAS → Python con autocorrección
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #20 de 26** · [← #19 Agente con herramientas](../14_agente_herramientas/README.md) · [#21 Evaluación y quality gate →](../16_evaluacion/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** el núcleo de la vacante: varios agentes especializados, orquestados,
 con un validador determinista que hace que el sistema se corrija solo.
 

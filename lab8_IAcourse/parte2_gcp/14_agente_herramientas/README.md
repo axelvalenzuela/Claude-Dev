@@ -1,5 +1,9 @@
 # 14 — Un agente con herramientas (function calling)
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #19 de 26** · [← #18 RAG con embeddings](../13_embeddings_rag/README.md) · [#20 Multi-agente SAS → Python →](../15_multi_agente/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** qué es realmente un "agente": un LLM dentro de un ciclo que decide qué
 herramienta usar, recibe el resultado y sigue hasta poder responder.
 

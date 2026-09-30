@@ -1,5 +1,9 @@
 # 09 — Mini RAG (lab7 en miniatura, sin nube)
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #14 de 26** · [← #13 Temperatura](../08_temperatura/README.md) · [#15 Preparar el entorno →](../../parte2_gcp/10_setup_gcp/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **El problema:** un LLM no conoce *tus* documentos (el menú de tu
 cafetería, los manuales de tu empresa). Si le preguntas, inventa (micro lab 07).
 

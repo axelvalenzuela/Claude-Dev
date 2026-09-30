@@ -1,6 +1,10 @@
 # 19 — Instrucciones
 
-## Paso 1 — Correr la API local (simulado)
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #24 de 26** · [← #23 Cloud Functions + Storage](../18_cloud_functions_storage/README.md) · [#25 Dataflow y Composer →](../20_composer_dataflow/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Correr la API local (simulado)
 
 ```bash
 uvicorn --app-dir 19_cloud_run_api app:app --reload --port 8080
@@ -14,7 +18,7 @@ python -c "import json;print(json.dumps({'programa':'ventas.sas','codigo_sas':op
 curl -s -X POST localhost:8080/migrar -H "Content-Type: application/json" -d @/tmp/peticion.json | python -m json.tool
 ```
 
-## Paso 2 — Probar el contenedor local (requiere Docker Desktop encendido)
+## Paso #2 — Probar el contenedor local (requiere Docker Desktop encendido)
 
 ```bash
 bash 19_cloud_run_api/preparar_build.sh
@@ -24,7 +28,7 @@ docker run --rm -p 8080:8080 -e MODO=simulado migrador-sas
 
 Si funciona en Docker, funciona en Cloud Run (es el mismo contenedor).
 
-## Paso 3 — Desplegar (real)
+## Paso #3 — Desplegar (real)
 
 ```bash
 export GCP_PROJECT_ID=tu-proyecto
@@ -35,7 +39,7 @@ curl -X POST $URL/migrar -H "Authorization: Bearer $(gcloud auth print-identity-
      -H "Content-Type: application/json" -d @/tmp/peticion.json
 ```
 
-## Paso 4 — Limpiar
+## Paso #4 — Limpiar
 
 ```bash
 gcloud run services delete migrador-sas --region=us-central1

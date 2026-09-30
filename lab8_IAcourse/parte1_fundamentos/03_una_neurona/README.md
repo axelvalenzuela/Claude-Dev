@@ -1,5 +1,9 @@
 # 03 — Una neurona (perceptrón)
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #8 de 26** · [← #7 Aprender = ajustar números](../02_aprender_es_ajustar_numeros/README.md) · [#9 Red neuronal →](../04_red_neuronal/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** una neurona artificial multiplica cada entrada por un **peso**,
 suma todo más un **sesgo**, y si el total pasa de 0 responde 1. Entrenarla
 es ajustar los pesos cada vez que se equivoca.

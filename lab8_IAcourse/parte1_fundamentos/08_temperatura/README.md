@@ -1,5 +1,9 @@
 # 08 — Temperatura
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #13 de 26** · [← #12 Siguiente palabra](../07_siguiente_palabra/README.md) · [#14 Mini RAG →](../09_mini_rag/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** el modelo da un puntaje (**logit**) a cada candidato; **softmax**
 los convierte en probabilidades. La **temperatura** controla qué tan
 "parejas" quedan antes de escoger:

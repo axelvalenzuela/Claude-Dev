@@ -3,10 +3,10 @@
 Un agente que alimenta a OTRO programa no puede responder prosa: necesita
 datos con forma fija. Receta:
 
-  PASO 1: definir la forma con Pydantic        (comun/esquemas.py -> AnalisisSAS)
-  PASO 2: pasarla como response_schema          (comun/llm.py, parámetro esquema=)
-  PASO 3: validar la respuesta con Pydantic     (respuesta.como(AnalisisSAS))
-  PASO 4: si no valida, NO seguir: registrar y reintentar / escalar
+  PASO #1: definir la forma con Pydantic        (comun/esquemas.py -> AnalisisSAS)
+  PASO #2: pasarla como response_schema          (comun/llm.py, parámetro esquema=)
+  PASO #3: validar la respuesta con Pydantic     (respuesta.como(AnalisisSAS))
+  PASO #4: si no valida, NO seguir: registrar y reintentar / escalar
 
 Correr (desde parte2_gcp/):
     python 12_salida_estructurada/extraer_reglas.py
@@ -32,9 +32,9 @@ SISTEMA = (
 
 def analizar(ruta_sas: Path) -> AnalisisSAS:
     codigo = ruta_sas.read_text(encoding="utf-8")
-    # PASO 2: esquema=AnalisisSAS -> Gemini devuelve JSON con esa forma exacta
+    # PASO #2: esquema=AnalisisSAS -> Gemini devuelve JSON con esa forma exacta
     respuesta = llm.generar(f"Programa SAS:\n\n{codigo}", rol="analista", sistema=SISTEMA, esquema=AnalisisSAS)
-    # PASO 3: validar. Si falla aquí, lanza ValidationError con el campo culpable.
+    # PASO #3: validar. Si falla aquí, lanza ValidationError con el campo culpable.
     return respuesta.como(AnalisisSAS)
 
 
@@ -56,7 +56,7 @@ def main():
     salida.write_text(analisis.model_dump_json(indent=2), encoding="utf-8")
     print(f"\nJSON guardado en {salida.relative_to(RAIZ)}")
 
-    # PASO 4: ¿qué pasa si el modelo responde algo que no cumple el esquema?
+    # PASO #4: ¿qué pasa si el modelo responde algo que no cumple el esquema?
     print("\nDemostración: validar un JSON inválido (complejidad='extrema' no existe):")
     try:
         AnalisisSAS.model_validate_json(

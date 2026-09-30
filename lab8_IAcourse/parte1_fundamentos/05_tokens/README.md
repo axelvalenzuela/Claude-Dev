@@ -1,5 +1,9 @@
 # 05 — Tokens
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #10 de 26** · [← #9 Red neuronal](../04_red_neuronal/README.md) · [#11 Embeddings →](../06_embeddings/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** una red neuronal solo procesa números. El texto se corta en
 **tokens** (pedazos) y cada token recibe un id numérico. Los modelos
 actuales usan **subpalabras**, aprendidas juntando los pares de letras

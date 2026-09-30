@@ -1,5 +1,9 @@
 # 20 — Cloud Composer (Airflow) y Dataflow (Apache Beam)
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #25 de 26** · [← #24 API en Cloud Run](../19_cloud_run_api/README.md) · [#26 Monitoreo y gobernanza →](../21_monitoreo_gobernanza/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** los dos destinos de "modernización" que pide la vacante: el proceso SAS
 convertido en un **pipeline de Dataflow**, y la calendarización SAS convertida en un **DAG de Composer**.
 

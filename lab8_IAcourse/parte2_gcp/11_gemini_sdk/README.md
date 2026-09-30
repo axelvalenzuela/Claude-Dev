@@ -1,5 +1,9 @@
 # 11 — Gemini con el SDK `google-genai`
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #16 de 26** · [← #15 Preparar el entorno](../10_setup_gcp/README.md) · [#17 Salida estructurada →](../12_salida_estructurada/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** hacer llamadas a Gemini en Vertex AI y leer lo que importa en
 producción: tokens, costo y latencia.
 

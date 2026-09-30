@@ -1,5 +1,9 @@
 # 01 — Reglas vs. aprendizaje
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #6 de 26** · [← #5 Clases y tipos](../../parte0_python/05_clases_y_tipos/INSTRUCCIONES.md) · [#7 Aprender = ajustar números →](../02_aprender_es_ajustar_numeros/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Idea:** en la programación normal *tú* escribes la regla. En machine
 learning le das **ejemplos con la respuesta correcta** y el programa saca
 la regla solo.

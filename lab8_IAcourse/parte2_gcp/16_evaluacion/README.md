@@ -1,5 +1,9 @@
 # 16 — Evaluar la IA con métricas y un quality gate en CI
 
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #21 de 26** · [← #20 Multi-agente SAS → Python](../15_multi_agente/README.md) · [#22 BigQuery →](../17_bigquery/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
 **Qué aprendes:** cómo saber, con números, si un cambio de prompt o de modelo mejora o empeora
 el sistema, y cómo impedir que un cambio malo llegue a `main`.
 
@@ -11,7 +15,7 @@ el sistema, y cómo impedir que un cambio malo llegue a `main`.
 | Tests de flujo | El pipeline completo en simulado | [tests/test_flujos.py](../tests/test_flujos.py) |
 | Evaluación (golden set) | Calidad de la IA con casos de respuesta conocida | [evaluar.py](evaluar.py) + [casos_golden.json](casos_golden.json) |
 | LLM como juez | Lo subjetivo (claridad de la documentación) con una rúbrica | `SISTEMA_JUEZ` en [evaluar.py](evaluar.py) |
-| Quality gate | Si las métricas bajan del umbral, CI falla | `PASO 5` + [.github/workflows/lab8-ci.yml](../../../.github/workflows/lab8-ci.yml) |
+| Quality gate | Si las métricas bajan del umbral, CI falla | `PASO #5` + [.github/workflows/lab8-ci.yml](../../../.github/workflows/lab8-ci.yml) |
 
 Métricas: **recall** de tipos de regla y de construcciones SAS (¿encontró lo que debía?),
 **estado correcto** (¿aprobó solo lo que debía?), intentos, costo y puntaje del juez.

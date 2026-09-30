@@ -29,7 +29,7 @@ def reportar(estado, mensaje, arreglo=""):
 def main():
     print(f"Modo: {config.modo.upper()}\n")
 
-    # PASO 1: Python y librerías
+    # PASO #1: Python y librerías
     version = sys.version_info
     reportar(OK if version >= (3, 10) else FALLA, f"Python {version.major}.{version.minor}",
              "Instala Python 3.10+ (o usa: uv run --python 3.12 ...)")
@@ -37,7 +37,7 @@ def main():
                             ("python-dotenv", "dotenv"), ("google-cloud-bigquery", "google.cloud.bigquery")]:
         reportar(OK if _existe(modulo) else FALLA, f"paquete {paquete}", "pip install -r requirements.txt")
 
-    # PASO 2: archivo .env
+    # PASO #2: archivo .env
     reportar(OK if (RAIZ / ".env").exists() else AVISO, "archivo parte2_gcp/.env",
              "cp .env.example .env   (sin .env todo corre en modo simulado)")
 
@@ -46,14 +46,14 @@ def main():
         print("y pon MODO=real en .env; luego vuelve a correr este script.")
         return
 
-    # PASO 3: proyecto y herramientas de GCP
+    # PASO #3: proyecto y herramientas de GCP
     proyecto_ok = config.proyecto and config.proyecto != "tu-proyecto-gcp"
     reportar(OK if proyecto_ok else FALLA, f"GCP_PROJECT_ID = {config.proyecto or '(vacío)'}",
              "Pon tu ID real: gcloud config get-value project")
     reportar(OK if shutil.which("gcloud") else AVISO, "gcloud CLI instalado",
              "https://cloud.google.com/sdk/docs/install (lo necesitas para login y deploy)")
 
-    # PASO 4: credenciales (ADC = Application Default Credentials)
+    # PASO #4: credenciales (ADC = Application Default Credentials)
     try:
         import google.auth
 
@@ -63,7 +63,7 @@ def main():
         reportar(FALLA, f"sin credenciales: {type(e).__name__}", "gcloud auth application-default login")
         return
 
-    # PASO 5: una llamada real y barata a Gemini y a embeddings
+    # PASO #5: una llamada real y barata a Gemini y a embeddings
     from comun import llm
 
     try:

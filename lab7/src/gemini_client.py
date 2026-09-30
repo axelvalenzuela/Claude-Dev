@@ -1,14 +1,15 @@
-"""Thin wrapper around the Vertex AI Gemini API (via the google-genai SDK).
+"""Envoltura delgada (thin wrapper) sobre la API de Gemini en Vertex AI
+(a traves del SDK google-genai).
 
-This is the ONLY file in the project that talks to Vertex AI directly.
-Everything else (vector_store.py, rag_engine.py) works with plain Python
-lists/arrays, which makes those pieces testable without any GCP
-credentials — see tests/test_vector_store.py.
+Este es el UNICO archivo del proyecto que habla directamente con Vertex AI.
+Todo lo demas (vector_store.py, rag_engine.py) trabaja con listas/arrays de
+Python puro, lo que permite probar esas piezas sin necesitar credenciales
+de GCP — ver tests/test_vector_store.py.
 
-Authentication: this file never handles credentials itself. The SDK uses
-Application Default Credentials (ADC) automatically:
-  - Local dev: `gcloud auth application-default login` (see INSTRUCCIONES.md)
-  - Cloud Run: the service's attached service account, automatically
+Autenticacion: este archivo nunca maneja credenciales por si mismo. El SDK
+usa Application Default Credentials (ADC) automaticamente:
+  - Desarrollo local: `gcloud auth application-default login` (ver INSTRUCCIONES.md)
+  - Cloud Run: la cuenta de servicio asociada al servicio, de forma automatica
 """
 from __future__ import annotations
 
@@ -18,9 +19,10 @@ from google.genai import types
 
 from src.config import settings
 
-# One client for the whole process. vertexai=True is what makes this call
-# Vertex AI (project/location-scoped, billed to your GCP project) instead
-# of the public Gemini Developer API (which uses a separate API key).
+# Un solo cliente para todo el proceso. vertexai=True es lo que hace que esto
+# llame a Vertex AI (con alcance a un project/location, facturado a tu proyecto
+# de GCP) en lugar de la Gemini Developer API publica (que usa una API key
+# separada).
 _client = genai.Client(
     vertexai=True,
     project=settings.gcp_project_id,
@@ -29,16 +31,18 @@ _client = genai.Client(
 
 
 def embed_texts(texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT") -> np.ndarray:
-    """Turn a list of strings into a matrix of embedding vectors.
+    """Convierte una lista de strings en una matriz de vectores de embedding.
 
-    task_type matters: embedding a document to store it should use
-    RETRIEVAL_DOCUMENT, while embedding a user's question to search should
-    use RETRIEVAL_QUERY. The model nudges the two into a space where a
-    query vector ends up close to the documents that answer it — using the
-    wrong task_type for one side quietly hurts retrieval quality without
-    raising an error, so callers must always pass the right one.
+    task_type importa: si se va a guardar un documento se debe usar
+    RETRIEVAL_DOCUMENT, mientras que si se embebe la pregunta de un usuario
+    para buscar se debe usar RETRIEVAL_QUERY. El modelo acomoda ambos casos
+    en un espacio donde el vector de la consulta termina cerca de los
+    documentos que la responden — usar el task_type incorrecto en alguno de
+    los dos lados degrada silenciosamente la calidad de la busqueda sin
+    lanzar ningun error, asi que quien llame a esta funcion siempre debe
+    pasar el correcto.
 
-    Returns an (len(texts), embedding_dim) float32 array.
+    Retorna un arreglo float32 de forma (len(texts), embedding_dim).
     """
     if not texts:
         return np.zeros((0, 0), dtype="float32")
@@ -53,11 +57,12 @@ def embed_texts(texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT") -> np.n
 
 
 def generate_answer(prompt: str, temperature: float = 0.2) -> str:
-    """Ask Gemini to generate text for a single already-built prompt.
+    """Le pide a Gemini que genere texto para un prompt ya construido.
 
-    Low temperature (0.2) on purpose: this app is answering factual
-    questions about internal documentation, not brainstorming, so we want
-    consistent, grounded answers rather than creative ones.
+    La temperatura baja (0.2) es a proposito: esta app responde preguntas
+    factuales sobre documentacion interna, no hace lluvia de ideas, asi que
+    se busca respuestas consistentes y ancladas en los hechos en vez de
+    respuestas creativas.
     """
     text, _usage = generate_answer_with_usage(prompt, temperature)
     return text
@@ -66,9 +71,10 @@ def generate_answer(prompt: str, temperature: float = 0.2) -> str:
 def generate_answer_with_usage(
     prompt: str, temperature: float = 0.2
 ) -> tuple[str, types.GenerateContentResponseUsageMetadata]:
-    """Same call as generate_answer, but also returns usage_metadata — the
-    actual prompt/response/total token counts Vertex AI billed for this
-    call. See src/count_tokens.py for a CLI that prints it."""
+    """Es la misma llamada que generate_answer, pero ademas retorna el
+    usage_metadata — los conteos reales de tokens (prompt, respuesta y
+    total) que Vertex AI facturo por esta llamada. Ver src/count_tokens.py
+    para un CLI que los imprime."""
     response = _client.models.generate_content(
         model=settings.generation_model,
         contents=prompt,
@@ -81,9 +87,9 @@ def generate_answer_with_usage(
 
 
 def count_tokens(text: str, model: str | None = None) -> int:
-    """Count how many tokens `text` would use for `model` (default: the
-    generation model) WITHOUT calling generate_content — free, no quota
-    spent. Useful to budget a prompt (context window, cost) before sending
-    it for real."""
+    """Cuenta cuantos tokens usaria `text` para `model` (por defecto: el
+    modelo de generacion) SIN llamar a generate_content — es gratis, no
+    consume cuota. Sirve para presupuestar un prompt (ventana de contexto,
+    costo) antes de enviarlo de verdad."""
     response = _client.models.count_tokens(model=model or settings.generation_model, contents=text)
     return response.total_tokens

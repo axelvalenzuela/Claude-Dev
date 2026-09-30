@@ -1,6 +1,10 @@
 # 12 — Instrucciones
 
-## Paso 1 — Correr
+<!-- ruta:inicio -->
+> **Ruta de aprendizaje: ejercicio #17 de 26** · [← #16 Gemini con el SDK](../11_gemini_sdk/README.md) · [#18 RAG con embeddings →](../13_embeddings_rag/README.md) · [ruta completa](../../EMPIEZA_AQUI.md)
+<!-- ruta:fin -->
+
+## Paso #1 — Correr
 
 ```bash
 python 12_salida_estructurada/extraer_reglas.py                          # ventas.sas
@@ -10,17 +14,17 @@ python 12_salida_estructurada/extraer_reglas.py comun/sas/inventario.sas # con P
 
 El JSON queda en `salida/analisis_<programa>.json`.
 
-## Paso 2 — Leer el código
+## Paso #2 — Leer el código
 
 1. [comun/esquemas.py](../comun/esquemas.py): la forma de la respuesta. Nota las `description`: el modelo las lee.
-2. [extraer_reglas.py](extraer_reglas.py): `PASO 2` (pedir con esquema), `PASO 3` (validar), `PASO 4` (qué pasa si no valida).
+2. [extraer_reglas.py](extraer_reglas.py): `PASO #2` (pedir con esquema), `PASO #3` (validar), `PASO #4` (qué pasa si no valida).
 3. En simulado, las reglas salen de expresiones regulares ([comun/simulado.py](../comun/simulado.py), `_analista`).
    En real, Gemini las "entiende": compara ambos resultados.
 
 ## Qué observar
 
 - Cada regla trae su `codigo_sas`: así un auditor puede verificarla.
-- El ejemplo del PASO 4: `complejidad="extrema"` se rechaza porque no está en el `Literal`.
+- El ejemplo del PASO #4: `complejidad="extrema"` se rechaza porque no está en el `Literal`.
 
 ## Si algo falla
 

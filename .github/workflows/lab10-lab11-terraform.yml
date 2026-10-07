@@ -71,7 +71,7 @@ jobs:
           python-version: "3.13"
 
       - name: Compilar código de funciones
-        run: python -m py_compile $(find lab10_terraform_aws/microlabs lab11_terraform_gcp/microlabs -path '*/src/*' -name '*.py') lab10_terraform_aws/sdk-examples/*.py lab11_terraform_gcp/sdk-examples/*.py
+        run: python -m py_compile $(find lab10_terraform_aws/microlabs lab11_terraform_gcp/microlabs -path '*/src/*' -name '*.py') lab10_terraform_aws/sdk-examples/*.py lab11_terraform_gcp/sdk-examples/*.py lab11_terraform_gcp/microlabs/*/scripts/*.py
 
       - name: YAML de Cloud Workflows
         run: python -c "import yaml; yaml.safe_load(open('lab11_terraform_gcp/microlabs/04-document-ai-workflows/workflow.yaml', encoding='utf-8'))"

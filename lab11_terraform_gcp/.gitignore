@@ -26,3 +26,6 @@ gcp_creds.json
 
 # Render temporal del PDF
 docs/.render/
+
+# Imágenes generadas por sdk-examples/15
+sdk-examples/imagen_*.png

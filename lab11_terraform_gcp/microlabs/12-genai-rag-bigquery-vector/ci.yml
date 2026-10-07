@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 12-genai-rag-bigquery-vector. Plantillas en lab11_terraform_gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP12_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp12_vars:
+  variables:
+    LAB_NAME: "12-genai-rag-bigquery-vector"
+    LAB_DIR: "lab11_terraform_gcp/microlabs/12-genai-rag-bigquery-vector"
+    TFVARS_FILE: $GCP12_TFVARS
+
+.gcp12_changes: &gcp12_changes
+  - lab11_terraform_gcp/microlabs/12-genai-rag-bigquery-vector/**/*
+  - lab11_terraform_gcp/modules/**/*
+  - lab11_terraform_gcp/.gitlab-ci.yml
+
+gcp12:validate:
+  extends: [.tf_validate, .gcp12_vars]
+  rules:
+    - changes: *gcp12_changes
+
+gcp12:lint:
+  extends: [.tf_lint, .gcp12_vars]
+  rules:
+    - changes: *gcp12_changes
+
+gcp12:checkov:
+  extends: [.tf_checkov, .gcp12_vars]
+  rules:
+    - changes: *gcp12_changes
+
+gcp12:plan:
+  extends: [.tf_plan, .gcp12_vars]
+  needs: ["gcp12:validate"]
+  rules:
+    - changes: *gcp12_changes
+
+gcp12:apply:
+  extends: [.tf_apply, .gcp12_vars]
+  needs: ["gcp12:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp12_changes
+      when: manual
+
+gcp12:smoke:
+  extends: [.tf_smoke, .gcp12_vars]
+  needs: ["gcp12:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp12_changes
+
+gcp12:destroy:
+  extends: [.tf_destroy, .gcp12_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "12-genai-rag-bigquery-vector"
+      when: manual

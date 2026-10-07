@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 16-genai-tuning-batch-eval. Plantillas en lab11_terraform_gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP16_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp16_vars:
+  variables:
+    LAB_NAME: "16-genai-tuning-batch-eval"
+    LAB_DIR: "lab11_terraform_gcp/microlabs/16-genai-tuning-batch-eval"
+    TFVARS_FILE: $GCP16_TFVARS
+
+.gcp16_changes: &gcp16_changes
+  - lab11_terraform_gcp/microlabs/16-genai-tuning-batch-eval/**/*
+  - lab11_terraform_gcp/modules/**/*
+  - lab11_terraform_gcp/.gitlab-ci.yml
+
+gcp16:validate:
+  extends: [.tf_validate, .gcp16_vars]
+  rules:
+    - changes: *gcp16_changes
+
+gcp16:lint:
+  extends: [.tf_lint, .gcp16_vars]
+  rules:
+    - changes: *gcp16_changes
+
+gcp16:checkov:
+  extends: [.tf_checkov, .gcp16_vars]
+  rules:
+    - changes: *gcp16_changes
+
+gcp16:plan:
+  extends: [.tf_plan, .gcp16_vars]
+  needs: ["gcp16:validate"]
+  rules:
+    - changes: *gcp16_changes
+
+gcp16:apply:
+  extends: [.tf_apply, .gcp16_vars]
+  needs: ["gcp16:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp16_changes
+      when: manual
+
+gcp16:smoke:
+  extends: [.tf_smoke, .gcp16_vars]
+  needs: ["gcp16:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp16_changes
+
+gcp16:destroy:
+  extends: [.tf_destroy, .gcp16_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "16-genai-tuning-batch-eval"
+      when: manual

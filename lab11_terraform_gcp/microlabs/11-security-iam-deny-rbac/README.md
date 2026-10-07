@@ -57,7 +57,19 @@ bash scripts/lab.sh destroy 11-security-iam-deny-rbac
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `locals.rbac` | Roles por equipo | Según tu organización |
+| main.tf → `google_project_iam_custom_role.deployer.permissions` | Permisos del rol custom | Mínimo privilegio |
+| main.tf → `google_iam_deny_policy.guardrails` | Permisos denegados | Nuevos guardrails |
+| main.tf → `locals.log_alerts` | Eventos que alertan | Según tu modelo de amenazas |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

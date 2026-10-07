@@ -1,6 +1,6 @@
 # Lab 11: Micro labs de Google Cloud con Terraform (SRE, serverless, IA y gobernanza)
 
-Versión **GCP** del [lab10_terraform_aws](../lab10_terraform_aws): 12 micro labs independientes y modulares para aprender a desplegar servicios de Google Cloud con Terraform, alineados con el **Google Cloud Architecture Framework** (equivalente al Well-Architected Framework). Se despliegan por GitOps desde **GitLab CI** con **Workload Identity Federation** (sin llaves JSON) y cada uno trae un **smoke test** que verifica el comportamiento real.
+Versión **GCP** del [lab10_terraform_aws](../lab10_terraform_aws): 17 micro labs (12 equivalentes a AWS + 5 de IA generativa) independientes y modulares para aprender a desplegar servicios de Google Cloud con Terraform, alineados con el **Google Cloud Architecture Framework** (equivalente al Well-Architected Framework). Se despliegan por GitOps desde **GitLab CI** con **Workload Identity Federation** (sin llaves JSON) y cada uno trae un **smoke test** que verifica el comportamiento real.
 
 > 📄 Los diagramas, las tablas de implementación y la guía de RBAC y seguridad DevOps para GCP están en [docs/lab11-arquitecturas-gcp.pdf](docs/lab11-arquitecturas-gcp.pdf).
 
@@ -12,6 +12,7 @@ Versión **GCP** del [lab10_terraform_aws](../lab10_terraform_aws): 12 micro lab
 | Practicar el SDK de IA (google-genai + Vertex AI) en scripts cortos | [sdk-examples/](sdk-examples/) |
 | Ver la arquitectura de cada micro lab | [docs/lab11-arquitecturas-gcp.pdf](docs/lab11-arquitecturas-gcp.pdf) |
 | Comparar con AWS | [docs/GUIA-AWS-GCP.md](docs/GUIA-AWS-GCP.md) |
+| **Prepararte como Senior AI Engineer en Google** | [docs/SENIOR-GENAI-GCP.md](docs/SENIOR-GENAI-GCP.md) + micro labs GenAI 12-16 + sdk-examples 01-19 |
 
 Cada carpeta de micro lab se llama `NN-categoria-servicios` (por ejemplo `03-genai-chatbot-vertex-gemini`) y su README empieza con **"Despliegue paso a paso"**.
 
@@ -31,6 +32,11 @@ Cada carpeta de micro lab se llama `NN-categoria-servicios` (por ejemplo `03-gen
 | 09 | [dms-migration](microlabs/09-migration-dms) | Database Migration Service, Cloud SQL, origen simulado | 09 (MGN) | ~USD 2/día ⚠️ |
 | 10 | [org-governance](microlabs/10-governance-org-policies) | Carpetas, Org Policies, tags, firewall jerárquico, fábrica de proyectos | 10 (StackSets + SCP) | USD 0 |
 | 11 | [security-governance](microlabs/11-security-iam-deny-rbac) | Audit logs, sinks, IAM Deny, RBAC, break-glass, SCC/VPC-SC | 11 (CloudTrail + GuardDuty) | Bajo |
+| 12 | [genai-rag-bigquery-vector](microlabs/12-genai-rag-bigquery-vector) | BigQuery ML embeddings, VECTOR_SEARCH, Gemini con citas | 04 + RAG | Por uso |
+| 13 | [genai-vertex-ai-search-grounding](microlabs/13-genai-vertex-ai-search-grounding) | Vertex AI Search, layout parser, grounding de Gemini | — (nuevo) | Por consulta |
+| 14 | [genai-agent-adk](microlabs/14-genai-agent-adk) | Google ADK, herramientas sobre Firestore, sesiones | — (nuevo) | Por token |
+| 15 | [genai-model-armor-safety](microlabs/15-genai-model-armor-safety) | Model Armor (injection, jailbreak, RAI, SDP, URLs) | Bedrock Guardrails (04) | Bajo |
+| 16 | [genai-tuning-batch-eval](microlabs/16-genai-tuning-batch-eval) | SFT/LoRA de Gemini, batch prediction, evaluación | — (nuevo) | Por tokens |
 
 ## Estructura
 
@@ -61,6 +67,8 @@ lab11_terraform_gcp/
 ## Orden recomendado
 
 `00 → 11 → 01 → 02 → 03 → 04 → 07 (sobre 01) → 08 → 05 → 06 → 09 → 10`
+
+**Ruta GenAI (Senior AI Engineer):** `00 → 03 → 12 → 13 → 14 → 15 → 16`, apoyándote en [docs/SENIOR-GENAI-GCP.md](docs/SENIOR-GENAI-GCP.md).
 
 ## Ejecución local
 
@@ -116,9 +124,14 @@ Protecciones: rama `main` protegida, approvals + CODEOWNERS, *protected environm
 | 09 | Origen con pglogical (500/5000 filas), verify; `RUN_MIGRATION=1` → fase CDC |
 | 10 | Org policies efectivas, baseline por proyecto, llave de SA bloqueada |
 | 11 | Auditoría y sinks, **deny policy** bloquea llaves, evento en el log bucket, RBAC |
+| 12 | Ingesta, respuesta con cita correcta, búsqueda semántica, "no tengo esa información" fuera de dominio |
+| 13 | Indexación, grounding con fuentes (modo gemini) y resumen con citas (modo search) |
+| 14 | El agente elige la herramienta correcta, usa memoria, no inventa pedidos y pide datos faltantes |
+| 15 | Model Armor bloquea injection, datos sensibles y URLs maliciosas; deja auditoría |
+| 16 | Dataset SFT, batch prediction terminada y exactitud del modelo base (`RUN_TUNING=1` para fine-tuning) |
 
 > El repositorio vive en **GitHub**; `.github/workflows/lab10-lab11-terraform.yml` ejecuta `fmt` y `validate` de lab10_terraform_aws y lab11_terraform_gcp en cada PR. Los pipelines de este lab están escritos para **GitLab CI**.
 
 ## Estado de validación
 
-Los 12 micro labs pasan `terraform fmt` y `terraform validate` (Terraform 1.13, google 7.x). **No se han desplegado** en un proyecto real: ejecuta `terraform plan` primero. Algunos valores dependen del proyecto y de la región (modelo de Gemini, IDs de organización y facturación) y están marcados en cada README.
+Los 17 micro labs pasan `terraform fmt` y `terraform validate` (Terraform 1.13, google 7.x). **No se han desplegado** en un proyecto real: ejecuta `terraform plan` primero. Algunos valores dependen del proyecto y de la región (modelo de Gemini, IDs de organización y facturación) y están marcados en cada README.

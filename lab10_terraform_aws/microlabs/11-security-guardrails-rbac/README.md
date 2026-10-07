@@ -56,7 +56,20 @@ bash scripts/lab.sh destroy 11-security-guardrails-rbac
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| variables.tf → `rbac_roles` | Roles por función, políticas, duración, boundary | Según tus equipos |
+| policies/developer-boundary.json | Techo de permisos del developer | Al habilitar nuevos servicios |
+| policies/abac-ec2-team.json | Etiqueta usada para ABAC (`Team`) | Otro criterio de aislamiento |
+| policies/scp/*.json | SCPs (regiones, cifrado, root) | Solo en management; probar en sandbox |
+| variables.tf → `config_managed_rules` | Reglas de AWS Config | Según el estándar de cumplimiento |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

@@ -1,0 +1,8 @@
+project_id            = "mi-proyecto-labs"
+region                = "us-central1"
+environment           = "dev"
+owner                 = "axel"
+build_service_account = "projects/mi-proyecto-labs/serviceAccounts/lab11-dev-builder@mi-proyecto-labs.iam.gserviceaccount.com"
+invoker_members       = ["user:tu.correo@dominio.com"]
+model                 = "gemini-2.5-flash"
+# sample_orders = { "PED-2001" = { estado = "enviado", total_mxn = 1200, entrega_estimada = "2026-11-01", categoria = "hogar" } }

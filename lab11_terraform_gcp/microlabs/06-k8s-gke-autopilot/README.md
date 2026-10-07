@@ -56,7 +56,19 @@ bash scripts/lab.sh destroy 06-k8s-gke-autopilot
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| variables.tf → `image` | Tu imagen (non-root, puerto 8080) | Siempre |
+| main.tf → `kubernetes_deployment_v1.app.spec.template` | Recursos, probes, variables de entorno | Según la app |
+| main.tf → `kubernetes_network_policy_v1` | Tráfico permitido | Al agregar servicios |
+| variables.tf → `authorized_networks` | Quién usa kubectl | Siempre (tu IP) |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

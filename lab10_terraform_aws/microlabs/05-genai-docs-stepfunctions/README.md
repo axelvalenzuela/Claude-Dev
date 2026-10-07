@@ -56,7 +56,19 @@ bash scripts/lab.sh destroy 05-genai-docs-stepfunctions
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| statemachine.asl.json.tpl | Estados, `Retry`, `Catch`, ramas del `Parallel` | Para agregar pasos (p. ej. traducción, clasificación) |
+| src/extract/app.py | Formatos soportados, `MAX_CHARS` | Nuevos tipos de documento |
+| src/summarize/app.py | Prompt de resumen y `maxTokens` | Otro estilo de salida |
+| main.tf → `aws_cloudwatch_event_rule.new_document` | Prefijo `incoming/` | Otra carpeta de entrada |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

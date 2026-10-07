@@ -55,7 +55,19 @@ bash scripts/lab.sh destroy 04-genai-chatbot-bedrock
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| variables.tf → `model_id`, `system_prompt`, `max_tokens`, `history_turns` | Modelo, personalidad y presupuesto de tokens | Siempre: define el comportamiento |
+| main.tf → `aws_bedrock_guardrail` | Temas DENY, entidades PII, fuerza de filtros | Según tu dominio (salud, finanzas...) |
+| src/chat/app.py | Formato de historial, parámetros de inferencia | Para RAG o tool use |
+| web/index.html | UI de prueba (CSS/mensajes) | Opcional |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

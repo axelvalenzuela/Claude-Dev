@@ -54,7 +54,18 @@ bash scripts/lab.sh destroy 08-data-bigquery-analytics
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| schemas/events.json | Columnas de la tabla cruda | Nuevos eventos |
+| sql/merge_daily_kpis.sql.tpl | KPIs calculados | Nuevas métricas |
+| main.tf → `google_bigquery_table.v_kpis.view.query` | Qué ven los analistas | Siempre sin PII |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

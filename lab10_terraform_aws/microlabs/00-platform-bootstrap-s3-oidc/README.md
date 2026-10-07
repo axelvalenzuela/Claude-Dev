@@ -55,7 +55,19 @@ bash scripts/lab.sh destroy 00-platform-bootstrap-s3-oidc
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `data.aws_iam_policy_document.plan_trust/apply_trust` | Condición `sub` (`project_path:...:ref:main`) | Si usas otra rama protegida o tags de release |
+| main.tf → `data.aws_iam_policy_document.boundary` | Regiones permitidas, acciones prohibidas | Para endurecer o relajar lo que el pipeline puede hacer |
+| main.tf → `aws_iam_role_policy_attachment.apply` | Cambiar `AdministratorAccess` por políticas mínimas | En producción |
+| variables.tf → `monthly_budget_usd` | Monto y umbrales del presupuesto | Según tu tarjeta / cuenta |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

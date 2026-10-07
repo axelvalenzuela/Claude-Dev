@@ -24,6 +24,11 @@ Esta guía conecta los dos laboratorios. lab10_terraform_aws y lab11_terraform_g
 | Migración | 09 · AWS MGN (servidores) | 09 · DMS (bases de datos) | Landing zone, replicación continua, prueba, cutover, rollback |
 | Gobernanza multi-cuenta | 10 · StackSets + Organizations | 10 · Carpetas + Org Policies + fábrica de proyectos | Baseline idéntico en N cuentas/proyectos, guardrails heredados |
 | Seguridad de cuenta/proyecto | 11 · CloudTrail, Config, GuardDuty, Security Hub, SCP | 11 · Audit logs, sinks, IAM Deny, SCC, VPC-SC | Detección, prevención, RBAC/ABAC, break-glass, respuesta |
+| RAG con vectores propios | — (reto del 04) | 12 · BigQuery Vector Search | Chunking, embeddings, umbral de relevancia, citas |
+| RAG administrado / grounding | Bedrock Knowledge Bases (reto) | 13 · Vertex AI Search | Build vs buy, grounding metadata |
+| Agentes | Bedrock Agents (no incluido) | 14 · ADK | Herramientas, memoria, bucle de agente |
+| Seguridad de LLMs | 04 · Bedrock Guardrails | 15 · Model Armor | Injection, jailbreak, PII, filtros de contenido |
+| Mejora de modelos | — | 16 · Tuning + batch + evaluación | SFT/LoRA, batch, métricas para decidir |
 
 ## 2. Equivalencias de servicios usados
 

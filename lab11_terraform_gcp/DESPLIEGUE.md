@@ -110,6 +110,11 @@ Orden recomendado y prerrequisitos:
 | 9 | `06-k8s-gke-autopilot` | tu IP en `authorized_networks` (cuesta ~USD 3/día) | ~12 min |
 | 10 | `09-migration-dms` | — (cuesta ~USD 2/día) | ~15 min |
 | 11 | `10-governance-org-policies` | organización + permisos de admin | ~5 min |
+| 12 | `12-genai-rag-bigquery-vector` | `invoker_members`; luego `scripts/ingest.py` | ~6 min |
+| 13 | `13-genai-vertex-ai-search-grounding` | `invoker_members`; luego `scripts/import-docs.sh --wait` | ~4 min + indexación |
+| 14 | `14-genai-agent-adk` | `invoker_members` | ~6 min |
+| 15 | `15-genai-model-armor-safety` | `invoker_members`, región con Model Armor | ~5 min |
+| 16 | `16-genai-tuning-batch-eval` | `pip install -r scripts/requirements.txt` (el tuning tiene costo) | ~2 min |
 
 ## Paso 6 (opcional). Pipeline en GitLab
 

@@ -58,7 +58,20 @@ bash scripts/lab.sh destroy 07-sre-slo-cloudwatch-fis
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `locals.burn_windows` | Ventanas y tasas de burn rate | Según el SLO y el horario de on-call |
+| variables.tf → `slo_target`, `latency_p99_ms` | Objetivos de servicio | Acordados con negocio |
+| dashboard.json.tpl | Widgets del dashboard | Para nuevas señales |
+| canary/nodejs/node_modules/index.js | Flujo que verifica el canary | Para rutas críticas adicionales |
+| main.tf → `aws_fis_experiment_template` | Acción de caos y objetivo | Otros GameDays |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

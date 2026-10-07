@@ -55,7 +55,18 @@ bash scripts/lab.sh destroy 01-serverless-apigw-functions-firestore
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| openapi.yaml.tpl → `paths`, `definitions` | Rutas y esquemas (Swagger 2.0) | Nuevas operaciones |
+| openapi.yaml.tpl → `x-google-management.quota` | Cuotas por consumidor | Planes de uso |
+| src/items/main.py | Lógica, `_validate`, colecciones de Firestore | Dominio |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

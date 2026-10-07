@@ -54,7 +54,19 @@ bash scripts/lab.sh destroy 02-events-pubsub-scheduler
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| schemas/order.avsc | Contrato del evento (AVRO) | Cambios de evento (versiona el schema) |
+| main.tf → `filter` de las suscripciones | Filtros por atributos | Nuevos consumidores |
+| main.tf → `retry_policy`, `dead_letter_policy` | Reintentos y DLQ | Según SLA del consumidor |
+| src/processor/main.py | Procesamiento idempotente | Lógica |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

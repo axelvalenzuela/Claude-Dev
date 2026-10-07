@@ -56,7 +56,19 @@ bash scripts/lab.sh destroy 06-web3tier-alb-asg-rds
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| modules/app-tier/user_data.sh.tpl | Tu aplicación real (o usar una AMI horneada) | Siempre en un proyecto real |
+| modules/data-tier/main.tf | Motor, versión, clase, storage, parámetros | Por requisitos de la app |
+| modules/web-tier/main.tf | Listeners, certificado, reglas WAF | Para HTTPS y rutas |
+| main.tf → reglas `db_from_app` / `app_to_db` | Puertos entre capas | Si cambia el motor |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

@@ -52,7 +52,18 @@ bash scripts/lab.sh destroy 02-serverless-appsync-graphql
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| schema.graphql | Tipos, queries, mutations, directivas de auth | Para nuevos campos |
+| resolvers/*.js + `local.resolvers` en main.tf | Un archivo por resolver y su entrada en el mapa | Por cada campo nuevo del schema |
+| variables.tf → `query_depth_limit`, `enable_cache` | Protección y caché | Al crecer el tráfico |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

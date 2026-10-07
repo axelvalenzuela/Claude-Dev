@@ -55,7 +55,18 @@ bash scripts/lab.sh destroy 10-governance-stacksets
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| templates/security-baseline.yaml | Recursos del baseline (roles, reglas, Config) | Para nuevos controles |
+| variables.tf → `baseline_version` | Subir versión en cada cambio | Siempre que cambie el template |
+| variables.tf → `target_ou_ids`, `target_regions` | Dónde se despliega | Al agregar OUs o regiones |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

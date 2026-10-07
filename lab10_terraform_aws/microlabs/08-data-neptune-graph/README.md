@@ -54,7 +54,18 @@ bash scripts/lab.sh destroy 08-data-neptune-graph
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| data/nodes.csv, data/edges.csv | Tu modelo de grafo (formato openCypher) | Siempre |
+| src/client/app.py | Acciones y consultas | Nuevos casos de uso |
+| variables.tf → `min_ncu`, `max_ncu`, `instance_count` | Capacidad y HA | Carga real |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

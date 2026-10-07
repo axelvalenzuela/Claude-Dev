@@ -58,7 +58,18 @@ bash scripts/lab.sh destroy 00-platform-bootstrap-gcs-wif
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `attribute_mapping` / `attribute_condition` | Claims de GitLab y restricción por proyecto | Otro proveedor de CI o más proyectos |
+| main.tf → `google_service_account_iam_member.apply_wif` | `deploy_ref` permitido (rama/tag) | Si despliegas desde tags |
+| variables.tf → `apply_roles` | Roles del SA de despliegue | Reducir a lo mínimo en producción |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

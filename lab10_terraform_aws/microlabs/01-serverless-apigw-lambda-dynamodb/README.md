@@ -52,7 +52,20 @@ bash scripts/lab.sh destroy 01-serverless-apigw-lambda-dynamodb
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| openapi.yaml.tpl → `paths` | Agregar rutas/métodos; cada uno con `x-amazon-apigateway-integration` | Para nuevas operaciones del API |
+| openapi.yaml.tpl → `components.schemas.Item` | Campos, tipos, límites (validación en el borde) | Cuando cambie el modelo de datos |
+| src/items/app.py | Lógica de negocio y llaves `pk/sk` de DynamoDB | Siempre que cambie el dominio |
+| main.tf → `aws_wafv2_web_acl` | Reglas administradas y `waf_rate_limit_per_5min` | Si el WAF bloquea tráfico legítimo |
+| main.tf → `aws_cognito_user_pool` | Password policy, MFA (`OPTIONAL`/`ON`) | Requisitos de seguridad |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

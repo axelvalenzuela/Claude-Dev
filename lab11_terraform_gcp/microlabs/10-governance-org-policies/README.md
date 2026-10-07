@@ -56,7 +56,19 @@ bash scripts/lab.sh destroy 10-governance-org-policies
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `locals.boolean_policies` | Constraints booleanos | Nuevos guardrails |
+| variables.tf → `allowed_locations`, `prod_denied_services` | Ubicaciones y servicios | Residencia de datos |
+| variables.tf → `projects` | Proyectos de la fábrica | Cada proyecto nuevo |
+| modules/project-baseline/main.tf | Qué recibe cada proyecto | Baseline corporativo |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

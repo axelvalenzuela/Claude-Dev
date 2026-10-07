@@ -56,7 +56,18 @@ bash scripts/lab.sh destroy 07-sre-slo-monitoring
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `google_monitoring_slo.*` | SLIs (filtros de métricas) y metas | Por servicio |
+| main.tf → `locals.burn_alerts` | Ventanas y tasas | Según on-call |
+| dashboard.json.tpl | Tiles del dashboard | Nuevas señales |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

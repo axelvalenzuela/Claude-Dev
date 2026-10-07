@@ -56,7 +56,19 @@ bash scripts/lab.sh destroy 03-genai-chatbot-vertex-gemini
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| variables.tf → `system_instruction` | Rol, tono, límites del asistente | Siempre |
+| variables.tf → `model`, `max_output_tokens`, `history_turns` | Calidad vs costo | Según presupuesto |
+| src/chat/main.py → `SAFETY`, `INJECTION`, `BLOCKED_TOPICS` | Guardrails en código | Según dominio (o usa el lab 15) |
+| src/chat/main.py → `GenerateContentConfig` | temperature, tools, response_schema | Para function calling o JSON |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

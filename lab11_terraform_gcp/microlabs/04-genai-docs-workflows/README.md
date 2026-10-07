@@ -54,7 +54,18 @@ bash scripts/lab.sh destroy 04-genai-docs-workflows
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| workflow.yaml → `route` | Extensiones soportadas y su procesamiento | Nuevos formatos (PDF con Document AI) |
+| workflow.yaml → rama `summary_branch` | Prompt y `generationConfig` | Otro tipo de análisis (clasificar, traducir) |
+| main.tf → `google_bigquery_table.documents` | Columnas de resultados | Si guardas más campos |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

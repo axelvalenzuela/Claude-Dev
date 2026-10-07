@@ -1,8 +1,8 @@
 # Ejemplos SDK para IA Engineer: Google Cloud (google-genai + Vertex AI)
 
-Once scripts cortos (20-40 líneas), uno por concepto, con el SDK **`google-genai`** (el mismo que se usa con la Gemini API) sobre **Vertex AI**, más Pub/Sub y BigQuery. Cada archivo empieza con un docstring que explica el concepto, cómo correrlo y qué observar.
+Diecinueve scripts cortos (20-45 líneas), uno por concepto, con el SDK **`google-genai`** (el mismo que se usa con la Gemini API) sobre **Vertex AI**, más Pub/Sub y BigQuery. Cada archivo empieza con un docstring que explica el concepto, cómo correrlo y qué observar.
 
-Los ejemplos 01-09 solo necesitan Vertex AI habilitado. Los 10-11 se conectan con los micro labs desplegados.
+Los ejemplos 01-09 y 12-19 solo necesitan Vertex AI habilitado. Los 10-11 se conectan con los micro labs desplegados.
 
 ## Preparación (5 minutos)
 
@@ -33,6 +33,14 @@ Variables opcionales: `GOOGLE_CLOUD_LOCATION` (default `global`), `GEMINI_MODEL`
 | 09 | `09_llm_evaluacion.py` | Evaluación con casos de prueba | Precisión y exit code para CI | ¿Qué es un quality gate para prompts? |
 | 10 | `10_pubsub_publicar.py` | Eventos con schema (micro lab 02) | Un mensaje inválido es rechazado | ¿Por qué validar el contrato del evento al publicar? |
 | 11 | `11_bigquery_consulta.py` | Dry run de costo + consulta (micro lab 08) | MB escaneados con partición y clustering | ¿Cómo controlas el costo en BigQuery? |
+| 12 | `12_chat_multiturno.py` | Chat con historial (`client.chats`) | Los tokens de entrada crecen por turno | ¿Por qué una conversación larga cuesta más y cómo lo mitigas? |
+| 13 | `13_grounding_google_search.py` | Grounding con Google Search | Fuentes web y búsquedas en `grounding_metadata` | ¿Cuándo grounding con Search y cuándo con tus datos? |
+| 14 | `14_context_caching.py` | Context caching | `cached_content_token_count` y el TTL | ¿Cuándo conviene cachear contexto y cuándo no? |
+| 15 | `15_imagen_generacion.py` | Generación de imágenes (Imagen) | Archivo PNG con marca SynthID | ¿Qué controles de seguridad tiene la generación de imágenes? |
+| 16 | `16_async_concurrencia_reintentos.py` | Concurrencia + backoff con jitter | Reintentos ante 429/503 | ¿Cómo manejas las cuotas (RPM/TPM) en producción? |
+| 17 | `17_code_execution.py` | Code execution (sandbox) | Código generado + resultado exacto | ¿Cómo evitas errores aritméticos de un LLM? |
+| 18 | `18_safety_settings.py` | Safety settings y `finish_reason` | Categorías con riesgo y bloqueo | ¿Safety settings o Model Armor? ¿Por qué ambos? |
+| 19 | `19_llm_as_judge.py` | LLM-as-judge con rúbrica | Calificación JSON por criterio | ¿Cómo evalúas respuestas abiertas a escala? |
 
 ## Ruta sugerida
 
@@ -40,6 +48,7 @@ Variables opcionales: `GOOGLE_CLOUD_LOCATION` (default `global`), `GEMINI_MODEL`
 2. **Integración con sistemas:** 04 → 03.
 3. **Conocimiento propio:** 05 → 06 → 07.
 4. **Datos y eventos:** 10 → 11 con los micro labs 02 y 08.
+5. **Nivel senior (producción):** 12 → 14 → 16 → 18 → 13 → 17 → 19 → 15, y después los micro labs GenAI 12-16.
 
 ## Retos para practicar
 

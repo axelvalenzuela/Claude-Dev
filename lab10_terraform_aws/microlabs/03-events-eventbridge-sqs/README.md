@@ -53,7 +53,19 @@ bash scripts/lab.sh destroy 03-events-eventbridge-sqs
 ```
 <!-- despliegue -->
 
+<!-- modificar -->
+## Qué modificar en los templates
 
+| Archivo / bloque | Qué cambiar | Cuándo |
+|---|---|---|
+| `terraform.tfvars` | Valores de tu entorno: proyecto/cuenta, `owner`, correos, regiones | Siempre, antes del primer apply |
+| main.tf → `event_pattern` de cada regla | Filtros por `source`, `detail-type` o contenido (`numeric`, `prefix`) | Para enrutar nuevos eventos |
+| main.tf → `input_transformer` | Qué campos recibe el consumidor | Cuando el consumidor necesite otro formato |
+| src/processor/app.py | Procesamiento idempotente del evento | Lógica del consumidor |
+| events/order-created.json | Eventos de prueba | Para probar nuevos patrones |
+
+> Regla: cambia **variables** (`terraform.tfvars`) para configurar; cambia **templates y código** para extender. Después de cualquier cambio: `bash scripts/lab.sh plan <lab>` para revisar el impacto antes de aplicar.
+<!-- modificar -->
 ## Arquitectura
 
 ```

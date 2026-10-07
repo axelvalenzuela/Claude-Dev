@@ -2,13 +2,14 @@
 
 Laboratorios prácticos organizados por **área**. Cada lab es un proyecto autocontenido: tiene su propio README, dependencias, configuración de ejemplo y, cuando aplica, pruebas y pipeline de CI.
 
+> **¿Buscas IA generativa, Gemini, Vertex AI, Bedrock o Terraform en AWS/GCP?** Ese material (antes lab07–lab11) vive ahora en su propio repositorio: **[ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws)**.
+
 ```
 Claude-Dev/
 ├── 01-desarrollo-web/            Apps web y APIs (Python)
 ├── 02-mcp-y-agentes/             Servidores MCP y automatización con Claude
-├── 03-cloud-e-infraestructura/   Kubernetes, SAP, Terraform en AWS y GCP
-├── 04-ia-generativa/             Gemini, RAG, agentes y curso de IA
-├── docs/                         Estructura del repo, convenciones y rutas de aprendizaje
+├── 03-cloud-e-infraestructura/   Kubernetes y SAP
+├── docs/                         Estructura del repo, ramas y rutas de aprendizaje
 └── .github/workflows/            CI de los labs (se ejecuta solo cuando cambia su carpeta)
 ```
 
@@ -22,21 +23,27 @@ Claude-Dev/
 | | [lab04-kohi-multi-mcp](02-mcp-y-agentes/lab04-kohi-multi-mcp/) | Web de cafetería usando 3 MCPs combinados (GitHub, SQLite, Playwright) | MCP, Playwright | Intermedio |
 | [Cloud e infraestructura](03-cloud-e-infraestructura/) | [lab05-kubernetes-local](03-cloud-e-infraestructura/lab05-kubernetes-local/) | Objetos básicos de Kubernetes en un clúster local | Kubernetes, kubectl, ingress-nginx | Inicial |
 | | [lab06-sap-s4hana-fiori](03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/) | Arquitectura, assessment y automatización de S/4HANA + Fiori | Terraform, Ansible, pipelines | Avanzado |
-| | [lab10-terraform-aws](03-cloud-e-infraestructura/lab10-terraform-aws/) | 12 micro labs de AWS: serverless, eventos, GenAI (Bedrock), 3 niveles, SRE, migración, gobernanza | Terraform, AWS, GitLab CI | Intermedio-avanzado |
-| | [lab11-terraform-gcp](03-cloud-e-infraestructura/lab11-terraform-gcp/) | 17 micro labs de GCP, incluidos 5 de GenAI (RAG, Vertex AI Search, ADK, Model Armor, tuning) | Terraform, Google Cloud, Vertex AI | Intermedio-avanzado |
-| [IA generativa](04-ia-generativa/) | [lab07-rag-vertex-cloudrun](04-ia-generativa/lab07-rag-vertex-cloudrun/) | Chat con RAG sobre documentos propios, desplegable en Cloud Run | FastAPI, Vertex AI Gemini, Terraform | Intermedio |
-| | [lab08-curso-ia](04-ia-generativa/lab08-curso-ia/) | Curso de 21 micro labs: fundamentos de IA a agentes en GCP | Python, Vertex AI, ADK, BigQuery | Inicial a avanzado |
-| | [lab09-gemini-sdk-basico](04-ia-generativa/lab09-gemini-sdk-basico/) | Primeros scripts con el SDK `google-genai` | Python, Gemini API | Inicial |
+
+Los números lab07–lab11 no se reutilizan: corresponden al material que se movió a [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws) (ver [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md#labs-movidos-a-otro-repositorio)).
 
 ## ¿Por dónde empiezo?
 
 | Si quieres... | Empieza en |
 |---|---|
-| Prepararte como **AI Engineer en Google Cloud** | [Ruta de IA generativa](docs/RUTAS-DE-APRENDIZAJE.md#ruta-1-ai-engineer-en-google-cloud) → lab09 → lab08 → lab07 → lab11 (micro labs 12-16) |
-| Aprender **cloud, Terraform y SRE** | [Ruta cloud/DevOps](docs/RUTAS-DE-APRENDIZAJE.md#ruta-2-cloud-devops-y-sre) → lab05 → lab10 → lab11 |
-| Construir **backends y apps web** | [Ruta backend](docs/RUTAS-DE-APRENDIZAJE.md#ruta-3-backend-y-aplicaciones-web) → lab01 → lab02 |
-| Trabajar con **MCP y Claude** | lab03 → lab04 |
-| Entender cómo está organizado el repo o agregar un lab | [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md) |
+| Construir **backends y apps web** | [Ruta backend](docs/RUTAS-DE-APRENDIZAJE.md#ruta-1-backend-y-aplicaciones-web) → lab01 → lab02 |
+| Trabajar con **MCP y Claude** | [Ruta MCP](docs/RUTAS-DE-APRENDIZAJE.md#ruta-2-mcp-y-automatización-con-claude) → lab03 → lab04 |
+| Aprender **Kubernetes y plataformas empresariales** | [Ruta infraestructura](docs/RUTAS-DE-APRENDIZAJE.md#ruta-3-infraestructura) → lab05 → lab06 |
+| Prepararte como **AI Engineer (GCP/AWS)** | Repositorio [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws) |
+| Entender cómo está organizado el repo, sus ramas o agregar un lab | [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md) |
+
+## Ramas
+
+| Rama | Para qué |
+|---|---|
+| `main` | Versión estable y rama por defecto. Aquí están todos los labs organizados. |
+| `develop` | Trabajo en curso. Cuando algo está listo, se integra a `main` con un Pull Request. |
+
+Flujo completo en [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md#ramas-y-flujo-de-trabajo).
 
 ## Convenciones
 
@@ -49,7 +56,5 @@ Claude-Dev/
 |---|---|---|
 | `lab2-ci.yml` | lab02 | Lint, tests de Django y build de Docker |
 | `lab6-sap-pipeline.yml` | lab06 | Sizing, Terraform y Ansible; despliegue manual |
-| `lab8-ci.yml` | lab08 | Lint, tests, quality gate de evaluación y Terraform |
-| `lab10-lab11-terraform.yml` | lab10 y lab11 | `terraform fmt`/`validate`, scripts y código Python |
 
 Más detalle en [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md).

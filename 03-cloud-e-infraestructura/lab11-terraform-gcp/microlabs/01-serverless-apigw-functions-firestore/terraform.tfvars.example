@@ -1,7 +1,0 @@
-project_id            = "mi-proyecto-labs"
-region                = "us-central1"
-environment           = "dev"
-owner                 = "axel"
-build_service_account = "projects/mi-proyecto-labs/serviceAccounts/lab11-dev-builder@mi-proyecto-labs.iam.gserviceaccount.com"
-quota_per_minute      = 120
-max_instances         = 5

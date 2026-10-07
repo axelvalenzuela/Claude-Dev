@@ -1,8 +1,0 @@
-project_id         = "mi-proyecto-labs"
-region             = "us-central1"
-environment        = "dev"
-owner              = "axel"
-source_subnet_cidr = "10.90.0.0/24"
-create_demo_source = true
-source_host        = null # IP de tu PostgreSQL real si create_demo_source = false
-destination_tier   = "db-custom-1-3840"

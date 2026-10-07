@@ -1,9 +1,0 @@
-project_id           = "mi-proyecto-labs"
-region               = "us-central1"
-environment          = "dev"
-owner                = "axel"
-lab01_state_bucket   = "mi-proyecto-labs-lab11-tfstate" # lee servicio y host del lab 01
-availability_goal    = 0.995
-latency_goal         = 0.95
-latency_threshold_ms = 800
-alert_emails         = ["tu.correo@dominio.com"]

@@ -1,6 +1,6 @@
 # Estructura del repositorio
 
-Cómo está organizado Claude-Dev, qué convenciones siguen los labs y cómo agregar uno nuevo.
+Cómo está organizado Claude-Dev, qué ramas tiene, qué convenciones siguen los labs y cómo agregar uno nuevo.
 
 ## Organización por áreas
 
@@ -9,7 +9,7 @@ Claude-Dev/
 ├── README.md                     Catálogo de labs y por dónde empezar
 ├── docs/
 │   ├── ESTRUCTURA.md             Este documento
-│   └── RUTAS-DE-APRENDIZAJE.md   Rutas por objetivo (IA, cloud, backend)
+│   └── RUTAS-DE-APRENDIZAJE.md   Rutas por objetivo
 ├── 01-desarrollo-web/
 │   ├── README.md
 │   ├── lab01-fastapi-todo/
@@ -21,21 +21,50 @@ Claude-Dev/
 ├── 03-cloud-e-infraestructura/
 │   ├── README.md
 │   ├── lab05-kubernetes-local/
-│   ├── lab06-sap-s4hana-fiori/
-│   ├── lab10-terraform-aws/
-│   └── lab11-terraform-gcp/
-├── 04-ia-generativa/
-│   ├── README.md
-│   ├── lab07-rag-vertex-cloudrun/
-│   ├── lab08-curso-ia/
-│   └── lab09-gemini-sdk-basico/
+│   └── lab06-sap-s4hana-fiori/
 └── .github/workflows/            Un workflow por lab, filtrado por ruta
 ```
 
 - **Área (`NN-area/`):** agrupa labs del mismo tema; su README compara los labs y sugiere el orden.
 - **Lab (`labNN-tema/`):** el número es el orden de creación (no se reutiliza); el tema describe qué se construye.
 
-## Equivalencia con los nombres anteriores
+## Ramas y flujo de trabajo
+
+El repositorio tiene solo dos ramas:
+
+| Rama | Contenido | Reglas |
+|---|---|---|
+| `main` | Versión estable; rama por defecto en GitHub | No se trabaja directo aquí: solo recibe Pull Requests desde `develop` |
+| `develop` | Trabajo en curso | Aquí haces commits; cuando algo está terminado y validado, abres un PR a `main` |
+
+Flujo diario:
+
+```bash
+git switch develop
+git pull
+# ... trabajas y haces commits ...
+git push
+# en GitHub: Pull Request develop -> main; al aprobarlo, main queda actualizado
+git switch develop && git merge main      # opcional: re-sincronizar develop después del merge
+```
+
+Si quieres probar algo grande sin ensuciar `develop`, crea una rama temporal desde `develop` (`git switch -c prueba-x`), intégrala con un PR y **bórrala al terminar** para que siempre queden solo estas dos.
+
+## Labs movidos a otro repositorio
+
+Los labs de IA generativa y Terraform en la nube se movieron a [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws), un repositorio enfocado en la preparación como AI Engineer en Google Cloud y AWS. Sus números no se reutilizan aquí.
+
+| Antes (Claude-Dev) | Ahora (ai-engineer-gcp-aws) |
+|---|---|
+| `lab07-rag-vertex-cloudrun` | `05-rag-app-cloud-run` |
+| `lab08-curso-ia` parte 0 / parte 1 / parte 2 | `01-python-for-ai` / `02-ai-fundamentals` / `04-vertex-ai-projects` |
+| `lab09-gemini-sdk-basico` | `03-gemini-sdk/01-gemini-api-quickstart` |
+| `lab10-terraform-aws` | `08-terraform-aws` (y sus ejemplos de SDK en `07-bedrock-sdk`) |
+| `lab11-terraform-gcp` | `06-terraform-gcp` (y sus ejemplos de SDK en `03-gemini-sdk/02-vertex-ai-examples`) |
+
+El historial de esos archivos sigue disponible en Git (`git log -- 04-ia-generativa/`).
+
+## Equivalencia con los nombres originales
 
 | Antes | Ahora |
 |---|---|
@@ -45,15 +74,7 @@ Claude-Dev/
 | `lab4/` | `02-mcp-y-agentes/lab04-kohi-multi-mcp/` |
 | `lab5/` | `03-cloud-e-infraestructura/lab05-kubernetes-local/` |
 | `lab6/` | `03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/` |
-| `lab7/` | `04-ia-generativa/lab07-rag-vertex-cloudrun/` |
-| `lab8_IAcourse/` | `04-ia-generativa/lab08-curso-ia/` |
-| `lab9_googleSDK/` | `04-ia-generativa/lab09-gemini-sdk-basico/` |
-| `lab10_terraform_aws/` | `03-cloud-e-infraestructura/lab10-terraform-aws/` |
-| `lab11_terraform_gcp/` | `03-cloud-e-infraestructura/lab11-terraform-gcp/` |
-
-Al mover los labs se actualizaron los links entre labs, las rutas de los workflows de GitHub Actions, el pipeline de GitLab del lab06 y las rutas y llaves de estado de los pipelines de lab10/lab11. Las rutas *dentro* de cada lab no cambiaron.
-
-> **Estado de Terraform (lab10/lab11):** la llave del estado ahora incluye la ruta nueva (`03-cloud-e-infraestructura/lab10-terraform-aws/<lab>/<env>`). Si ya habías desplegado algo con la ruta anterior, haz `terraform init -migrate-state` con la nueva `key`/`prefix` o destruye primero con la configuración anterior.
+| `lab7/`, `lab8_IAcourse/`, `lab9_googleSDK/`, `lab10_terraform_aws/`, `lab11_terraform_gcp/` | Repositorio [ai-engineer-gcp-aws](#labs-movidos-a-otro-repositorio) |
 
 ## Convenciones de cada lab
 
@@ -75,7 +96,7 @@ Al mover los labs se actualizaron los links entre labs, las rutas de los workflo
 
 ## Cómo agregar un lab nuevo
 
-1. Elige el área (o crea una nueva `05-...` si ninguna aplica) y el siguiente número libre: `labNN-tema`.
+1. Elige el área (o crea una nueva `04-...` si ninguna aplica) y el siguiente número libre: `lab12-tema`.
 2. Crea la carpeta con al menos:
    ```
    labNN-tema/
@@ -87,3 +108,4 @@ Al mover los labs se actualizaron los links entre labs, las rutas de los workflo
 3. Agrega una fila en el README del área y en el [catálogo del README raíz](../README.md#catálogo-de-labs).
 4. Si tiene CI, crea `.github/workflows/labNN-ci.yml` con `paths` y `working-directory` del lab.
 5. Si conviene, agrégalo a una ruta en [RUTAS-DE-APRENDIZAJE.md](RUTAS-DE-APRENDIZAJE.md).
+6. Trabaja en `develop` y súbelo a `main` con un Pull Request.

@@ -1,9 +1,0 @@
-NubeMX - Seguridad y residencia de datos
-
-Los datos de los clientes se almacenan cifrados en reposo con AES-256 y en tránsito con TLS 1.2 o superior. El plan Empresa permite usar llaves administradas por el cliente (CMEK).
-
-Los datos de clientes en México se alojan en la región de Querétaro con respaldo en Estados Unidos. Los respaldos se conservan 35 días.
-
-NubeMX cuenta con certificación ISO 27001 y reporte SOC 2 Tipo II, disponibles bajo acuerdo de confidencialidad.
-
-Para eliminar una cuenta, el administrador abre una solicitud en el portal; los datos se borran de forma definitiva en un plazo máximo de 30 días.

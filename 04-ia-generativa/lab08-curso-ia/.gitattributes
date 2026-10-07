@@ -1,6 +1,0 @@
-# Finales de línea fijos para que funcionen igual en Windows, Mac y Linux.
-# Los scripts de bash y el Dockerfile se rompen con CRLF ($'\r': command not found).
-*.sh        text eol=lf
-Dockerfile  text eol=lf
-# El PDF es binario: git nunca debe convertir sus bytes.
-*.pdf       binary

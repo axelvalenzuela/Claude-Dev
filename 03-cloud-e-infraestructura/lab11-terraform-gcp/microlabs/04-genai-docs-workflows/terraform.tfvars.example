@@ -1,9 +1,0 @@
-project_id              = "mi-proyecto-labs"
-region                  = "us-central1"
-environment             = "dev"
-owner                   = "axel"
-model                   = "gemini-2.5-flash"
-vertex_location         = "us-central1"
-language                = "es"
-document_retention_days = 30
-notification_channels   = []

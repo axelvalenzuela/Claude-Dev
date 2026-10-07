@@ -1,8 +1,0 @@
-# Copia a terraform.tfvars (está en .gitignore) y edita.
-proyecto = "tu-proyecto-gcp"
-region   = "us-central1"
-
-# Opcional: crea un presupuesto con alertas. Encuéntralo con: gcloud billing accounts list
-# billing_account_id  = "XXXXXX-XXXXXX-XXXXXX"
-# presupuesto_mensual = 200
-# moneda_presupuesto  = "MXN"   # la moneda de TU cuenta de facturación

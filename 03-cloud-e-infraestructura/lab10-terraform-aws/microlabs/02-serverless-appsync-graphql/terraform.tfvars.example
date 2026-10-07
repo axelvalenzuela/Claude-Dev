@@ -1,8 +1,0 @@
-aws_region         = "us-east-1"
-project            = "lab10"
-environment        = "dev"
-owner              = "tu.correo@dominio.com"
-field_log_level    = "ERROR"
-query_depth_limit  = 5
-enable_cache       = false
-log_retention_days = 30

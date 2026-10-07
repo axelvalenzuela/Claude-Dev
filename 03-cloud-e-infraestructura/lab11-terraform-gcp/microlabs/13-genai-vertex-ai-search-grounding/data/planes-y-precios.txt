@@ -1,9 +1,0 @@
-NubeMX - Planes y precios
-
-Plan Básico: 10 dólares al mes por usuario. Incluye 20 GB de almacenamiento, soporte por correo con respuesta en 24 horas y hasta 5 proyectos.
-
-Plan Pro: 25 dólares al mes por usuario. Incluye 200 GB de almacenamiento, soporte por chat 8x5, proyectos ilimitados e integración con Slack y Google Workspace.
-
-Plan Empresa: precio a la medida. Incluye almacenamiento ilimitado, soporte 24/7 con tiempo de respuesta de 1 hora para incidentes críticos, SSO con SAML, registros de auditoría y acuerdo de nivel de servicio (SLA) de 99.95 por ciento.
-
-Los pagos anuales tienen 15 por ciento de descuento. Los precios no incluyen IVA.

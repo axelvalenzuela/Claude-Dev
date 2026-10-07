@@ -1,4 +1,0 @@
-google-genai>=1.20
-pydantic>=2.7
-google-cloud-pubsub>=2.25
-google-cloud-bigquery>=3.25

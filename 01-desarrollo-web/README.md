@@ -9,4 +9,4 @@ Aplicaciones web y APIs en Python, de un CRUD sencillo a una aplicación empresa
 
 **Orden sugerido:** lab01 (fundamentos de API) → lab02 (aplicación completa).
 
-**Relación con otras áreas:** el lab02 incluye infraestructura AWS con CloudFormation; para Terraform y arquitecturas de referencia continúa con [lab10-terraform-aws](../03-cloud-e-infraestructura/lab10-terraform-aws/).
+**Relación con otras áreas:** el lab02 incluye infraestructura AWS con CloudFormation; para Terraform y arquitecturas de referencia continúa con el módulo `08-terraform-aws` del repositorio [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws).

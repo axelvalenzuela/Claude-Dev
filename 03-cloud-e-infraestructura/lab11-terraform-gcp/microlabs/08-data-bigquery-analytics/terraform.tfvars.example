@@ -1,8 +1,0 @@
-project_id         = "mi-proyecto-labs"
-region             = "us-central1"
-environment        = "dev"
-owner              = "axel"
-bq_location        = "US"
-raw_retention_days = 90
-kpi_schedule       = "every day 06:00"
-analyst_members    = [] # ["group:analistas@dominio.com"]

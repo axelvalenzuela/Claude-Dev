@@ -9,4 +9,4 @@ Labs sobre el **Model Context Protocol (MCP)**: cómo exponer herramientas a un 
 
 **Orden sugerido:** lab03 (crear un MCP) → lab04 (usar varios MCPs juntos).
 
-**Relación con otras áreas:** los agentes con herramientas propias en Google Cloud están en [lab11-terraform-gcp · micro lab 14 (ADK)](../03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/14-genai-agent-adk/) y en [lab08-curso-ia](../04-ia-generativa/lab08-curso-ia/) (agentes y multi-agente).
+**Relación con otras áreas:** los agentes con herramientas propias en Google Cloud están en el repositorio [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws): `04-vertex-ai-projects` (agentes y multi-agente) y `06-terraform-gcp`, micro lab 14 (ADK).

@@ -1,4 +1,0 @@
-# Aparte del requirements.txt principal porque Beam es pesado (cientos de MB).
-# [gcp] agrega los conectores de Dataflow, BigQuery y Cloud Storage.
-apache-beam[gcp]==2.76.0
-pandas==3.0.6

@@ -1,8 +1,0 @@
-# Secretos y configuración local
-.env
-
-# Generado al correr los labs
-.registros/
-salida/
-.indice_*.json
-build/

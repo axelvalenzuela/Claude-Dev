@@ -1,0 +1,6 @@
+project_id            = "mi-proyecto-labs"
+region                = "us-central1" # región soportada para tuning y batch de Gemini
+environment           = "dev"
+owner                 = "axel"
+data_retention_days   = 30
+notification_channels = []

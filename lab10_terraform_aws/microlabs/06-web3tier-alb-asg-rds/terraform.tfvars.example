@@ -1,0 +1,15 @@
+aws_region              = "us-east-1"
+project                 = "lab10"
+environment             = "dev"
+owner                   = "tu.correo@dominio.com"
+vpc_cidr                = "10.60.0.0/16"
+az_count                = 2
+single_nat_gateway      = true  # false en producción (un NAT por AZ)
+certificate_arn         = null  # "arn:aws:acm:us-east-1:<account>:certificate/<id>" para HTTPS
+app_instance_type       = "t4g.micro"
+app_min_size            = 2
+app_max_size            = 4
+db_instance_class       = "db.t4g.micro"
+db_allocated_storage_gb = 20
+db_multi_az             = true
+deletion_protection     = false # true en producción

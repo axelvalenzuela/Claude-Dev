@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 09-migration-dms. Plantillas en lab11_terraform_gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP09_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp09_vars:
+  variables:
+    LAB_NAME: "09-migration-dms"
+    LAB_DIR: "lab11_terraform_gcp/microlabs/09-migration-dms"
+    TFVARS_FILE: $GCP09_TFVARS
+
+.gcp09_changes: &gcp09_changes
+  - lab11_terraform_gcp/microlabs/09-migration-dms/**/*
+  - lab11_terraform_gcp/modules/**/*
+  - lab11_terraform_gcp/.gitlab-ci.yml
+
+gcp09:validate:
+  extends: [.tf_validate, .gcp09_vars]
+  rules:
+    - changes: *gcp09_changes
+
+gcp09:lint:
+  extends: [.tf_lint, .gcp09_vars]
+  rules:
+    - changes: *gcp09_changes
+
+gcp09:checkov:
+  extends: [.tf_checkov, .gcp09_vars]
+  rules:
+    - changes: *gcp09_changes
+
+gcp09:plan:
+  extends: [.tf_plan, .gcp09_vars]
+  needs: ["gcp09:validate"]
+  rules:
+    - changes: *gcp09_changes
+
+gcp09:apply:
+  extends: [.tf_apply, .gcp09_vars]
+  needs: ["gcp09:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp09_changes
+      when: manual
+
+gcp09:smoke:
+  extends: [.tf_smoke, .gcp09_vars]
+  needs: ["gcp09:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp09_changes
+
+gcp09:destroy:
+  extends: [.tf_destroy, .gcp09_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "09-migration-dms"
+      when: manual

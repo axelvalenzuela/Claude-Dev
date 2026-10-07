@@ -1,0 +1,9 @@
+[
+  { "name": "event_id",   "type": "STRING",    "mode": "REQUIRED", "description": "Llave de idempotencia" },
+  { "name": "event_ts",   "type": "TIMESTAMP", "mode": "REQUIRED" },
+  { "name": "event_type", "type": "STRING",    "mode": "REQUIRED", "description": "page_view | add_to_cart | purchase" },
+  { "name": "user_id",    "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "email",      "type": "STRING",    "mode": "NULLABLE", "description": "PII: nunca se expone en vistas compartidas" },
+  { "name": "country",    "type": "STRING",    "mode": "NULLABLE" },
+  { "name": "amount",     "type": "NUMERIC",   "mode": "NULLABLE" }
+]

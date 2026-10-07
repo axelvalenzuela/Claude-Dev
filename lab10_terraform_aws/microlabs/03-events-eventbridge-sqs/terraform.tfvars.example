@@ -1,0 +1,10 @@
+aws_region             = "us-east-1"
+project                = "lab10"
+environment            = "dev"
+owner                  = "tu.correo@dominio.com"
+archive_retention_days = 7
+producer_account_ids   = [] # p. ej. ["111122223333"]
+high_value_threshold   = 1000
+report_schedule        = "rate(1 hour)" # o "cron(0 8 ? * MON-FRI *)"
+schedule_timezone      = "America/Tijuana"
+log_retention_days     = 14

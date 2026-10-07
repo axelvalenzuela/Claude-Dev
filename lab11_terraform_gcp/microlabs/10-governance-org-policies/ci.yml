@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 10-governance-org-policies. Plantillas en lab11_terraform_gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP10_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp10_vars:
+  variables:
+    LAB_NAME: "10-governance-org-policies"
+    LAB_DIR: "lab11_terraform_gcp/microlabs/10-governance-org-policies"
+    TFVARS_FILE: $GCP10_TFVARS
+
+.gcp10_changes: &gcp10_changes
+  - lab11_terraform_gcp/microlabs/10-governance-org-policies/**/*
+  - lab11_terraform_gcp/modules/**/*
+  - lab11_terraform_gcp/.gitlab-ci.yml
+
+gcp10:validate:
+  extends: [.tf_validate, .gcp10_vars]
+  rules:
+    - changes: *gcp10_changes
+
+gcp10:lint:
+  extends: [.tf_lint, .gcp10_vars]
+  rules:
+    - changes: *gcp10_changes
+
+gcp10:checkov:
+  extends: [.tf_checkov, .gcp10_vars]
+  rules:
+    - changes: *gcp10_changes
+
+gcp10:plan:
+  extends: [.tf_plan, .gcp10_vars]
+  needs: ["gcp10:validate"]
+  rules:
+    - changes: *gcp10_changes
+
+gcp10:apply:
+  extends: [.tf_apply, .gcp10_vars]
+  needs: ["gcp10:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp10_changes
+      when: manual
+
+gcp10:smoke:
+  extends: [.tf_smoke, .gcp10_vars]
+  needs: ["gcp10:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp10_changes
+
+gcp10:destroy:
+  extends: [.tf_destroy, .gcp10_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "10-governance-org-policies"
+      when: manual

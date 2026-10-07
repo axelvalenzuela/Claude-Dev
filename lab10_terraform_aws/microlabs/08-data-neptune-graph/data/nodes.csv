@@ -1,0 +1,9 @@
+:ID,:LABEL,name:String,city:String,risk:Int
+p1,Person,Ana,Tijuana,10
+p2,Person,Luis,Mexicali,20
+p3,Person,Sofia,Ensenada,85
+p4,Person,Carlos,Tijuana,15
+a1,Account,ACC-001,Tijuana,0
+a2,Account,ACC-002,Mexicali,0
+a3,Account,ACC-003,Ensenada,0
+d1,Device,iphone-9f2,Tijuana,0

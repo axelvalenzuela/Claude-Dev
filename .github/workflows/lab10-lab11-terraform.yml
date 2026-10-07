@@ -1,0 +1,77 @@
+# CI de lab10 (AWS) y lab11 (GCP): micro labs de Terraform. Corre en cada push/PR que los toque.
+#
+# Sin credenciales de nube y sin costo: valida el código, no despliega.
+#   1. terraform -> fmt -check + init -backend=false + validate de cada micro lab
+#   2. scripts   -> bash -n de los smoke tests y shellcheck (errores)
+#   3. python    -> compilación de las funciones Lambda / Cloud Run functions
+# El despliegue real (plan/apply/smoke) vive en los pipelines de GitLab: lab10/.gitlab-ci.yml y lab11/.gitlab-ci.yml.
+name: lab10-lab11 Terraform
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["lab10/**", "lab11/**", ".github/workflows/lab10-lab11-terraform.yml"]
+  pull_request:
+    paths: ["lab10/**", "lab11/**", ".github/workflows/lab10-lab11-terraform.yml"]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lab: [lab10, lab11]
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13.*"
+          terraform_wrapper: false
+
+      - name: Cache de providers
+        uses: actions/cache@v4
+        with:
+          path: .terraform-plugin-cache
+          key: tf-${{ matrix.lab }}-${{ hashFiles(format('{0}/microlabs/*/versions.tf', matrix.lab)) }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff ${{ matrix.lab }}
+
+      - name: terraform validate (todos los micro labs)
+        run: |
+          mkdir -p "$TF_PLUGIN_CACHE_DIR"
+          status=0
+          for d in ${{ matrix.lab }}/microlabs/*/; do
+            echo "::group::$d"
+            if terraform -chdir="$d" init -backend=false -input=false >/dev/null && terraform -chdir="$d" validate -no-color; then
+              echo "OK $d"
+            else
+              echo "::error::validate falló en $d"; status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $status
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sintaxis de bash
+        run: for f in lab10/scripts/*.sh lab10/microlabs/*/scripts/*.sh lab11/scripts/*.sh lab11/microlabs/*/scripts/*.sh; do bash -n "$f"; done
+
+      - name: shellcheck (solo errores)
+        run: shellcheck --severity=error lab10/scripts/*.sh lab10/microlabs/*/scripts/*.sh lab11/scripts/*.sh lab11/microlabs/*/scripts/*.sh
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compilar código de funciones
+        run: python -m py_compile $(find lab10/microlabs lab11/microlabs -path '*/src/*' -name '*.py')
+
+      - name: YAML de Cloud Workflows
+        run: python -c "import yaml; yaml.safe_load(open('lab11/microlabs/04-document-ai-workflows/workflow.yaml', encoding='utf-8'))"

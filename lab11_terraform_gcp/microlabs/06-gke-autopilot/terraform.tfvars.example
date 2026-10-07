@@ -1,0 +1,9 @@
+project_id          = "mi-proyecto-labs"
+region              = "us-central1"
+environment         = "dev"
+owner               = "axel"
+authorized_networks = ["203.0.113.10/32"] # tu IP pública (curl ifconfig.me)
+image               = "nginxinc/nginx-unprivileged:1.27-alpine"
+min_replicas        = 2
+max_replicas        = 6
+deletion_protection = false

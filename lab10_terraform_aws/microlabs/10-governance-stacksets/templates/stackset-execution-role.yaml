@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Solo para permission_model = SELF_MANAGED (cuentas fuera de AWS Organizations).
+  Despliega este template en CADA cuenta destino para que la cuenta administradora pueda operar StackSets.
+
+Parameters:
+  AdministratorAccountId:
+    Type: String
+    AllowedPattern: "^\\d{12}$"
+
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AWSCloudFormationStackSetExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AdministratorAccountId}:role/AWSCloudFormationStackSetAdministrationRole"
+            Action: sts:AssumeRole
+      # Para producción reemplaza AdministratorAccess por una política limitada a lo que el baseline crea.
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess"

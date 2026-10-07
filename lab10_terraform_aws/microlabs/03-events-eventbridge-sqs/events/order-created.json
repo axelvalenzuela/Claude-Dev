@@ -1,0 +1,20 @@
+[
+  {
+    "Source": "com.lab10.orders",
+    "DetailType": "order.created",
+    "Detail": "{\"orderId\": \"A-1001\", \"amount\": 250, \"customer\": \"c-01\"}",
+    "EventBusName": "lab10-dev-evt-orders"
+  },
+  {
+    "Source": "com.lab10.orders",
+    "DetailType": "order.created",
+    "Detail": "{\"orderId\": \"A-1002\", \"amount\": 4800, \"customer\": \"c-02\"}",
+    "EventBusName": "lab10-dev-evt-orders"
+  },
+  {
+    "Source": "com.lab10.orders",
+    "DetailType": "order.created",
+    "Detail": "{\"orderId\": \"A-1003\", \"customer\": \"c-03\"}",
+    "EventBusName": "lab10-dev-evt-orders"
+  }
+]

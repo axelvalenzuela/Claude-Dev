@@ -1,0 +1,169 @@
+# =============================================================================
+# lab11 - Pipeline GitOps de Terraform para los micro labs de GCP
+#
+# Si el repositorio raíz es Claude-Dev, configura en GitLab:
+#   Settings > CI/CD > General pipelines > CI/CD configuration file = lab11/.gitlab-ci.yml
+#
+# validate (fmt + validate + tflint) -> security (checkov) -> plan -> apply (manual, main) -> smoke -> destroy
+# Autenticación: GitLab id_token -> Workload Identity Federation -> impersonación de SA (sin llaves JSON)
+# =============================================================================
+
+stages:
+  - validate
+  - security
+  - plan
+  - apply
+  - smoke
+  - destroy
+
+variables:
+  TF_VERSION: "1.13"
+  TF_ENV: "dev"
+  GOOGLE_CLOUD_REGION: "us-central1"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_PLUGIN_CACHE_DIR: "${CI_PROJECT_DIR}/.terraform-plugin-cache"
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+include:
+  - local: "lab11/microlabs/*/ci.yml"
+
+# -----------------------------------------------------------------------------
+# Autenticación con Workload Identity Federation
+#   GCP_WIF_PROVIDER = projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/gitlab
+#   GCP_SA           = SA a impersonar (plan o apply)
+# -----------------------------------------------------------------------------
+.gcp_wif:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+
+.gcp_auth: &gcp_auth
+  - echo "$GITLAB_OIDC_TOKEN" > /tmp/oidc_token
+  - >
+    printf '{"type":"external_account","audience":"//iam.googleapis.com/%s","subject_token_type":"urn:ietf:params:oauth:token-type:jwt","token_url":"https://sts.googleapis.com/v1/token","credential_source":{"file":"/tmp/oidc_token"},"service_account_impersonation_url":"https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken"}'
+    "$GCP_WIF_PROVIDER" "$GCP_SA" > /tmp/gcp_creds.json
+  - export GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp_creds.json
+  - export GOOGLE_CLOUD_PROJECT="$GCP_PROJECT_ID"
+
+.tf_init: &tf_init
+  - terraform init -backend-config="bucket=${TF_STATE_BUCKET}" -backend-config="prefix=lab11/${LAB_NAME}/${TF_ENV}"
+
+.tf_base:
+  image:
+    name: hashicorp/terraform:${TF_VERSION}
+    entrypoint: [""]
+  cache:
+    key: "tf-plugins-${LAB_NAME}"
+    paths:
+      - .terraform-plugin-cache/
+  before_script:
+    - mkdir -p "$TF_PLUGIN_CACHE_DIR"
+    - cd "$LAB_DIR"
+    - if [ -n "${TFVARS_FILE:-}" ] && [ -f "${TFVARS_FILE}" ]; then cp "$TFVARS_FILE" ci.auto.tfvars; fi
+
+.tf_validate:
+  extends: .tf_base
+  stage: validate
+  script:
+    - terraform fmt -check -recursive -diff
+    - terraform init -backend=false
+    - terraform validate
+
+.tf_lint:
+  stage: validate
+  image:
+    name: ghcr.io/terraform-linters/tflint:latest
+    entrypoint: [""]
+  script:
+    - cd "$LAB_DIR"
+    - tflint --init || true
+    - tflint --recursive --minimum-failure-severity=error
+  allow_failure: true
+
+.tf_checkov:
+  stage: security
+  image:
+    name: bridgecrew/checkov:latest
+    entrypoint: [""]
+  script:
+    - checkov -d "$LAB_DIR" --framework terraform --compact --quiet
+      --output cli --output junitxml --output-file-path console,checkov-report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: checkov-report.xml
+  allow_failure: true
+
+.tf_plan:
+  extends: [.tf_base, .gcp_wif]
+  stage: plan
+  variables:
+    GCP_SA: $GCP_PLAN_SA
+  script:
+    - *gcp_auth
+    - *tf_init
+    - terraform plan -lock-timeout=5m -out=plan.tfplan
+    - terraform show -no-color plan.tfplan > plan.txt
+  artifacts:
+    expire_in: 7 days
+    paths:
+      - ${LAB_DIR}/plan.tfplan
+      - ${LAB_DIR}/plan.txt
+      - ${LAB_DIR}/.build/
+      - ${LAB_DIR}/.terraform.lock.hcl
+
+.tf_apply:
+  extends: [.tf_base, .gcp_wif]
+  stage: apply
+  variables:
+    GCP_SA: $GCP_APPLY_SA
+  resource_group: ${LAB_NAME}-${TF_ENV}
+  timeout: 1h
+  environment:
+    name: gcp-${TF_ENV}/${LAB_NAME}
+    action: start
+  script:
+    - *gcp_auth
+    - *tf_init
+    - terraform apply -lock-timeout=5m plan.tfplan
+    - terraform output -json > outputs.json
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${LAB_DIR}/outputs.json
+
+.tf_smoke:
+  extends: [.gcp_wif]
+  stage: smoke
+  image: google/cloud-sdk:stable
+  variables:
+    GCP_SA: $GCP_APPLY_SA
+    OUTPUTS_JSON: ${CI_PROJECT_DIR}/${LAB_DIR}/outputs.json
+  before_script:
+    - apt-get install -y -qq jq >/dev/null 2>&1 || true
+  script:
+    - *gcp_auth
+    - gcloud auth login --cred-file=/tmp/gcp_creds.json --quiet
+    - gcloud config set project "$GCP_PROJECT_ID"
+    - bash "$LAB_DIR/scripts/smoke-test.sh"
+
+.tf_destroy:
+  extends: [.tf_base, .gcp_wif]
+  stage: destroy
+  variables:
+    GCP_SA: $GCP_APPLY_SA
+  resource_group: ${LAB_NAME}-${TF_ENV}
+  timeout: 1h
+  environment:
+    name: gcp-${TF_ENV}/${LAB_NAME}
+    action: stop
+  script:
+    - *gcp_auth
+    - *tf_init
+    - terraform destroy -auto-approve -lock-timeout=5m

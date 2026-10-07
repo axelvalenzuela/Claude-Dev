@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 04-chatbot-bedrock. Plantillas en lab10/.gitlab-ci.yml
+# Variable requerida en GitLab: LAB04_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.lab04_vars:
+  variables:
+    LAB_NAME: "04-chatbot-bedrock"
+    LAB_DIR: "lab10/microlabs/04-chatbot-bedrock"
+    TFVARS_FILE: $LAB04_TFVARS
+
+.lab04_changes: &lab04_changes
+  - lab10/microlabs/04-chatbot-bedrock/**/*
+  - lab10/modules/**/*
+  - lab10/.gitlab-ci.yml
+
+lab04:validate:
+  extends: [.tf_validate, .lab04_vars]
+  rules:
+    - changes: *lab04_changes
+
+lab04:lint:
+  extends: [.tf_lint, .lab04_vars]
+  rules:
+    - changes: *lab04_changes
+
+lab04:checkov:
+  extends: [.tf_checkov, .lab04_vars]
+  rules:
+    - changes: *lab04_changes
+
+lab04:plan:
+  extends: [.tf_plan, .lab04_vars]
+  needs: ["lab04:validate"]
+  rules:
+    - changes: *lab04_changes
+
+lab04:apply:
+  extends: [.tf_apply, .lab04_vars]
+  needs: ["lab04:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *lab04_changes
+      when: manual
+
+lab04:smoke:
+  extends: [.tf_smoke, .lab04_vars]
+  needs: ["lab04:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *lab04_changes
+
+lab04:destroy:
+  extends: [.tf_destroy, .lab04_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "04-chatbot-bedrock"
+      when: manual

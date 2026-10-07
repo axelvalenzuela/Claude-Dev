@@ -1,0 +1,28 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+plan.txt
+outputs.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+
+# Nunca subir valores reales (se configuran como variables File en GitLab)
+*.tfvars
+!*.tfvars.example
+ci.auto.tfvars
+
+# Credenciales: el pipeline usa Workload Identity Federation; jamás llaves JSON
+*.json.key
+*-key.json
+gcp_creds.json
+
+# Artefactos generados (zips de funciones)
+**/.build/
+
+# Render temporal del PDF
+docs/.render/

@@ -1,0 +1,19 @@
+aws_region           = "us-east-1"
+project              = "lab10"
+environment          = "dev"
+owner                = "tu.correo@dominio.com"
+api_name             = "lab10-dev-api"
+api_stage            = "v1"
+api_access_log_group = "/apigw/lab10-dev-api/access"
+health_check_url     = "https://<api-id>.execute-api.us-east-1.amazonaws.com/v1/health"
+slo_target           = 0.999
+latency_p99_ms       = 1000
+runbook_url          = "https://gitlab.com/mi-grupo/claude-dev/-/wikis/runbooks/api"
+alert_emails         = ["tu.correo@dominio.com"]
+# ChatOps (opcional): autoriza Slack en la consola de Amazon Q Developer in chat applications y copia los IDs
+slack_team_id        = ""
+slack_channel_id     = ""
+# Chaos (opcional): requiere el micro lab 06 desplegado
+enable_fis           = false
+fis_target_tag_key   = "MicroLab"
+fis_target_tag_value = "06-three-tier-web"

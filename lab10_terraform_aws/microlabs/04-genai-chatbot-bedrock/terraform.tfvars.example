@@ -1,0 +1,13 @@
+aws_region                = "us-east-1"
+project                   = "lab10"
+environment               = "dev"
+owner                     = "tu.correo@dominio.com"
+# Usa un modelo habilitado en Bedrock > Model access. Para modelos con inference profile usa el ID del perfil (p. ej. "us.<proveedor>.<modelo>").
+model_id                  = "amazon.nova-lite-v1:0"
+system_prompt             = "Eres un asistente técnico de AWS para estudiantes. Responde en español, breve y preciso."
+max_tokens                = 512
+history_turns             = 6
+max_concurrency           = 10
+throttle_rate_limit       = 10
+allowed_origins           = ["http://localhost:8080"]
+hourly_output_token_alarm = 200000

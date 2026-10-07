@@ -1,0 +1,30 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+plan.txt
+outputs.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+
+# Nunca subir valores reales (se configuran como variables File en GitLab)
+*.tfvars
+!*.tfvars.example
+ci.auto.tfvars
+
+# Artefactos generados (zips de Lambda, templates renderizados)
+**/.build/
+
+# El canary de Synthetics DEBE versionarse aunque viva en node_modules
+!microlabs/07-sre-observability/canary/nodejs/node_modules/
+!microlabs/07-sre-observability/canary/nodejs/node_modules/index.js
+
+# PDF de diagramas: regenerable con docs/build_pdf.py
+docs/.render/
+
+# Generados localmente
+tfplan
+microlabs/04-chatbot-bedrock/web/config.js

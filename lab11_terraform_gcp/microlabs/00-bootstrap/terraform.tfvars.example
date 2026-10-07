@@ -1,0 +1,13 @@
+# Copia a terraform.tfvars. NO subas terraform.tfvars a Git.
+project_id            = "mi-proyecto-labs"
+region                = "us-central1"
+environment           = "dev"
+owner                 = "axel"
+cost_center           = "training"
+gitlab_url            = "https://gitlab.com"
+gitlab_project_path   = "mi-grupo/claude-dev"
+gitlab_project_id     = "12345678"
+gitlab_default_branch = "main"
+billing_account       = null # "XXXXXX-XXXXXX-XXXXXX"
+monthly_budget        = 50
+alert_email           = "tu.correo@dominio.com"

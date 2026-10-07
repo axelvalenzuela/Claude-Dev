@@ -1,0 +1,171 @@
+# =============================================================================
+# lab10 - Pipeline GitOps de Terraform para los micro labs de AWS
+#
+# Ubicación: si el repositorio raíz es Claude-Dev, configura en GitLab
+#   Settings > CI/CD > General pipelines > CI/CD configuration file = lab10/.gitlab-ci.yml
+#
+# Flujo por micro lab (solo se ejecuta si cambian sus archivos o los módulos compartidos):
+#   validate (fmt + validate + tflint) -> security (checkov) -> plan (MR y main) -> apply (manual, solo main)
+#   -> destroy (manual, solo main)
+#
+# Autenticación: OIDC de GitLab -> AWS STS (sin llaves de acceso). Ver microlabs/00-bootstrap.
+# =============================================================================
+
+stages:
+  - validate
+  - security
+  - plan
+  - apply
+  - smoke
+  - destroy
+
+variables:
+  TF_VERSION: "1.13"
+  TF_ENV: "dev"
+  AWS_REGION: "us-east-1"
+  AWS_DEFAULT_REGION: "${AWS_REGION}"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_PLUGIN_CACHE_DIR: "${CI_PROJECT_DIR}/.terraform-plugin-cache"
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+include:
+  - local: "lab10/microlabs/*/ci.yml"
+
+# -----------------------------------------------------------------------------
+# Plantillas
+# -----------------------------------------------------------------------------
+.tf_base:
+  image:
+    name: hashicorp/terraform:${TF_VERSION}
+    entrypoint: [""]
+  cache:
+    key: "tf-plugins-${LAB_NAME}"
+    paths:
+      - .terraform-plugin-cache/
+  before_script:
+    - mkdir -p "$TF_PLUGIN_CACHE_DIR"
+    - cd "$LAB_DIR"
+    # tfvars desde variable de tipo File (p. ej. LAB01_TFVARS); TF_VAR_* también funciona
+    - if [ -n "${TFVARS_FILE:-}" ] && [ -f "${TFVARS_FILE}" ]; then cp "$TFVARS_FILE" ci.auto.tfvars; fi
+
+.aws_oidc:
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  variables:
+    AWS_WEB_IDENTITY_TOKEN_FILE: /tmp/gitlab_oidc_token
+    AWS_ROLE_SESSION_NAME: "gitlab-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+
+.tf_init: &tf_init
+  - echo "$GITLAB_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
+  - >
+    terraform init
+    -backend-config="bucket=${TF_STATE_BUCKET}"
+    -backend-config="key=lab10/${LAB_NAME}/${TF_ENV}.tfstate"
+    -backend-config="region=${AWS_REGION}"
+    -backend-config="use_lockfile=true"
+    -backend-config="encrypt=true"
+
+.tf_validate:
+  extends: .tf_base
+  stage: validate
+  script:
+    - terraform fmt -check -recursive -diff
+    - terraform init -backend=false
+    - terraform validate
+
+.tf_lint:
+  stage: validate
+  image:
+    name: ghcr.io/terraform-linters/tflint:latest
+    entrypoint: [""]
+  script:
+    - cd "$LAB_DIR"
+    - tflint --init || true
+    - tflint --recursive --minimum-failure-severity=error
+  allow_failure: true
+
+.tf_checkov:
+  stage: security
+  image:
+    name: bridgecrew/checkov:latest
+    entrypoint: [""]
+  script:
+    - checkov -d "$LAB_DIR" --framework terraform --compact --quiet
+      --output cli --output junitxml --output-file-path console,checkov-report.xml
+  artifacts:
+    when: always
+    reports:
+      junit: checkov-report.xml
+  allow_failure: true # cámbialo a false cuando el equipo haya corregido los hallazgos base
+
+.tf_plan:
+  extends: [.tf_base, .aws_oidc]
+  stage: plan
+  variables:
+    AWS_ROLE_ARN: $AWS_PLAN_ROLE_ARN
+  script:
+    - *tf_init
+    - terraform plan -lock-timeout=5m -out=plan.tfplan
+    - terraform show -no-color plan.tfplan > plan.txt
+  artifacts:
+    expire_in: 7 days
+    paths:
+      - ${LAB_DIR}/plan.tfplan
+      - ${LAB_DIR}/plan.txt
+      - ${LAB_DIR}/.build/
+      - ${LAB_DIR}/.terraform.lock.hcl
+
+.tf_apply:
+  extends: [.tf_base, .aws_oidc]
+  stage: apply
+  variables:
+    AWS_ROLE_ARN: $AWS_APPLY_ROLE_ARN
+  resource_group: ${LAB_NAME}-${TF_ENV} # evita applies concurrentes del mismo lab
+  timeout: 1h
+  environment:
+    name: ${TF_ENV}/${LAB_NAME}
+    action: start
+  script:
+    - *tf_init
+    - terraform apply -lock-timeout=5m plan.tfplan
+    - terraform output -json > outputs.json
+  artifacts:
+    expire_in: 30 days
+    paths:
+      - ${LAB_DIR}/outputs.json
+
+.tf_smoke:
+  extends: [.aws_oidc]
+  stage: smoke
+  image:
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  variables:
+    AWS_ROLE_ARN: $AWS_APPLY_ROLE_ARN
+    OUTPUTS_JSON: ${CI_PROJECT_DIR}/${LAB_DIR}/outputs.json
+  before_script:
+    - yum install -y -q jq >/dev/null
+    - echo "$GITLAB_OIDC_TOKEN" > "$AWS_WEB_IDENTITY_TOKEN_FILE"
+  script:
+    - bash "$LAB_DIR/scripts/smoke-test.sh"
+
+.tf_destroy:
+  extends: [.tf_base, .aws_oidc]
+  stage: destroy
+  variables:
+    AWS_ROLE_ARN: $AWS_APPLY_ROLE_ARN
+  resource_group: ${LAB_NAME}-${TF_ENV}
+  timeout: 1h
+  environment:
+    name: ${TF_ENV}/${LAB_NAME}
+    action: stop
+  script:
+    - *tf_init
+    - terraform destroy -auto-approve -lock-timeout=5m

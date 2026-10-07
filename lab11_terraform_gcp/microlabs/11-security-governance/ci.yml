@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 11-security-governance. Plantillas en lab11/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP11_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp11_vars:
+  variables:
+    LAB_NAME: "11-security-governance"
+    LAB_DIR: "lab11/microlabs/11-security-governance"
+    TFVARS_FILE: $GCP11_TFVARS
+
+.gcp11_changes: &gcp11_changes
+  - lab11/microlabs/11-security-governance/**/*
+  - lab11/modules/**/*
+  - lab11/.gitlab-ci.yml
+
+gcp11:validate:
+  extends: [.tf_validate, .gcp11_vars]
+  rules:
+    - changes: *gcp11_changes
+
+gcp11:lint:
+  extends: [.tf_lint, .gcp11_vars]
+  rules:
+    - changes: *gcp11_changes
+
+gcp11:checkov:
+  extends: [.tf_checkov, .gcp11_vars]
+  rules:
+    - changes: *gcp11_changes
+
+gcp11:plan:
+  extends: [.tf_plan, .gcp11_vars]
+  needs: ["gcp11:validate"]
+  rules:
+    - changes: *gcp11_changes
+
+gcp11:apply:
+  extends: [.tf_apply, .gcp11_vars]
+  needs: ["gcp11:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp11_changes
+      when: manual
+
+gcp11:smoke:
+  extends: [.tf_smoke, .gcp11_vars]
+  needs: ["gcp11:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp11_changes
+
+gcp11:destroy:
+  extends: [.tf_destroy, .gcp11_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "11-security-governance"
+      when: manual

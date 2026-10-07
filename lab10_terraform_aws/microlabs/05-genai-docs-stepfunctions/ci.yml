@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 05-ai-document-pipeline. Plantillas en lab10/.gitlab-ci.yml
+# Variable requerida en GitLab: LAB05_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.lab05_vars:
+  variables:
+    LAB_NAME: "05-ai-document-pipeline"
+    LAB_DIR: "lab10/microlabs/05-ai-document-pipeline"
+    TFVARS_FILE: $LAB05_TFVARS
+
+.lab05_changes: &lab05_changes
+  - lab10/microlabs/05-ai-document-pipeline/**/*
+  - lab10/modules/**/*
+  - lab10/.gitlab-ci.yml
+
+lab05:validate:
+  extends: [.tf_validate, .lab05_vars]
+  rules:
+    - changes: *lab05_changes
+
+lab05:lint:
+  extends: [.tf_lint, .lab05_vars]
+  rules:
+    - changes: *lab05_changes
+
+lab05:checkov:
+  extends: [.tf_checkov, .lab05_vars]
+  rules:
+    - changes: *lab05_changes
+
+lab05:plan:
+  extends: [.tf_plan, .lab05_vars]
+  needs: ["lab05:validate"]
+  rules:
+    - changes: *lab05_changes
+
+lab05:apply:
+  extends: [.tf_apply, .lab05_vars]
+  needs: ["lab05:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *lab05_changes
+      when: manual
+
+lab05:smoke:
+  extends: [.tf_smoke, .lab05_vars]
+  needs: ["lab05:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *lab05_changes
+
+lab05:destroy:
+  extends: [.tf_destroy, .lab05_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "05-ai-document-pipeline"
+      when: manual

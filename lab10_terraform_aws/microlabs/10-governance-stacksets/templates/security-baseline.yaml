@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  lab10 - Baseline de seguridad por cuenta (desplegado con StackSets a todas las cuentas de las OUs destino).
+  Rol de auditoría cross-account, reenvío de eventos críticos al bus central y reglas de AWS Config opcionales.
+
+Parameters:
+  AuditAccountId:
+    Type: String
+    AllowedPattern: "^\\d{12}$"
+    Description: Cuenta de seguridad/auditoría que puede asumir el rol de lectura.
+  CentralEventBusArn:
+    Type: String
+    Description: ARN del bus de EventBridge central (cuenta de seguridad).
+  EnableConfigRules:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+    Description: Crear reglas de AWS Config (requiere que el configuration recorder ya exista en la cuenta).
+  BaselineVersion:
+    Type: String
+    Default: "1.0.0"
+
+Conditions:
+  CreateConfigRules: !Equals [!Ref EnableConfigRules, "true"]
+
+Resources:
+  # ---------------- Rol de auditoría (solo lectura) ----------------
+  SecurityAuditRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: lab10-security-audit
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AuditAccountId}:root"
+            Action: sts:AssumeRole
+            Condition:
+              Bool:
+                aws:MultiFactorAuthPresent: "true"
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/SecurityAudit"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/job-function/ViewOnlyAccess"
+      Tags:
+        - Key: Baseline
+          Value: !Ref BaselineVersion
+
+  # ---------------- Reenvío de eventos al bus central ----------------
+  ForwardToCentralBusRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: put-events-central
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: events:PutEvents
+                Resource: !Ref CentralEventBusArn
+
+  RootActivityRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Cualquier actividad del usuario root
+      EventPattern:
+        detail-type:
+          - AWS API Call via CloudTrail
+          - AWS Console Sign In via CloudTrail
+        detail:
+          userIdentity:
+            type: [Root]
+      Targets:
+        - Id: central-bus
+          Arn: !Ref CentralEventBusArn
+          RoleArn: !GetAtt ForwardToCentralBusRole.Arn
+
+  SecurityFindingsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Hallazgos de GuardDuty severidad >= 7 y de Security Hub CRITICAL/HIGH
+      EventPattern:
+        source: [aws.guardduty, aws.securityhub]
+        $or:
+          - detail:
+              severity: [{ numeric: [">=", 7] }]
+          - detail:
+              findings:
+                Severity:
+                  Label: [CRITICAL, HIGH]
+      Targets:
+        - Id: central-bus
+          Arn: !Ref CentralEventBusArn
+          RoleArn: !GetAtt ForwardToCentralBusRole.Arn
+
+  IamChangesRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Cambios sensibles de IAM
+      EventPattern:
+        source: [aws.iam]
+        detail-type: [AWS API Call via CloudTrail]
+        detail:
+          eventName:
+            - CreateUser
+            - CreateAccessKey
+            - AttachUserPolicy
+            - PutUserPolicy
+            - DeleteRolePermissionsBoundary
+      Targets:
+        - Id: central-bus
+          Arn: !Ref CentralEventBusArn
+          RoleArn: !GetAtt ForwardToCentralBusRole.Arn
+
+  # ---------------- Reglas de AWS Config (opcionales) ----------------
+  RuleRootMfa:
+    Type: AWS::Config::ConfigRule
+    Condition: CreateConfigRules
+    Properties:
+      ConfigRuleName: lab10-root-account-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
+
+  RuleEncryptedVolumes:
+    Type: AWS::Config::ConfigRule
+    Condition: CreateConfigRules
+    Properties:
+      ConfigRuleName: lab10-encrypted-volumes
+      Source:
+        Owner: AWS
+        SourceIdentifier: ENCRYPTED_VOLUMES
+
+  RuleS3PublicRead:
+    Type: AWS::Config::ConfigRule
+    Condition: CreateConfigRules
+    Properties:
+      ConfigRuleName: lab10-s3-bucket-public-read-prohibited
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+
+  RuleRestrictedSsh:
+    Type: AWS::Config::ConfigRule
+    Condition: CreateConfigRules
+    Properties:
+      ConfigRuleName: lab10-restricted-ssh
+      Source:
+        Owner: AWS
+        SourceIdentifier: INCOMING_SSH_DISABLED
+
+Outputs:
+  SecurityAuditRoleArn:
+    Value: !GetAtt SecurityAuditRole.Arn
+  BaselineVersion:
+    Value: !Ref BaselineVersion

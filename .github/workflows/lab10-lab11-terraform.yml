@@ -1,18 +1,18 @@
-# CI de lab10_terraform_aws (AWS) y lab11_terraform_gcp (GCP): micro labs de Terraform. Corre en cada push/PR que los toque.
+# CI de 03-cloud-e-infraestructura/lab10-terraform-aws (AWS) y 03-cloud-e-infraestructura/lab11-terraform-gcp (GCP): micro labs de Terraform. Corre en cada push/PR que los toque.
 #
 # Sin credenciales de nube y sin costo: valida el código, no despliega.
 #   1. terraform -> fmt -check + init -backend=false + validate de cada micro lab
 #   2. scripts   -> bash -n de los smoke tests y shellcheck (errores)
 #   3. python    -> compilación de las funciones Lambda / Cloud Run functions y de los sdk-examples
-# El despliegue real (plan/apply/smoke) vive en los pipelines de GitLab: lab10_terraform_aws/.gitlab-ci.yml y lab11_terraform_gcp/.gitlab-ci.yml.
+# El despliegue real (plan/apply/smoke) vive en los pipelines de GitLab: 03-cloud-e-infraestructura/lab10-terraform-aws/.gitlab-ci.yml y 03-cloud-e-infraestructura/lab11-terraform-gcp/.gitlab-ci.yml.
 name: lab10-lab11 Terraform
 
 on:
   push:
     branches: ["**"]
-    paths: ["lab10_terraform_aws/**", "lab11_terraform_gcp/**", ".github/workflows/lab10-lab11-terraform.yml"]
+    paths: ["03-cloud-e-infraestructura/lab10-terraform-aws/**", "03-cloud-e-infraestructura/lab11-terraform-gcp/**", ".github/workflows/lab10-lab11-terraform.yml"]
   pull_request:
-    paths: ["lab10_terraform_aws/**", "lab11_terraform_gcp/**", ".github/workflows/lab10-lab11-terraform.yml"]
+    paths: ["03-cloud-e-infraestructura/lab10-terraform-aws/**", "03-cloud-e-infraestructura/lab11-terraform-gcp/**", ".github/workflows/lab10-lab11-terraform.yml"]
 
 jobs:
   terraform:
@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lab: [lab10_terraform_aws, lab11_terraform_gcp]
+        lab: [03-cloud-e-infraestructura/lab10-terraform-aws, 03-cloud-e-infraestructura/lab11-terraform-gcp]
     env:
       TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugin-cache
     steps:
@@ -61,17 +61,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sintaxis de bash
-        run: for f in lab10_terraform_aws/scripts/*.sh lab10_terraform_aws/microlabs/*/scripts/*.sh lab11_terraform_gcp/scripts/*.sh lab11_terraform_gcp/microlabs/*/scripts/*.sh; do bash -n "$f"; done
+        run: for f in 03-cloud-e-infraestructura/lab10-terraform-aws/scripts/*.sh 03-cloud-e-infraestructura/lab10-terraform-aws/microlabs/*/scripts/*.sh 03-cloud-e-infraestructura/lab11-terraform-gcp/scripts/*.sh 03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/*/scripts/*.sh; do bash -n "$f"; done
 
       - name: shellcheck (solo errores)
-        run: shellcheck --severity=error lab10_terraform_aws/scripts/*.sh lab10_terraform_aws/microlabs/*/scripts/*.sh lab11_terraform_gcp/scripts/*.sh lab11_terraform_gcp/microlabs/*/scripts/*.sh
+        run: shellcheck --severity=error 03-cloud-e-infraestructura/lab10-terraform-aws/scripts/*.sh 03-cloud-e-infraestructura/lab10-terraform-aws/microlabs/*/scripts/*.sh 03-cloud-e-infraestructura/lab11-terraform-gcp/scripts/*.sh 03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/*/scripts/*.sh
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
       - name: Compilar código de funciones
-        run: python -m py_compile $(find lab10_terraform_aws/microlabs lab11_terraform_gcp/microlabs -path '*/src/*' -name '*.py') lab10_terraform_aws/sdk-examples/*.py lab11_terraform_gcp/sdk-examples/*.py lab11_terraform_gcp/microlabs/*/scripts/*.py
+        run: python -m py_compile $(find 03-cloud-e-infraestructura/lab10-terraform-aws/microlabs 03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs -path '*/src/*' -name '*.py') 03-cloud-e-infraestructura/lab10-terraform-aws/sdk-examples/*.py 03-cloud-e-infraestructura/lab11-terraform-gcp/sdk-examples/*.py 03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/*/scripts/*.py
 
       - name: YAML de Cloud Workflows
-        run: python -c "import yaml; yaml.safe_load(open('lab11_terraform_gcp/microlabs/04-document-ai-workflows/workflow.yaml', encoding='utf-8'))"
+        run: python -c "import yaml; yaml.safe_load(open('03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/04-genai-docs-workflows/workflow.yaml', encoding='utf-8'))"

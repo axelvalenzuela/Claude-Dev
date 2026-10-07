@@ -1,20 +1,20 @@
 name: lab6-sap-pipeline
 
-# Validacion automatica en cada cambio de lab6/. El despliegue (plan / apply /
+# Validacion automatica en cada cambio de 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/. El despliegue (plan / apply /
 # configure) solo corre a mano (workflow_dispatch) y requiere credenciales AWS.
-# Detalle de variables, secretos y setup unico: lab6/pipelines/README.md
+# Detalle de variables, secretos y setup unico: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/pipelines/README.md
 
 on:
   pull_request:
-    paths: ["lab6/**", ".github/workflows/lab6-sap-pipeline.yml"]
+    paths: ["03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/**", ".github/workflows/lab6-sap-pipeline.yml"]
   push:
-    paths: ["lab6/**", ".github/workflows/lab6-sap-pipeline.yml"]
+    paths: ["03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/**", ".github/workflows/lab6-sap-pipeline.yml"]
   workflow_dispatch:
     inputs:
       assessment_file:
-        description: "Ruta del assessment JSON (ver lab6/ASSESSMENT.md)"
+        description: "Ruta del assessment JSON (ver 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/ASSESSMENT.md)"
         required: true
-        default: "lab6/assessment/assessment.example.json"
+        default: "03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/assessment/assessment.example.json"
       action:
         description: "Que ejecutar"
         type: choice
@@ -45,17 +45,17 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Sizing de prueba con el assessment de ejemplo
-        run: node lab6/tools/sizing.js lab6/assessment/assessment.example.json
+        run: node 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/tools/sizing.js 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/assessment/assessment.example.json
 
       - name: Terraform fmt / init / validate
-        working-directory: lab6/terraform
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
         run: |
           terraform fmt -check -recursive
           terraform init -backend=false -input=false
           terraform validate
 
       - name: Sintaxis de Ansible
-        working-directory: lab6/ansible
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/ansible
         run: |
           pip install ansible-core
           ansible-galaxy collection install -r requirements.yml
@@ -93,10 +93,10 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Dimensionar (assessment -> tfvars)
-        run: node lab6/tools/sizing.js "${{ inputs.assessment_file }}"
+        run: node 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/tools/sizing.js "${{ inputs.assessment_file }}"
 
       - name: Terraform init (estado remoto)
-        working-directory: lab6/terraform
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
         run: |
           terraform init -input=false \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
@@ -106,7 +106,7 @@ jobs:
             -backend-config="encrypt=true"
 
       - name: Terraform plan
-        working-directory: lab6/terraform
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
         run: |
           terraform plan -input=false \
             -var-file=environments/${{ needs.prepare.outputs.env }}.generated.tfvars.json \
@@ -115,7 +115,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ needs.prepare.outputs.env }}
-          path: lab6/terraform/tfplan
+          path: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform/tfplan
           retention-days: 3
 
   apply:
@@ -136,9 +136,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: tfplan-${{ needs.prepare.outputs.env }}
-          path: lab6/terraform
+          path: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
       - name: Terraform init
-        working-directory: lab6/terraform
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
         run: |
           terraform init -input=false \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
@@ -147,7 +147,7 @@ jobs:
             -backend-config="key=sap/${{ needs.prepare.outputs.env }}/terraform.tfstate" \
             -backend-config="encrypt=true"
       - name: Terraform apply (plan aprobado)
-        working-directory: lab6/terraform
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
         run: terraform apply -input=false tfplan
 
   configure:
@@ -171,7 +171,7 @@ jobs:
 
       - name: Leer outputs de Terraform y generar inventario
         run: |
-          cd lab6/terraform
+          cd 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/terraform
           terraform init -input=false \
             -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
             -backend-config="dynamodb_table=${{ vars.TF_STATE_LOCK_TABLE }}" \
@@ -180,17 +180,17 @@ jobs:
             -backend-config="encrypt=true"
           terraform output -json > "$RUNNER_TEMP/tf-out.json"
           cd ../..
-          node lab6/tools/tf-to-inventory.js "$RUNNER_TEMP/tf-out.json" > lab6/ansible/inventory.generated.yml
+          node 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/tools/tf-to-inventory.js "$RUNNER_TEMP/tf-out.json" > 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/ansible/inventory.generated.yml
 
       - name: Instalar Ansible y plugin de Session Manager
         run: |
           pip install ansible-core boto3 botocore
           curl -sSfL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o ssm.deb
           sudo dpkg -i ssm.deb
-          ansible-galaxy collection install -r lab6/ansible/requirements.yml
+          ansible-galaxy collection install -r 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/ansible/requirements.yml
 
       - name: Configurar SO, discos, HANA, replicacion (y S/4HANA si se pidio)
-        working-directory: lab6/ansible
+        working-directory: 03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/ansible
         run: |
           ansible-playbook playbooks/site.yml \
             -e run_s4_install=${{ inputs.run_s4_install }} \

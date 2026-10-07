@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 10-governance-stacksets. Plantillas en 03-cloud-e-infraestructura/lab10-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: LAB10_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.lab10_vars:
+  variables:
+    LAB_NAME: "10-governance-stacksets"
+    LAB_DIR: "03-cloud-e-infraestructura/lab10-terraform-aws/microlabs/10-governance-stacksets"
+    TFVARS_FILE: $LAB10_TFVARS
+
+.lab10_changes: &lab10_changes
+  - 03-cloud-e-infraestructura/lab10-terraform-aws/microlabs/10-governance-stacksets/**/*
+  - 03-cloud-e-infraestructura/lab10-terraform-aws/modules/**/*
+  - 03-cloud-e-infraestructura/lab10-terraform-aws/.gitlab-ci.yml
+
+03-cloud-e-infraestructura/lab10-terraform-aws:validate:
+  extends: [.tf_validate, .lab10_vars]
+  rules:
+    - changes: *lab10_changes
+
+03-cloud-e-infraestructura/lab10-terraform-aws:lint:
+  extends: [.tf_lint, .lab10_vars]
+  rules:
+    - changes: *lab10_changes
+
+03-cloud-e-infraestructura/lab10-terraform-aws:checkov:
+  extends: [.tf_checkov, .lab10_vars]
+  rules:
+    - changes: *lab10_changes
+
+03-cloud-e-infraestructura/lab10-terraform-aws:plan:
+  extends: [.tf_plan, .lab10_vars]
+  needs: ["03-cloud-e-infraestructura/lab10-terraform-aws:validate"]
+  rules:
+    - changes: *lab10_changes
+
+03-cloud-e-infraestructura/lab10-terraform-aws:apply:
+  extends: [.tf_apply, .lab10_vars]
+  needs: ["03-cloud-e-infraestructura/lab10-terraform-aws:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *lab10_changes
+      when: manual
+
+03-cloud-e-infraestructura/lab10-terraform-aws:smoke:
+  extends: [.tf_smoke, .lab10_vars]
+  needs: ["03-cloud-e-infraestructura/lab10-terraform-aws:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *lab10_changes
+
+03-cloud-e-infraestructura/lab10-terraform-aws:destroy:
+  extends: [.tf_destroy, .lab10_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "10-governance-stacksets"
+      when: manual

@@ -1,0 +1,9 @@
+# Linter del lab 8:  ruff check 04-ia-generativa/lab08-curso-ia   (lo corre CI en cada push)
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "B"]
+# E731: lambdas con nombre (se usan a propósito en ejemplos cortos)
+# B905: zip() sin strict= (ruido para código didáctico)
+# B023: closures en ciclos (las usamos con argumento por defecto)
+ignore = ["E731", "B905", "B023"]

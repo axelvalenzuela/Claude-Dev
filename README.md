@@ -1,24 +1,55 @@
-# Learning Labs
+# Claude-Dev · Learning Labs
 
-Repositorio de laboratorios independientes. Cada carpeta `labN/` es un
-proyecto autocontenido (su propio código, `requirements.txt`, tests y
-entorno virtual).
+Laboratorios prácticos organizados por **área**. Cada lab es un proyecto autocontenido: tiene su propio README, dependencias, configuración de ejemplo y, cuando aplica, pruebas y pipeline de CI.
 
-## Laboratorios
+```
+Claude-Dev/
+├── 01-desarrollo-web/            Apps web y APIs (Python)
+├── 02-mcp-y-agentes/             Servidores MCP y automatización con Claude
+├── 03-cloud-e-infraestructura/   Kubernetes, SAP, Terraform en AWS y GCP
+├── 04-ia-generativa/             Gemini, RAG, agentes y curso de IA
+├── docs/                         Estructura del repo, convenciones y rutas de aprendizaje
+└── .github/workflows/            CI de los labs (se ejecuta solo cuando cambia su carpeta)
+```
 
-| Lab | Descripción |
-|-----|-------------|
-| [lab1/](lab1/) | API REST de to-do list con FastAPI + SQLite, panel Streamlit y reporte de actividades por correo. |
-| [lab2/](lab2/) | App enterprise de reportes de gastos de viaje (Django + SQLite, vistas basadas en clases): portal por empleado (TAXI/MEAL/FLIGHT/HOTEL) con análisis de PDF, política de $60/día y deadline de envío; panel admin con cláusula de aprobación del CEO y auditoría/trazabilidad de reportes y sesiones. |
-| [lab3/](lab3/) | Servidor MCP básico (Node.js + TypeScript, `@modelcontextprotocol/sdk`) que controla Chromium headless vía Puppeteer: expone `open_url`, `get_page_text` y `screenshot` como herramientas MCP para Claude Desktop/Claude Code. También registra el servidor oficial `@playwright/mcp` para probar navegación/screenshot/verificación de título contra sitios reales. |
-| [lab4/](lab4/) | Kōhi: web de una cafetería con lista de espera de inauguración, construida como ejercicio de 3 MCPs combinados — GitHub (explorar repo, branch, PR), SQLite (`kohi.db` vía `@executeautomation/database-server`) y Playwright (tests E2E). En planificación: ver [lab4/README.md](lab4/README.md) para el plan completo y [lab4/INSTRUCCIONES.md](lab4/INSTRUCCIONES.md) para el setup. |
-| [lab5/](lab5/) | Kubernetes local (Docker Desktop/minikube/kind): Deployment + ReplicaSet de Nginx, ReplicaSet suelto de comparación, dos ConfigMaps (montado como volumen y como env vars), Service ClusterIP y NodePort, e Ingress con ingress-nginx. Manifiestos en [lab5/manifests/](lab5/manifests/), guía paso a paso en [lab5/INSTRUCCIONES.md](lab5/INSTRUCCIONES.md) y teoría/buenas prácticas (labels vs. annotations, tipos de Service, probes, QoS) en [lab5/CONCEPTOS.md](lab5/CONCEPTOS.md). |
-| [lab6/](lab6/) | SAP S/4HANA + Fiori: arquitectura capa por capa (Browser → Fiori Launchpad → UI5 → OData/API → S/4HANA → ABAP → HANA) en [lab6/ARQUITECTURA.md](lab6/ARQUITECTURA.md) y guía de instalación (SAP CAL, BTP Trial, on-prem con SWPM) y activación de Fiori en [lab6/INSTALACION.md](lab6/INSTALACION.md). Además: requisitos y assessment/dimensionamiento ([lab6/ASSESSMENT.md](lab6/ASSESSMENT.md)), plantilla Terraform modular, roles de Ansible y pipelines (GitHub Actions / GitLab CI). S/4HANA requiere licencia SAP e infraestructura grande, no se instaló. |
-| [lab10_terraform_aws/](lab10_terraform_aws/) | 12 micro labs de **AWS con Terraform** modular (Well-Architected): bootstrap con GitLab OIDC, API Gateway + Lambda, AppSync, EventBridge, chatbot con Bedrock + Guardrails, pipeline de IA con Step Functions, 3 niveles (ALB + ASG + RDS Multi-AZ), SRE (SLO burn rate, Synthetics, FIS), Neptune, migración con MGN, CloudFormation StackSets y seguridad (RBAC/ABAC, SCPs). Guía de despliegue desde cero en [DESPLIEGUE.md](lab10_terraform_aws/DESPLIEGUE.md), 10 ejemplos cortos de boto3/Bedrock para IA Engineer en [sdk-examples/](lab10_terraform_aws/sdk-examples/); cada lab trae README, smoke test y `ci.yml` de GitLab; diagramas en [lab10_terraform_aws/docs/lab10-arquitecturas.pdf](lab10_terraform_aws/docs/lab10-arquitecturas.pdf). |
-| [lab11_terraform_gcp/](lab11_terraform_gcp/) | Versión **Google Cloud** del lab10_terraform_aws (17 micro labs: 12 equivalentes + 5 de IA generativa: RAG en BigQuery, Vertex AI Search, agente ADK, Model Armor, tuning/batch/eval; guía Senior GenAI en `docs/SENIOR-GENAI-GCP.md`): Workload Identity Federation, API Gateway + Cloud Run functions, Pub/Sub, chatbot con Vertex AI Gemini, Workflows + Vision/NL, 3 niveles (LB + Cloud Armor + MIG + Cloud SQL HA), GKE Autopilot, SLOs en Cloud Monitoring, BigQuery, DMS, Org Policies y seguridad (IAM Deny, RBAC). Guía [DESPLIEGUE.md](lab11_terraform_gcp/DESPLIEGUE.md), 11 ejemplos cortos de google-genai/Vertex AI en [sdk-examples/](lab11_terraform_gcp/sdk-examples/). Diagramas en [lab11_terraform_gcp/docs/lab11-arquitecturas-gcp.pdf](lab11_terraform_gcp/docs/lab11-arquitecturas-gcp.pdf); comparación AWS ↔ GCP en [lab11_terraform_gcp/docs/GUIA-AWS-GCP.md](lab11_terraform_gcp/docs/GUIA-AWS-GCP.md). |
+## Catálogo de labs
 
-| [lab7/](lab7/) | RAG sobre Vertex AI Gemini con página de chat (FastAPI), desplegable en Cloud Run, con Terraform opcional. |
-| [lab8_IAcourse/](lab8_IAcourse/) | Curso de IA en 21 micro labs. Parte 1: fundamentos (aprendizaje, redes neuronales, tokens, embeddings, generación, RAG) en Python puro. Parte 2: desarrollo en GCP orientado a migración SAS → Python: Vertex AI SDK, salida estructurada, RAG, agentes, multi-agente con autocorrección (+ Google ADK), evaluación con quality gate, BigQuery, Cloud Functions, Cloud Run, Dataflow, Composer y monitoreo. Corre gratis en modo simulado; Terraform en `infra/`, matriz de costos en [lab8_IAcourse/docs/COSTOS_GCP.pdf](lab8_IAcourse/docs/COSTOS_GCP.pdf). |
+| Área | Lab | Qué construyes | Stack principal | Nivel |
+|---|---|---|---|---|
+| [Desarrollo web](01-desarrollo-web/) | [lab01-fastapi-todo](01-desarrollo-web/lab01-fastapi-todo/) | API REST de tareas con panel y reporte por correo | FastAPI, SQLite, Streamlit | Inicial |
+| | [lab02-django-gastos-viaje](01-desarrollo-web/lab02-django-gastos-viaje/) | App empresarial de reportes de gastos con aprobaciones, auditoría e infraestructura AWS | Django, Docker, CloudFormation | Intermedio |
+| [MCP y agentes](02-mcp-y-agentes/) | [lab03-mcp-puppeteer](02-mcp-y-agentes/lab03-mcp-puppeteer/) | Servidor MCP que controla Chromium (abrir URL, leer, captura) | Node.js, TypeScript, MCP SDK, Puppeteer | Intermedio |
+| | [lab04-kohi-multi-mcp](02-mcp-y-agentes/lab04-kohi-multi-mcp/) | Web de cafetería usando 3 MCPs combinados (GitHub, SQLite, Playwright) | MCP, Playwright | Intermedio |
+| [Cloud e infraestructura](03-cloud-e-infraestructura/) | [lab05-kubernetes-local](03-cloud-e-infraestructura/lab05-kubernetes-local/) | Objetos básicos de Kubernetes en un clúster local | Kubernetes, kubectl, ingress-nginx | Inicial |
+| | [lab06-sap-s4hana-fiori](03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/) | Arquitectura, assessment y automatización de S/4HANA + Fiori | Terraform, Ansible, pipelines | Avanzado |
+| | [lab10-terraform-aws](03-cloud-e-infraestructura/lab10-terraform-aws/) | 12 micro labs de AWS: serverless, eventos, GenAI (Bedrock), 3 niveles, SRE, migración, gobernanza | Terraform, AWS, GitLab CI | Intermedio-avanzado |
+| | [lab11-terraform-gcp](03-cloud-e-infraestructura/lab11-terraform-gcp/) | 17 micro labs de GCP, incluidos 5 de GenAI (RAG, Vertex AI Search, ADK, Model Armor, tuning) | Terraform, Google Cloud, Vertex AI | Intermedio-avanzado |
+| [IA generativa](04-ia-generativa/) | [lab07-rag-vertex-cloudrun](04-ia-generativa/lab07-rag-vertex-cloudrun/) | Chat con RAG sobre documentos propios, desplegable en Cloud Run | FastAPI, Vertex AI Gemini, Terraform | Intermedio |
+| | [lab08-curso-ia](04-ia-generativa/lab08-curso-ia/) | Curso de 21 micro labs: fundamentos de IA a agentes en GCP | Python, Vertex AI, ADK, BigQuery | Inicial a avanzado |
+| | [lab09-gemini-sdk-basico](04-ia-generativa/lab09-gemini-sdk-basico/) | Primeros scripts con el SDK `google-genai` | Python, Gemini API | Inicial |
 
-Para correr un laboratorio, entra a su carpeta y sigue el README de ese
-proyecto.
+## ¿Por dónde empiezo?
+
+| Si quieres... | Empieza en |
+|---|---|
+| Prepararte como **AI Engineer en Google Cloud** | [Ruta de IA generativa](docs/RUTAS-DE-APRENDIZAJE.md#ruta-1-ai-engineer-en-google-cloud) → lab09 → lab08 → lab07 → lab11 (micro labs 12-16) |
+| Aprender **cloud, Terraform y SRE** | [Ruta cloud/DevOps](docs/RUTAS-DE-APRENDIZAJE.md#ruta-2-cloud-devops-y-sre) → lab05 → lab10 → lab11 |
+| Construir **backends y apps web** | [Ruta backend](docs/RUTAS-DE-APRENDIZAJE.md#ruta-3-backend-y-aplicaciones-web) → lab01 → lab02 |
+| Trabajar con **MCP y Claude** | lab03 → lab04 |
+| Entender cómo está organizado el repo o agregar un lab | [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md) |
+
+## Convenciones
+
+- **Cada lab es independiente:** entra a su carpeta y sigue su `README.md`. Las dependencias viven dentro del lab (`requirements.txt`, `package.json`) y cada uno usa su propio entorno virtual.
+- **Nombres:** `NN-area/labNN-tema`. El número del lab indica el orden en que se creó; el área agrupa por tema.
+- **Secretos:** nunca en el repo. Cada lab trae `.env.example` o `terraform.tfvars.example`; los valores reales van en archivos ignorados por Git o en variables de CI.
+- **CI:** cada workflow de `.github/workflows/` se dispara solo con cambios en la carpeta de su lab.
+
+| Workflow | Lab | Qué valida |
+|---|---|---|
+| `lab2-ci.yml` | lab02 | Lint, tests de Django y build de Docker |
+| `lab6-sap-pipeline.yml` | lab06 | Sizing, Terraform y Ansible; despliegue manual |
+| `lab8-ci.yml` | lab08 | Lint, tests, quality gate de evaluación y Terraform |
+| `lab10-lab11-terraform.yml` | lab10 y lab11 | `terraform fmt`/`validate`, scripts y código Python |
+
+Más detalle en [docs/ESTRUCTURA.md](docs/ESTRUCTURA.md).

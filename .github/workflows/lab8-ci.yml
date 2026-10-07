@@ -1,4 +1,4 @@
-# CI del lab 8 (micro labs de IA). Corre en cada push/PR que toque lab8_IAcourse/.
+# CI del lab 8 (micro labs de IA). Corre en cada push/PR que toque 04-ia-generativa/lab08-curso-ia/.
 #
 # Todo corre en MODO=simulado: sin credenciales de GCP, sin red hacia Vertex AI,
 # sin costo. Así cada cambio de prompt, modelo o código se prueba automáticamente.
@@ -12,13 +12,13 @@ name: lab8 CI
 on:
   push:
     branches: ["**"]
-    paths: ["lab8_IAcourse/**", ".github/workflows/lab8-ci.yml"]
+    paths: ["04-ia-generativa/lab08-curso-ia/**", ".github/workflows/lab8-ci.yml"]
   pull_request:
-    paths: ["lab8_IAcourse/**", ".github/workflows/lab8-ci.yml"]
+    paths: ["04-ia-generativa/lab08-curso-ia/**", ".github/workflows/lab8-ci.yml"]
 
 defaults:
   run:
-    working-directory: lab8_IAcourse
+    working-directory: 04-ia-generativa/lab08-curso-ia
 
 jobs:
   python:
@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: lab8_IAcourse/parte2_gcp/requirements.txt
+          cache-dependency-path: 04-ia-generativa/lab08-curso-ia/parte2_gcp/requirements.txt
 
       - name: Instalar dependencias
         run: pip install -r parte2_gcp/requirements.txt ruff
@@ -44,18 +44,18 @@ jobs:
         run: for f in parte1_fundamentos/*/*.py; do echo "== $f"; python "$f" > /dev/null; done
 
       - name: Tests (parte 2)
-        working-directory: lab8_IAcourse/parte2_gcp
+        working-directory: 04-ia-generativa/lab08-curso-ia/parte2_gcp
         run: pytest -v
 
       - name: Quality gate de evaluación (lab 16)
-        working-directory: lab8_IAcourse/parte2_gcp
+        working-directory: 04-ia-generativa/lab08-curso-ia/parte2_gcp
         run: python 16_evaluacion/evaluar.py
 
   terraform:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: lab8_IAcourse/infra
+        working-directory: 04-ia-generativa/lab08-curso-ia/infra
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3

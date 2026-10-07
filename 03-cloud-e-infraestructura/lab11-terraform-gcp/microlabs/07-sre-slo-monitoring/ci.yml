@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 07-sre-slo-monitoring. Plantillas en 03-cloud-e-infraestructura/lab11-terraform-gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP07_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp07_vars:
+  variables:
+    LAB_NAME: "07-sre-slo-monitoring"
+    LAB_DIR: "03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/07-sre-slo-monitoring"
+    TFVARS_FILE: $GCP07_TFVARS
+
+.gcp07_changes: &gcp07_changes
+  - 03-cloud-e-infraestructura/lab11-terraform-gcp/microlabs/07-sre-slo-monitoring/**/*
+  - 03-cloud-e-infraestructura/lab11-terraform-gcp/modules/**/*
+  - 03-cloud-e-infraestructura/lab11-terraform-gcp/.gitlab-ci.yml
+
+gcp07:validate:
+  extends: [.tf_validate, .gcp07_vars]
+  rules:
+    - changes: *gcp07_changes
+
+gcp07:lint:
+  extends: [.tf_lint, .gcp07_vars]
+  rules:
+    - changes: *gcp07_changes
+
+gcp07:checkov:
+  extends: [.tf_checkov, .gcp07_vars]
+  rules:
+    - changes: *gcp07_changes
+
+gcp07:plan:
+  extends: [.tf_plan, .gcp07_vars]
+  needs: ["gcp07:validate"]
+  rules:
+    - changes: *gcp07_changes
+
+gcp07:apply:
+  extends: [.tf_apply, .gcp07_vars]
+  needs: ["gcp07:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp07_changes
+      when: manual
+
+gcp07:smoke:
+  extends: [.tf_smoke, .gcp07_vars]
+  needs: ["gcp07:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp07_changes
+
+gcp07:destroy:
+  extends: [.tf_destroy, .gcp07_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "07-sre-slo-monitoring"
+      when: manual

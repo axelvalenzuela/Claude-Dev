@@ -1,5 +1,5 @@
 # CI template for lab2 (the Django travel-expense app). Runs on every push/PR
-# that touches lab2/, so lab1 changes don't trigger it and vice versa.
+# that touches 01-desarrollo-web/lab02-django-gastos-viaje/, so lab1 changes don't trigger it and vice versa.
 #
 # This is intentionally a starting point, not a finished pipeline — a real
 # rollout would likely add here, in this order of priority:
@@ -12,13 +12,13 @@ name: lab2 CI
 on:
   push:
     branches: ["**"]
-    paths: ["lab2/**", ".github/workflows/lab2-ci.yml"]
+    paths: ["01-desarrollo-web/lab02-django-gastos-viaje/**", ".github/workflows/lab2-ci.yml"]
   pull_request:
-    paths: ["lab2/**", ".github/workflows/lab2-ci.yml"]
+    paths: ["01-desarrollo-web/lab02-django-gastos-viaje/**", ".github/workflows/lab2-ci.yml"]
 
 defaults:
   run:
-    working-directory: lab2
+    working-directory: 01-desarrollo-web/lab02-django-gastos-viaje
 
 jobs:
   test:
@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
-          cache-dependency-path: lab2/requirements.txt
+          cache-dependency-path: 01-desarrollo-web/lab02-django-gastos-viaje/requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt

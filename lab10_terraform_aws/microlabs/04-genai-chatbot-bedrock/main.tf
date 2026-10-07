@@ -13,7 +13,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "04-chatbot-bedrock"
+    MicroLab    = "04-genai-chatbot-bedrock"
   }
 }
 

@@ -16,4 +16,4 @@ slack_channel_id     = ""
 # Chaos (opcional): requiere el micro lab 06 desplegado
 enable_fis           = false
 fis_target_tag_key   = "MicroLab"
-fis_target_tag_value = "06-three-tier-web"
+fis_target_tag_value = "06-web3tier-alb-asg-rds"

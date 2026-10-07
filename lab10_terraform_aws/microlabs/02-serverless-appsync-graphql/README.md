@@ -2,6 +2,57 @@
 
 > **Objetivo:** exponer una API GraphQL administrada con resolvers JavaScript que acceden **directo** a DynamoDB (sin Lambda) y suscripciones WebSocket, con autorización por usuario.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~2 min · **Costo si queda encendido:** Free tier
+
+**Prerrequisitos**
+
+- Lab 00
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/02-serverless-appsync-graphql/terraform.tfvars.example microlabs/02-serverless-appsync-graphql/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  02-serverless-appsync-graphql
+bash scripts/lab.sh plan  02-serverless-appsync-graphql   # revisa qué se crea
+bash scripts/lab.sh apply 02-serverless-appsync-graphql
+```
+
+**3. Después del apply**
+
+- Prueba también en la consola de AppSync → *Queries* (login con el user pool)
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 02-serverless-appsync-graphql   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 02-serverless-appsync-graphql
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -58,16 +109,16 @@ curl -s $(terraform output -raw graphql_url) -H "Authorization: $TOKEN" -H 'Cont
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/02-appsync-graphql/terraform.tfvars.example microlabs/02-appsync-graphql/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  02-appsync-graphql
-bash scripts/lab.sh apply 02-appsync-graphql
-bash scripts/lab.sh test  02-appsync-graphql      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 02-appsync-graphql
+cp microlabs/02-serverless-appsync-graphql/terraform.tfvars.example microlabs/02-serverless-appsync-graphql/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  02-serverless-appsync-graphql
+bash scripts/lab.sh apply 02-serverless-appsync-graphql
+bash scripts/lab.sh test  02-serverless-appsync-graphql      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 02-serverless-appsync-graphql
 ```
 
-Con `make`: `make apply LAB=02-appsync-graphql` · `make test LAB=02-appsync-graphql`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=02-serverless-appsync-graphql` · `make test LAB=02-serverless-appsync-graphql`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

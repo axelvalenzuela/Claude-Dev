@@ -12,7 +12,7 @@
   "createPublicIP": ${use_private_ip ? "false" : "true"},
   "stagingAreaTags": {
     "Project": "${project}",
-    "MicroLab": "09-mgn-migration",
+    "MicroLab": "09-migration-mgn",
     "Purpose": "mgn-staging"
   }
 }

@@ -13,7 +13,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "08-neptune-graph"
+    MicroLab    = "08-data-neptune-graph"
   }
 }
 

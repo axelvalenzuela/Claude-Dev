@@ -1,14 +1,14 @@
 # =============================================================================
-# lab10 - Pipeline GitOps de Terraform para los micro labs de AWS
+# lab10_terraform_aws - Pipeline GitOps de Terraform para los micro labs de AWS
 #
 # Ubicación: si el repositorio raíz es Claude-Dev, configura en GitLab
-#   Settings > CI/CD > General pipelines > CI/CD configuration file = lab10/.gitlab-ci.yml
+#   Settings > CI/CD > General pipelines > CI/CD configuration file = lab10_terraform_aws/.gitlab-ci.yml
 #
 # Flujo por micro lab (solo se ejecuta si cambian sus archivos o los módulos compartidos):
 #   validate (fmt + validate + tflint) -> security (checkov) -> plan (MR y main) -> apply (manual, solo main)
 #   -> destroy (manual, solo main)
 #
-# Autenticación: OIDC de GitLab -> AWS STS (sin llaves de acceso). Ver microlabs/00-bootstrap.
+# Autenticación: OIDC de GitLab -> AWS STS (sin llaves de acceso). Ver microlabs/00-platform-bootstrap-s3-oidc.
 # =============================================================================
 
 stages:
@@ -35,7 +35,7 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "web"
 
 include:
-  - local: "lab10/microlabs/*/ci.yml"
+  - local: "lab10_terraform_aws/microlabs/*/ci.yml"
 
 # -----------------------------------------------------------------------------
 # Plantillas
@@ -67,7 +67,7 @@ include:
   - >
     terraform init
     -backend-config="bucket=${TF_STATE_BUCKET}"
-    -backend-config="key=lab10/${LAB_NAME}/${TF_ENV}.tfstate"
+    -backend-config="key=lab10_terraform_aws/${LAB_NAME}/${TF_ENV}.tfstate"
     -backend-config="region=${AWS_REGION}"
     -backend-config="use_lockfile=true"
     -backend-config="encrypt=true"

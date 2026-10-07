@@ -7,8 +7,8 @@
 # Ejemplo:
 #   gcloud auth application-default login && gcloud config set project <id>
 #   export TF_STATE_BUCKET=<id>-lab11-tfstate
-#   ./scripts/lab.sh init 01-api-gateway-functions && ./scripts/lab.sh apply 01-api-gateway-functions
-#   ./scripts/lab.sh test 01-api-gateway-functions
+#   ./scripts/lab.sh init 01-serverless-apigw-functions-firestore && ./scripts/lab.sh apply 01-serverless-apigw-functions-firestore
+#   ./scripts/lab.sh test 01-serverless-apigw-functions-firestore
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,13 +33,13 @@ tfvars_args() {
 case "$ACTION" in
   init)
     D=$(lab_dir)
-    if [ "$LAB" = "00-bootstrap" ]; then
+    if [ "$LAB" = "00-platform-bootstrap-gcs-wif" ]; then
       terraform -chdir="$D" init
     else
-      : "${TF_STATE_BUCKET:?Define TF_STATE_BUCKET (output del lab 00-bootstrap)}"
+      : "${TF_STATE_BUCKET:?Define TF_STATE_BUCKET (output del lab 00-platform-bootstrap-gcs-wif)}"
       terraform -chdir="$D" init -reconfigure \
         -backend-config="bucket=$TF_STATE_BUCKET" \
-        -backend-config="prefix=lab11/$LAB/$ENVIRONMENT"
+        -backend-config="prefix=lab11_terraform_gcp/$LAB/$ENVIRONMENT"
     fi
     ;;
   plan)

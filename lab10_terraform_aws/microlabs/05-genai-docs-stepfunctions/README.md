@@ -2,6 +2,61 @@
 
 > **Objetivo:** orquestar servicios de IA administrados con Step Functions. Se practican las integraciones SDK directas (sin Lambda), los reintentos con jitter, el paralelismo y el manejo centralizado de errores.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~3 min · **Costo si queda encendido:** Por uso
+
+**Prerrequisitos**
+
+- Lab 00
+- Model access en Bedrock
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/05-genai-docs-stepfunctions/terraform.tfvars.example microlabs/05-genai-docs-stepfunctions/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `alert_emails` | recibe las fallas |
+| `model_id` | modelo habilitado |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  05-genai-docs-stepfunctions
+bash scripts/lab.sh plan  05-genai-docs-stepfunctions   # revisa qué se crea
+bash scripts/lab.sh apply 05-genai-docs-stepfunctions
+```
+
+**3. Después del apply**
+
+- Confirma la suscripción SNS
+- `aws s3 cp samples/comunicado.txt s3://<bucket>/incoming/`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 05-genai-docs-stepfunctions   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 05-genai-docs-stepfunctions
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -50,16 +105,16 @@ GitLab: `LAB05_TFVARS` (File).
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/05-ai-document-pipeline/terraform.tfvars.example microlabs/05-ai-document-pipeline/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  05-ai-document-pipeline
-bash scripts/lab.sh apply 05-ai-document-pipeline
-bash scripts/lab.sh test  05-ai-document-pipeline      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 05-ai-document-pipeline
+cp microlabs/05-genai-docs-stepfunctions/terraform.tfvars.example microlabs/05-genai-docs-stepfunctions/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  05-genai-docs-stepfunctions
+bash scripts/lab.sh apply 05-genai-docs-stepfunctions
+bash scripts/lab.sh test  05-genai-docs-stepfunctions      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 05-genai-docs-stepfunctions
 ```
 
-Con `make`: `make apply LAB=05-ai-document-pipeline` · `make test LAB=05-ai-document-pipeline`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=05-genai-docs-stepfunctions` · `make test LAB=05-genai-docs-stepfunctions`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

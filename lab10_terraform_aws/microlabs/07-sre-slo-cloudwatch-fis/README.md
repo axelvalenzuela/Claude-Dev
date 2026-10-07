@@ -2,6 +2,63 @@
 
 > **Objetivo:** aplicar prácticas SRE sobre las cargas de los labs 01 y 06: definir SLIs/SLOs, alertar por **consumo del presupuesto de error** (no por umbrales sueltos), monitorear desde fuera con canaries, notificar en Slack y validar la resiliencia con un GameDay en AWS FIS.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~3 min · **Costo si queda encendido:** ~USD 10/mes
+
+**Prerrequisitos**
+
+- Lab 00
+- Lab 01 desplegado
+- Opcional: lab 06 para FIS
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/07-sre-slo-cloudwatch-fis/terraform.tfvars.example microlabs/07-sre-slo-cloudwatch-fis/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `lab01_state_bucket` | `$TF_STATE_BUCKET` (lee el API del lab 01) |
+| `alert_emails` | on-call |
+| `enable_fis` | `true` si el lab 06 está arriba |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  07-sre-slo-cloudwatch-fis
+bash scripts/lab.sh plan  07-sre-slo-cloudwatch-fis   # revisa qué se crea
+bash scripts/lab.sh apply 07-sre-slo-cloudwatch-fis
+```
+
+**3. Después del apply**
+
+- Confirma la suscripción SNS
+- GameDay: `GENERATE_ERRORS=1 bash scripts/lab.sh test 07-sre-slo-cloudwatch-fis`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 07-sre-slo-cloudwatch-fis   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 07-sre-slo-cloudwatch-fis
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -58,16 +115,16 @@ GitLab: `LAB07_TFVARS` (File). Guarda `SLACK_*` como variables **masked**.
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/07-sre-observability/terraform.tfvars.example microlabs/07-sre-observability/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  07-sre-observability
-bash scripts/lab.sh apply 07-sre-observability
-bash scripts/lab.sh test  07-sre-observability      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 07-sre-observability
+cp microlabs/07-sre-slo-cloudwatch-fis/terraform.tfvars.example microlabs/07-sre-slo-cloudwatch-fis/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  07-sre-slo-cloudwatch-fis
+bash scripts/lab.sh apply 07-sre-slo-cloudwatch-fis
+bash scripts/lab.sh test  07-sre-slo-cloudwatch-fis      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 07-sre-slo-cloudwatch-fis
 ```
 
-Con `make`: `make apply LAB=07-sre-observability` · `make test LAB=07-sre-observability`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=07-sre-slo-cloudwatch-fis` · `make test LAB=07-sre-slo-cloudwatch-fis`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 
@@ -77,7 +134,7 @@ Comprueba que existen el dashboard y las 2 alarmas compuestas, que el canary est
 
 1. En el lab 01 define `enable_fault_injection = true` y aplica.
 2. En este lab define `lab01_state_bucket = "<TF_STATE_BUCKET>"`: los nombres del API, el stage, el log group y la URL del canary se leen solos del estado del lab 01 (`terraform_remote_state`).
-3. Ejecuta `GENERATE_ERRORS=1 bash scripts/lab.sh test 07-sre-observability`. Durante 6 min se envía tráfico con ~90 % de errores 5XX. La prueba espera a que la alarma **fast burn** pase a `ALARM` y llegue la notificación.
+3. Ejecuta `GENERATE_ERRORS=1 bash scripts/lab.sh test 07-sre-slo-cloudwatch-fis`. Durante 6 min se envía tráfico con ~90 % de errores 5XX. La prueba espera a que la alarma **fast burn** pase a `ALARM` y llegue la notificación.
 4. Observa en el dashboard la tasa de error y cómo la alarma se resetea pocos minutos después de detener el tráfico (ventana corta).
 5. Documenta el incidente con la plantilla de postmortem (línea de tiempo, presupuesto consumido, acciones).
 
@@ -101,7 +158,7 @@ SMOKE TEST OK  (7 verificaciones)
 |---|---|
 | El canary falla con `Runtime version is deprecated` | Actualiza `canary_runtime_version` con `aws synthetics describe-runtime-versions`. |
 | Las alarmas burn rate quedan en `INSUFFICIENT_DATA` | Es normal sin tráfico (`treat_missing_data = notBreaching` las mantiene en OK cuando hay datos). Genera tráfico con el smoke test del lab 01. |
-| `Error: Unable to find remote state` | El lab 01 debe estar aplicado en el mismo `TF_ENV` y con la key `lab10/01-serverless-api/<env>.tfstate`. |
+| `Error: Unable to find remote state` | El lab 01 debe estar aplicado en el mismo `TF_ENV` y con la key `lab10_terraform_aws/01-serverless-apigw-lambda-dynamodb/<env>.tfstate`. |
 | ChatOps: `Slack workspace not authorized` | Autoriza el workspace una vez en la consola de *Amazon Q Developer in chat applications* antes de aplicar. |
 <!-- detalle-funcional -->
 

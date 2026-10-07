@@ -1,16 +1,16 @@
-# Jobs de GitLab CI para el micro lab 09-mgn-migration. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 09-migration-mgn. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB09_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab09_vars:
   variables:
-    LAB_NAME: "09-mgn-migration"
-    LAB_DIR: "lab10/microlabs/09-mgn-migration"
+    LAB_NAME: "09-migration-mgn"
+    LAB_DIR: "lab10_terraform_aws/microlabs/09-migration-mgn"
     TFVARS_FILE: $LAB09_TFVARS
 
 .lab09_changes: &lab09_changes
-  - lab10/microlabs/09-mgn-migration/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/09-migration-mgn/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
 lab09:validate:
   extends: [.tf_validate, .lab09_vars]
@@ -52,5 +52,5 @@ lab09:destroy:
   extends: [.tf_destroy, .lab09_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "09-mgn-migration"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "09-migration-mgn"
       when: manual

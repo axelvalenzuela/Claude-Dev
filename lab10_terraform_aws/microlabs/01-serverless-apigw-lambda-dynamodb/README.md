@@ -2,6 +2,57 @@
 
 > **Objetivo:** desplegar una API REST definida por **contrato OpenAPI**, con defensa en profundidad (WAF, API key, JWT de Cognito, validación de esquema) y observabilidad (access logs, X-Ray, alarmas).
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~2 min · **Costo si queda encendido:** Free tier (+ WAF ~USD 6/mes)
+
+**Prerrequisitos**
+
+- Lab 00 desplegado (`TF_STATE_BUCKET`)
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/01-serverless-apigw-lambda-dynamodb/terraform.tfvars.example microlabs/01-serverless-apigw-lambda-dynamodb/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  01-serverless-apigw-lambda-dynamodb
+bash scripts/lab.sh plan  01-serverless-apigw-lambda-dynamodb   # revisa qué se crea
+bash scripts/lab.sh apply 01-serverless-apigw-lambda-dynamodb
+```
+
+**3. Después del apply**
+
+- Opcional para el lab 07: `enable_fault_injection = true`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 01-serverless-apigw-lambda-dynamodb   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 01-serverless-apigw-lambda-dynamodb
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -46,9 +97,9 @@ Cliente ──HTTPS──► AWS WAF (Common, BadInputs, rate-limit/IP)
 ## Pasos
 
 ```bash
-cd lab10/microlabs/01-serverless-api
+cd lab10_terraform_aws/microlabs/01-serverless-apigw-lambda-dynamodb
 cp terraform.tfvars.example terraform.tfvars
-terraform init -backend-config="bucket=<TF_STATE_BUCKET>" -backend-config="key=lab10/01-serverless-api/dev.tfstate" \
+terraform init -backend-config="bucket=<TF_STATE_BUCKET>" -backend-config="key=lab10_terraform_aws/01-serverless-apigw-lambda-dynamodb/dev.tfstate" \
                -backend-config="region=us-east-1" -backend-config="use_lockfile=true" -backend-config="encrypt=true"
 terraform plan -out tfplan && terraform apply tfplan
 ```
@@ -85,16 +136,16 @@ curl $API/items                                                                 
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/01-serverless-api/terraform.tfvars.example microlabs/01-serverless-api/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  01-serverless-api
-bash scripts/lab.sh apply 01-serverless-api
-bash scripts/lab.sh test  01-serverless-api      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 01-serverless-api
+cp microlabs/01-serverless-apigw-lambda-dynamodb/terraform.tfvars.example microlabs/01-serverless-apigw-lambda-dynamodb/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  01-serverless-apigw-lambda-dynamodb
+bash scripts/lab.sh apply 01-serverless-apigw-lambda-dynamodb
+bash scripts/lab.sh test  01-serverless-apigw-lambda-dynamodb      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 01-serverless-apigw-lambda-dynamodb
 ```
 
-Con `make`: `make apply LAB=01-serverless-api` · `make test LAB=01-serverless-api`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=01-serverless-apigw-lambda-dynamodb` · `make test LAB=01-serverless-apigw-lambda-dynamodb`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

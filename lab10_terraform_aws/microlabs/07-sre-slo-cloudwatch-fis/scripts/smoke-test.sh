@@ -29,7 +29,7 @@ ok "Listado de alarmas"
 if [ "${GENERATE_ERRORS:-0}" = "1" ]; then
   # Requiere el lab 01 aplicado con enable_fault_injection = true y su estado inicializado localmente.
   section "Inyección de errores 5XX en el API del lab 01 (6 min)"
-  LAB01="$LAB_DIR/../01-serverless-api"
+  LAB01="$LAB_DIR/../01-serverless-apigw-lambda-dynamodb"
   API=$(terraform -chdir="$LAB01" output -raw api_url)
   POOL=$(terraform -chdir="$LAB01" output -raw user_pool_id)
   KEY=$(aws apigateway get-api-key --api-key "$(terraform -chdir="$LAB01" output -raw api_key_id)" --include-value --query value --output text)

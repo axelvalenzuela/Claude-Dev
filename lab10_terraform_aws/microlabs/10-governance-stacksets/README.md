@@ -2,6 +2,60 @@
 
 > **Objetivo:** gobernar muchas cuentas desde un solo punto. Terraform administra un **StackSet** que despliega un template de CloudFormation (baseline de seguridad) en todas las cuentas de las OUs destino, con auto-deployment para las cuentas nuevas y un **bus de eventos central** que concentra los hallazgos de seguridad.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~5 min · **Costo si queda encendido:** USD 0
+
+**Prerrequisitos**
+
+- Cuenta **management** de AWS Organizations (o delegated admin)
+- `aws cloudformation activate-organizations-access`
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/10-governance-stacksets/terraform.tfvars.example microlabs/10-governance-stacksets/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `organization_id` | `aws organizations describe-organization` |
+| `target_ou_ids` | OU de prueba |
+| `security_emails` | equipo de seguridad |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  10-governance-stacksets
+bash scripts/lab.sh plan  10-governance-stacksets   # revisa qué se crea
+bash scripts/lab.sh apply 10-governance-stacksets
+```
+
+**3. Después del apply**
+
+- `aws cloudformation list-stack-instances --stack-set-name <nombre>`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 10-governance-stacksets   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 10-governance-stacksets
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -74,22 +128,22 @@ aws organizations list-organizational-units-for-parent --parent-id <root-id>
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/10-cloudformation-stacksets/terraform.tfvars.example microlabs/10-cloudformation-stacksets/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  10-cloudformation-stacksets
-bash scripts/lab.sh apply 10-cloudformation-stacksets
-bash scripts/lab.sh test  10-cloudformation-stacksets      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 10-cloudformation-stacksets
+cp microlabs/10-governance-stacksets/terraform.tfvars.example microlabs/10-governance-stacksets/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  10-governance-stacksets
+bash scripts/lab.sh apply 10-governance-stacksets
+bash scripts/lab.sh test  10-governance-stacksets      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 10-governance-stacksets
 ```
 
-Con `make`: `make apply LAB=10-cloudformation-stacksets` · `make test LAB=10-cloudformation-stacksets`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=10-governance-stacksets` · `make test LAB=10-governance-stacksets`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 
 Verifica que el StackSet esté `ACTIVE` y que todas las instancias (cuenta × región) estén en `SUCCEEDED`, lanza una **detección de drift** y espera `IN_SYNC`, y comprueba que el bus central restringe a la organización. Con `SEND_TEST_EVENT=1` publica un evento en el bus y debe llegar un correo.
 
-Para cuentas delegadas: `CALL_AS=DELEGATED_ADMIN bash scripts/lab.sh test 10-cloudformation-stacksets`.
+Para cuentas delegadas: `CALL_AS=DELEGATED_ADMIN bash scripts/lab.sh test 10-governance-stacksets`.
 
 ### Práctica de drift
 

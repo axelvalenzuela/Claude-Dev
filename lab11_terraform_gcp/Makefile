@@ -3,7 +3,7 @@
 #   make test  LAB=01-serverless-api
 # En Windows sin make, usa directamente: bash scripts/lab.sh <acción> <lab>
 
-LAB ?= 01-api-gateway-functions
+LAB ?= 01-serverless-apigw-functions-firestore
 
 .PHONY: init plan apply test output destroy validate validate-all fmt pdf
 

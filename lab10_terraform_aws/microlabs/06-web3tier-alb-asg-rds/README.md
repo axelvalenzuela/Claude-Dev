@@ -2,6 +2,61 @@
 
 > **Objetivo:** desplegar la arquitectura de referencia de 3 capas en una VPC multi-AZ. Cada capa vive en su propio módulo y en su propia subnet, y la seguridad se encadena por security groups.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~15 min · **Costo si queda encendido:** ~USD 95/mes ⚠️ destruir al terminar
+
+**Prerrequisitos**
+
+- Lab 00
+- Presupuesto: ~USD 3/día encendido
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/06-web3tier-alb-asg-rds/terraform.tfvars.example microlabs/06-web3tier-alb-asg-rds/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `db_multi_az` | `false` para ahorrar en pruebas cortas |
+| `certificate_arn` | opcional, ACM para HTTPS |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  06-web3tier-alb-asg-rds
+bash scripts/lab.sh plan  06-web3tier-alb-asg-rds   # revisa qué se crea
+bash scripts/lab.sh apply 06-web3tier-alb-asg-rds
+```
+
+**3. Después del apply**
+
+- Espera 3-5 min a que las instancias pasen el health check
+- `curl $(terraform -chdir=microlabs/06-web3tier-alb-asg-rds output -raw app_url)/db`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 06-web3tier-alb-asg-rds   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 06-web3tier-alb-asg-rds
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -25,7 +80,7 @@
 ## Estructura modular
 
 ```
-06-three-tier-web/
+06-web3tier-alb-asg-rds/
 ├── main.tf               # composición + reglas entre capas + alarmas
 └── modules/
     ├── web-tier/         # ALB, listeners, target group, WAF
@@ -67,22 +122,22 @@ GitLab: `LAB06_TFVARS` (File). Como RDS tarda en crearse, deja el job de apply c
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/06-three-tier-web/terraform.tfvars.example microlabs/06-three-tier-web/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  06-three-tier-web
-bash scripts/lab.sh apply 06-three-tier-web
-bash scripts/lab.sh test  06-three-tier-web      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 06-three-tier-web
+cp microlabs/06-web3tier-alb-asg-rds/terraform.tfvars.example microlabs/06-web3tier-alb-asg-rds/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  06-web3tier-alb-asg-rds
+bash scripts/lab.sh apply 06-web3tier-alb-asg-rds
+bash scripts/lab.sh test  06-web3tier-alb-asg-rds      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 06-web3tier-alb-asg-rds
 ```
 
-Con `make`: `make apply LAB=06-three-tier-web` · `make test LAB=06-three-tier-web`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=06-web3tier-alb-asg-rds` · `make test LAB=06-web3tier-alb-asg-rds`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 
 Espera a que el ALB responda, verifica 2 targets sanos y balanceo entre **2 AZ**, y llama a `/db`: la app lee la contraseña de **Secrets Manager**, crea la tabla `visits`, inserta una fila y confirma que la conexión usa **TLS**. También comprueba que RDS no es público, que es Multi-AZ, que IMDSv2 es obligatorio y que el WAF bloquea una inyección SQL.
 
-`CHAOS=1 bash scripts/lab.sh test 06-three-tier-web` termina una instancia y mide cuántos requests fallan mientras el ASG se recupera.
+`CHAOS=1 bash scripts/lab.sh test 06-web3tier-alb-asg-rds` termina una instancia y mide cuántos requests fallan mientras el ASG se recupera.
 
 ### La aplicación
 

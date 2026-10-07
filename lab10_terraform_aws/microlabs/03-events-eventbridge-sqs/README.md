@@ -2,6 +2,58 @@
 
 > **Objetivo:** desacoplar productores y consumidores con un bus de eventos. Se practican el filtrado por contenido, la transformación de entrada, los reintentos, la DLQ, el archive con replay, el bus cross-account y EventBridge Scheduler.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~2 min · **Costo si queda encendido:** Free tier
+
+**Prerrequisitos**
+
+- Lab 00
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/03-events-eventbridge-sqs/terraform.tfvars.example microlabs/03-events-eventbridge-sqs/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `producer_account_ids` | opcional, cuentas que publican |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  03-events-eventbridge-sqs
+bash scripts/lab.sh plan  03-events-eventbridge-sqs   # revisa qué se crea
+bash scripts/lab.sh apply 03-events-eventbridge-sqs
+```
+
+**3. Después del apply**
+
+- `aws events put-events --entries file://microlabs/03-events-eventbridge-sqs/events/order-created.json`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 03-events-eventbridge-sqs   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 03-events-eventbridge-sqs
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -50,16 +102,16 @@ Resultados esperados:
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/03-eventbridge-event-driven/terraform.tfvars.example microlabs/03-eventbridge-event-driven/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  03-eventbridge-event-driven
-bash scripts/lab.sh apply 03-eventbridge-event-driven
-bash scripts/lab.sh test  03-eventbridge-event-driven      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 03-eventbridge-event-driven
+cp microlabs/03-events-eventbridge-sqs/terraform.tfvars.example microlabs/03-events-eventbridge-sqs/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  03-events-eventbridge-sqs
+bash scripts/lab.sh apply 03-events-eventbridge-sqs
+bash scripts/lab.sh test  03-events-eventbridge-sqs      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 03-events-eventbridge-sqs
 ```
 
-Con `make`: `make apply LAB=03-eventbridge-event-driven` · `make test LAB=03-eventbridge-event-driven`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=03-events-eventbridge-sqs` · `make test LAB=03-events-eventbridge-sqs`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

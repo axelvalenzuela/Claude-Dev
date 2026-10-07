@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 01-serverless-apigw-functions-firestore. Plantillas en lab11_terraform_gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP01_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp01_vars:
+  variables:
+    LAB_NAME: "01-serverless-apigw-functions-firestore"
+    LAB_DIR: "lab11_terraform_gcp/microlabs/01-serverless-apigw-functions-firestore"
+    TFVARS_FILE: $GCP01_TFVARS
+
+.gcp01_changes: &gcp01_changes
+  - lab11_terraform_gcp/microlabs/01-serverless-apigw-functions-firestore/**/*
+  - lab11_terraform_gcp/modules/**/*
+  - lab11_terraform_gcp/.gitlab-ci.yml
+
+gcp01:validate:
+  extends: [.tf_validate, .gcp01_vars]
+  rules:
+    - changes: *gcp01_changes
+
+gcp01:lint:
+  extends: [.tf_lint, .gcp01_vars]
+  rules:
+    - changes: *gcp01_changes
+
+gcp01:checkov:
+  extends: [.tf_checkov, .gcp01_vars]
+  rules:
+    - changes: *gcp01_changes
+
+gcp01:plan:
+  extends: [.tf_plan, .gcp01_vars]
+  needs: ["gcp01:validate"]
+  rules:
+    - changes: *gcp01_changes
+
+gcp01:apply:
+  extends: [.tf_apply, .gcp01_vars]
+  needs: ["gcp01:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp01_changes
+      when: manual
+
+gcp01:smoke:
+  extends: [.tf_smoke, .gcp01_vars]
+  needs: ["gcp01:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp01_changes
+
+gcp01:destroy:
+  extends: [.tf_destroy, .gcp01_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "01-serverless-apigw-functions-firestore"
+      when: manual

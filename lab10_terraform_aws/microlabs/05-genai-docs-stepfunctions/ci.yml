@@ -1,16 +1,16 @@
-# Jobs de GitLab CI para el micro lab 05-ai-document-pipeline. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 05-genai-docs-stepfunctions. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB05_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab05_vars:
   variables:
-    LAB_NAME: "05-ai-document-pipeline"
-    LAB_DIR: "lab10/microlabs/05-ai-document-pipeline"
+    LAB_NAME: "05-genai-docs-stepfunctions"
+    LAB_DIR: "lab10_terraform_aws/microlabs/05-genai-docs-stepfunctions"
     TFVARS_FILE: $LAB05_TFVARS
 
 .lab05_changes: &lab05_changes
-  - lab10/microlabs/05-ai-document-pipeline/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/05-genai-docs-stepfunctions/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
 lab05:validate:
   extends: [.tf_validate, .lab05_vars]
@@ -52,5 +52,5 @@ lab05:destroy:
   extends: [.tf_destroy, .lab05_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "05-ai-document-pipeline"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "05-genai-docs-stepfunctions"
       when: manual

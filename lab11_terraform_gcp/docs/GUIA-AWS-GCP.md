@@ -1,15 +1,15 @@
-# Guía de estudio: lab10 (AWS) ↔ lab11 (GCP)
+# Guía de estudio: lab10_terraform_aws (AWS) ↔ lab11_terraform_gcp (GCP)
 
-Esta guía conecta los dos laboratorios. lab10 y lab11 resuelven los **mismos problemas de arquitectura** con Terraform, uno en AWS y otro en Google Cloud. Estudiarlos juntos ayuda a separar el **patrón** (lo que se repite en cualquier nube) del **servicio** (cómo lo implementa cada proveedor).
+Esta guía conecta los dos laboratorios. lab10_terraform_aws y lab11_terraform_gcp resuelven los **mismos problemas de arquitectura** con Terraform, uno en AWS y otro en Google Cloud. Estudiarlos juntos ayuda a separar el **patrón** (lo que se repite en cualquier nube) del **servicio** (cómo lo implementa cada proveedor).
 
-- AWS: [lab10/README.md](../../lab10/README.md) · diagramas en [lab10/docs/lab10-arquitecturas.pdf](../../lab10/docs/lab10-arquitecturas.pdf)
-- GCP: [lab11/README.md](../README.md) · diagramas en [lab11-arquitecturas-gcp.pdf](lab11-arquitecturas-gcp.pdf)
+- AWS: [lab10_terraform_aws/README.md](../../lab10_terraform_aws/README.md) · diagramas en [lab10_terraform_aws/docs/lab10-arquitecturas.pdf](../../lab10_terraform_aws/docs/lab10-arquitecturas.pdf)
+- GCP: [lab11_terraform_gcp/README.md](../README.md) · diagramas en [lab11-arquitecturas-gcp.pdf](lab11-arquitecturas-gcp.pdf)
 
 ---
 
 ## 1. Mapa de micro labs
 
-| Patrón | lab10 (AWS) | lab11 (GCP) | Lo que se aprende en ambos |
+| Patrón | lab10_terraform_aws (AWS) | lab11_terraform_gcp (GCP) | Lo que se aprende en ambos |
 |---|---|---|---|
 | Plataforma y CI sin secretos | 00 · S3 + IAM OIDC + boundary | 00 · GCS + Workload Identity Federation | Estado remoto con lock, federación OIDC, separación plan/apply, presupuesto |
 | API serverless | 01 · API Gateway REST + Lambda + DynamoDB + Cognito + WAF | 01 · API Gateway + Cloud Run functions + Firestore | Contrato OpenAPI, cuotas por cliente, backend privado, validación, IAM por recurso |
@@ -27,16 +27,16 @@ Esta guía conecta los dos laboratorios. lab10 y lab11 resuelven los **mismos pr
 
 ## 2. Equivalencias de servicios usados
 
-| Necesidad | AWS (lab10) | Google Cloud (lab11) | Diferencia que conviene notar |
+| Necesidad | AWS (lab10_terraform_aws) | Google Cloud (lab11_terraform_gcp) | Diferencia que conviene notar |
 |---|---|---|---|
 | Estado de Terraform | S3 + `use_lockfile` | GCS (lock nativo) | Ambos ya no necesitan tabla de locks |
 | CI sin llaves | IAM OIDC provider + `AssumeRoleWithWebIdentity` | Workload Identity Pool + impersonación de SA | En GCP el filtro va en `attribute_condition` y en el `principalSet` |
 | Funciones | Lambda (zip) | Cloud Run functions (build desde source con Cloud Build) | GCP construye un contenedor; Lambda ejecuta el zip directo |
-| Identidad de usuarios | Cognito User Pools | Identity Platform / IAM invoker | lab11 usa identidades de Google (ID token) para simplificar |
+| Identidad de usuarios | Cognito User Pools | Identity Platform / IAM invoker | lab11_terraform_gcp usa identidades de Google (ID token) para simplificar |
 | Base documental | DynamoDB | Firestore | Ambas con TTL nativo y recuperación point-in-time |
 | Mensajería | EventBridge, SQS | Pub/Sub | Pub/Sub valida esquemas al publicar; EventBridge filtra por contenido JSON |
 | Orquestación | Step Functions (ASL JSON) | Workflows (YAML) | Ambos con conectores directos a APIs y `parallel` |
-| IA generativa | Bedrock (Converse API) + Guardrails | Vertex AI (Gemini, `google-genai`) | Bedrock tiene guardrails administrados; en lab11 se implementan en código + safety settings |
+| IA generativa | Bedrock (Converse API) + Guardrails | Vertex AI (Gemini, `google-genai`) | Bedrock tiene guardrails administrados; en lab11_terraform_gcp se implementan en código + safety settings |
 | Balanceo y WAF | ALB (regional) + AWS WAF | External Application LB (global) + Cloud Armor | El LB de Google es global con una sola IP anycast |
 | Cómputo elástico | Auto Scaling Group | Managed Instance Group regional | Ambos con autohealing y rolling updates |
 | Base relacional HA | RDS Multi-AZ | Cloud SQL `REGIONAL` | Ambos con standby síncrono en otra zona |
@@ -51,7 +51,7 @@ Esta guía conecta los dos laboratorios. lab10 y lab11 resuelven los **mismos pr
 
 ## 3. Ruta de estudio sugerida (6 semanas)
 
-| Semana | lab10 (AWS) | lab11 (GCP) | Entregable |
+| Semana | lab10_terraform_aws (AWS) | lab11_terraform_gcp (GCP) | Entregable |
 |---|---|---|---|
 | 1 | 00, 11 | 00, 11 | Cuentas preparadas, pipeline OIDC/WIF funcionando, auditoría activa |
 | 2 | 01, 02 | 01 | Ambas APIs pasando su smoke test; comparar autorización y cuotas |
@@ -79,11 +79,11 @@ Y el mismo flujo de despliegue: MR → validate/tflint/checkov/plan con identida
 
 | Siempre destruir al terminar | Costo aproximado si queda encendido |
 |---|---|
-| lab10/06 three-tier-web | ~USD 95/mes |
-| lab10/08 neptune-graph | ~USD 115/mes |
-| lab11/05 three-tier-web | ~USD 120/mes |
-| lab11/06 gke-autopilot | ~USD 95/mes |
-| lab11/09 dms-migration | ~USD 2/día |
+| lab10_terraform_aws/06 three-tier-web | ~USD 95/mes |
+| lab10_terraform_aws/08 neptune-graph | ~USD 115/mes |
+| lab11_terraform_gcp/05 three-tier-web | ~USD 120/mes |
+| lab11_terraform_gcp/06 gke-autopilot | ~USD 95/mes |
+| lab11_terraform_gcp/09 dms-migration | ~USD 2/día |
 
 El resto de los labs es serverless y su costo es prácticamente cero sin tráfico. Los labs 00 de ambas nubes crean un presupuesto con alertas.
 

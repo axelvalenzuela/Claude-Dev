@@ -19,12 +19,12 @@ ci.auto.tfvars
 **/.build/
 
 # El canary de Synthetics DEBE versionarse aunque viva en node_modules
-!microlabs/07-sre-observability/canary/nodejs/node_modules/
-!microlabs/07-sre-observability/canary/nodejs/node_modules/index.js
+!microlabs/07-sre-slo-cloudwatch-fis/canary/nodejs/node_modules/
+!microlabs/07-sre-slo-cloudwatch-fis/canary/nodejs/node_modules/index.js
 
 # PDF de diagramas: regenerable con docs/build_pdf.py
 docs/.render/
 
 # Generados localmente
 tfplan
-microlabs/04-chatbot-bedrock/web/config.js
+microlabs/04-genai-chatbot-bedrock/web/config.js

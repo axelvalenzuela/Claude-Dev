@@ -11,7 +11,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "06-three-tier-web"
+    MicroLab    = "06-web3tier-alb-asg-rds"
   }
 }
 

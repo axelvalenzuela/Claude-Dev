@@ -13,7 +13,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "09-mgn-migration"
+    MicroLab    = "09-migration-mgn"
   }
 }
 

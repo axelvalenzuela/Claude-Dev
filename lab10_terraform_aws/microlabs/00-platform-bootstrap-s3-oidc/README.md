@@ -2,6 +2,60 @@
 
 > **Objetivo:** preparar la cuenta AWS para que el resto de los micro labs se desplieguen desde GitLab CI **sin llaves de acceso estáticas**, con estado remoto cifrado y alertas de presupuesto.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~2 min · **Costo si queda encendido:** ~USD 1/mes
+
+**Prerrequisitos**
+
+- Credenciales de administrador (`aws sso login`)
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/00-platform-bootstrap-s3-oidc/terraform.tfvars.example microlabs/00-platform-bootstrap-s3-oidc/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `gitlab_project_path` | `grupo/proyecto` exacto en GitLab |
+| `alert_emails` | correo para el presupuesto |
+
+**2. Despliega**
+
+```bash
+bash scripts/lab.sh init  00-platform-bootstrap-s3-oidc
+bash scripts/lab.sh plan  00-platform-bootstrap-s3-oidc   # revisa qué se crea
+bash scripts/lab.sh apply 00-platform-bootstrap-s3-oidc
+```
+
+**3. Después del apply**
+
+- `export TF_STATE_BUCKET=$(terraform -chdir=microlabs/00-platform-bootstrap-s3-oidc output -raw tf_state_bucket)`
+- Confirma el correo de AWS Budgets
+- Copia los outputs a las variables de GitLab (si usarás CI)
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 00-platform-bootstrap-s3-oidc   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 00-platform-bootstrap-s3-oidc
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -41,7 +95,7 @@ GitLab CI job ──(id_token JWT, aud=https://gitlab.com)──► IAM OIDC Pro
    ```bash
    terraform init -migrate-state \
      -backend-config="bucket=$(terraform output -raw tf_state_bucket)" \
-     -backend-config="key=lab10/00-bootstrap/terraform.tfstate" \
+     -backend-config="key=lab10_terraform_aws/00-platform-bootstrap-s3-oidc/terraform.tfstate" \
      -backend-config="region=us-east-1" -backend-config="use_lockfile=true" -backend-config="encrypt=true"
    ```
 5. Copia los outputs a GitLab (ver tabla abajo) y confirma los correos de AWS Budgets.
@@ -61,16 +115,16 @@ Además: **Settings → Repository → Protected branches**: protege `main` (sol
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/00-bootstrap/terraform.tfvars.example microlabs/00-bootstrap/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  00-bootstrap
-bash scripts/lab.sh apply 00-bootstrap
-bash scripts/lab.sh test  00-bootstrap      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 00-bootstrap
+cp microlabs/00-platform-bootstrap-s3-oidc/terraform.tfvars.example microlabs/00-platform-bootstrap-s3-oidc/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  00-platform-bootstrap-s3-oidc
+bash scripts/lab.sh apply 00-platform-bootstrap-s3-oidc
+bash scripts/lab.sh test  00-platform-bootstrap-s3-oidc      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 00-platform-bootstrap-s3-oidc
 ```
 
-Con `make`: `make apply LAB=00-bootstrap` · `make test LAB=00-bootstrap`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=00-platform-bootstrap-s3-oidc` · `make test LAB=00-platform-bootstrap-s3-oidc`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

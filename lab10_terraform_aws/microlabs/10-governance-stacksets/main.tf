@@ -13,7 +13,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "10-cloudformation-stacksets"
+    MicroLab    = "10-governance-stacksets"
   }
 
   audit_account_id = coalesce(var.audit_account_id, data.aws_caller_identity.current.account_id)
@@ -70,7 +70,7 @@ resource "aws_cloudwatch_event_target" "sns" {
       type    = "$.detail-type"
       source  = "$.source"
     }
-    input_template = "\"[lab10 security] <type> (<source>) en la cuenta <account> / <region>\""
+    input_template = "\"[lab10_terraform_aws security] <type> (<source>) en la cuenta <account> / <region>\""
   }
 }
 
@@ -108,7 +108,7 @@ resource "aws_iam_role_policy" "stackset_admin" {
 # ---------------- StackSet ----------------
 resource "aws_cloudformation_stack_set" "baseline" {
   name             = "${local.name}-security-baseline"
-  description      = "Baseline de seguridad lab10 (versión ${var.baseline_version})"
+  description      = "Baseline de seguridad lab10_terraform_aws (versión ${var.baseline_version})"
   permission_model = var.permission_model
   call_as          = var.call_as
   capabilities     = ["CAPABILITY_NAMED_IAM"]

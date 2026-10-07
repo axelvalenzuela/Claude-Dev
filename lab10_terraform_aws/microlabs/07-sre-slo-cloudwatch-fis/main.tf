@@ -10,7 +10,7 @@ data "terraform_remote_state" "lab01" {
   backend = "s3"
   config = {
     bucket = var.lab01_state_bucket
-    key    = "lab10/01-serverless-api/${var.environment}.tfstate"
+    key    = "lab10_terraform_aws/01-serverless-apigw-lambda-dynamodb/${var.environment}.tfstate"
     region = var.aws_region
   }
 }
@@ -31,7 +31,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "07-sre-observability"
+    MicroLab    = "07-sre-slo-cloudwatch-fis"
   }
 
   error_budget = 1 - var.slo_target # p. ej. 0.001 para 99.9 %

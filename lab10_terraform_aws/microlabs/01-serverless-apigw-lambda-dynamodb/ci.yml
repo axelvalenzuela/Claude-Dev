@@ -1,16 +1,16 @@
-# Jobs de GitLab CI para el micro lab 01-serverless-api. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 01-serverless-apigw-lambda-dynamodb. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB01_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab01_vars:
   variables:
-    LAB_NAME: "01-serverless-api"
-    LAB_DIR: "lab10/microlabs/01-serverless-api"
+    LAB_NAME: "01-serverless-apigw-lambda-dynamodb"
+    LAB_DIR: "lab10_terraform_aws/microlabs/01-serverless-apigw-lambda-dynamodb"
     TFVARS_FILE: $LAB01_TFVARS
 
 .lab01_changes: &lab01_changes
-  - lab10/microlabs/01-serverless-api/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/01-serverless-apigw-lambda-dynamodb/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
 lab01:validate:
   extends: [.tf_validate, .lab01_vars]
@@ -52,5 +52,5 @@ lab01:destroy:
   extends: [.tf_destroy, .lab01_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "01-serverless-api"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "01-serverless-apigw-lambda-dynamodb"
       when: manual

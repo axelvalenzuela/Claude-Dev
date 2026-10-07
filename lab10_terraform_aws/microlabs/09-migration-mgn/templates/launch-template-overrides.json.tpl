@@ -15,7 +15,7 @@
       "ResourceType": "instance",
       "Tags": [
         { "Key": "Project", "Value": "${project}" },
-        { "Key": "MicroLab", "Value": "09-mgn-migration" },
+        { "Key": "MicroLab", "Value": "09-migration-mgn" },
         { "Key": "MigratedBy", "Value": "AWS-MGN" }
       ]
     }

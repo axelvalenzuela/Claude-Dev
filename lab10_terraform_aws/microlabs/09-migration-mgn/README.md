@@ -2,6 +2,61 @@
 
 > **Objetivo:** preparar la *landing zone* de una migración lift-and-shift y recorrer el ciclo completo de MGN: replicación continua, prueba, cutover y finalización. Terraform crea la red, la seguridad, KMS y las identidades; la configuración de MGN se aplica con un script que usa los templates JSON renderizados por Terraform.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~3 min + replicación · **Costo si queda encendido:** Según servidores
+
+**Prerrequisitos**
+
+- Lab 00
+- Un servidor origen (VM en otra región/nube)
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/09-migration-mgn/terraform.tfvars.example microlabs/09-migration-mgn/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `source_cidrs` | IP pública del origen /32 |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  09-migration-mgn
+bash scripts/lab.sh plan  09-migration-mgn   # revisa qué se crea
+bash scripts/lab.sh apply 09-migration-mgn
+```
+
+**3. Después del apply**
+
+- `bash microlabs/09-migration-mgn/scripts/configure-mgn.sh`
+- Instala el agente en el origen (sección C)
+- Test → Cutover → Finalize en la consola de MGN
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 09-migration-mgn   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 09-migration-mgn
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -100,16 +155,16 @@ En Windows se usa `AwsReplicationWindowsInstaller.exe` con los mismos parámetro
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/09-mgn-migration/terraform.tfvars.example microlabs/09-mgn-migration/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  09-mgn-migration
-bash scripts/lab.sh apply 09-mgn-migration
-bash scripts/lab.sh test  09-mgn-migration      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 09-mgn-migration
+cp microlabs/09-migration-mgn/terraform.tfvars.example microlabs/09-migration-mgn/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  09-migration-mgn
+bash scripts/lab.sh apply 09-migration-mgn
+bash scripts/lab.sh test  09-migration-mgn      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 09-migration-mgn
 ```
 
-Con `make`: `make apply LAB=09-mgn-migration` · `make test LAB=09-mgn-migration`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=09-migration-mgn` · `make test LAB=09-migration-mgn`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

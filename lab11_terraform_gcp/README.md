@@ -1,32 +1,45 @@
 # Lab 11: Micro labs de Google Cloud con Terraform (SRE, serverless, IA y gobernanza)
 
-Versión **GCP** del [lab10](../lab10): 12 micro labs independientes y modulares para aprender a desplegar servicios de Google Cloud con Terraform, alineados con el **Google Cloud Architecture Framework** (equivalente al Well-Architected Framework). Se despliegan por GitOps desde **GitLab CI** con **Workload Identity Federation** (sin llaves JSON) y cada uno trae un **smoke test** que verifica el comportamiento real.
+Versión **GCP** del [lab10_terraform_aws](../lab10_terraform_aws): 12 micro labs independientes y modulares para aprender a desplegar servicios de Google Cloud con Terraform, alineados con el **Google Cloud Architecture Framework** (equivalente al Well-Architected Framework). Se despliegan por GitOps desde **GitLab CI** con **Workload Identity Federation** (sin llaves JSON) y cada uno trae un **smoke test** que verifica el comportamiento real.
 
 > 📄 Los diagramas, las tablas de implementación y la guía de RBAC y seguridad DevOps para GCP están en [docs/lab11-arquitecturas-gcp.pdf](docs/lab11-arquitecturas-gcp.pdf).
 
+## Empieza aquí
+
+| Si quieres... | Ve a |
+|---|---|
+| Instalar todo y desplegar desde cero | [DESPLIEGUE.md](DESPLIEGUE.md) |
+| Practicar el SDK de IA (google-genai + Vertex AI) en scripts cortos | [sdk-examples/](sdk-examples/) |
+| Ver la arquitectura de cada micro lab | [docs/lab11-arquitecturas-gcp.pdf](docs/lab11-arquitecturas-gcp.pdf) |
+| Comparar con AWS | [docs/GUIA-AWS-GCP.md](docs/GUIA-AWS-GCP.md) |
+
+Cada carpeta de micro lab se llama `NN-categoria-servicios` (por ejemplo `03-genai-chatbot-vertex-gemini`) y su README empieza con **"Despliegue paso a paso"**.
+
 ## Índice
 
-| # | Micro lab | Servicios | Equivalente en lab10 (AWS) | Costo si queda encendido |
+| # | Micro lab | Servicios | Equivalente en lab10_terraform_aws (AWS) | Costo si queda encendido |
 |---|---|---|---|---|
-| 00 | [bootstrap](microlabs/00-bootstrap) | GCS state, WIF, SAs, Artifact Registry, Budget | 00 (S3 + OIDC) | ~USD 0 |
-| 01 | [api-gateway-functions](microlabs/01-api-gateway-functions) | API Gateway, Cloud Run functions, Firestore, API keys | 01 (API GW + Lambda) | Free tier |
-| 02 | [pubsub-event-driven](microlabs/02-pubsub-event-driven) | Pub/Sub (schema, push OIDC, DLQ, filtros), BigQuery sub, Scheduler | 03 (EventBridge) | Free tier |
-| 03 | [vertex-ai-chatbot](microlabs/03-vertex-ai-chatbot) | Vertex AI Gemini, Cloud Run functions, Firestore TTL | 04 (Bedrock) | Por token |
-| 04 | [document-ai-workflows](microlabs/04-document-ai-workflows) | Eventarc, Workflows, Vision, Natural Language, Gemini, BigQuery | 05 (Step Functions) | Por uso |
-| 05 | [three-tier-web](microlabs/05-three-tier-web) | LB global, Cloud Armor, MIG regional, Cloud SQL HA, Secret Manager | 06 (ALB + RDS) | ~USD 120/mes ⚠️ |
-| 06 | [gke-autopilot](microlabs/06-gke-autopilot) | GKE Autopilot, Workload Identity, HPA/PDB/NetworkPolicy | — (nuevo) | ~USD 95/mes ⚠️ |
-| 07 | [sre-observability](microlabs/07-sre-observability) | Cloud Monitoring SLOs, burn rate, uptime checks, dashboard | 07 (CloudWatch SLO) | Gratis |
-| 08 | [bigquery-analytics](microlabs/08-bigquery-analytics) | BigQuery (capas, partición, vista autorizada), scheduled query | — (nuevo) | Free tier |
-| 09 | [dms-migration](microlabs/09-dms-migration) | Database Migration Service, Cloud SQL, origen simulado | 09 (MGN) | ~USD 2/día ⚠️ |
-| 10 | [org-governance](microlabs/10-org-governance) | Carpetas, Org Policies, tags, firewall jerárquico, fábrica de proyectos | 10 (StackSets + SCP) | USD 0 |
-| 11 | [security-governance](microlabs/11-security-governance) | Audit logs, sinks, IAM Deny, RBAC, break-glass, SCC/VPC-SC | 11 (CloudTrail + GuardDuty) | Bajo |
+| 00 | [bootstrap](microlabs/00-platform-bootstrap-gcs-wif) | GCS state, WIF, SAs, Artifact Registry, Budget | 00 (S3 + OIDC) | ~USD 0 |
+| 01 | [api-gateway-functions](microlabs/01-serverless-apigw-functions-firestore) | API Gateway, Cloud Run functions, Firestore, API keys | 01 (API GW + Lambda) | Free tier |
+| 02 | [pubsub-event-driven](microlabs/02-events-pubsub-scheduler) | Pub/Sub (schema, push OIDC, DLQ, filtros), BigQuery sub, Scheduler | 03 (EventBridge) | Free tier |
+| 03 | [vertex-ai-chatbot](microlabs/03-genai-chatbot-vertex-gemini) | Vertex AI Gemini, Cloud Run functions, Firestore TTL | 04 (Bedrock) | Por token |
+| 04 | [document-ai-workflows](microlabs/04-genai-docs-workflows) | Eventarc, Workflows, Vision, Natural Language, Gemini, BigQuery | 05 (Step Functions) | Por uso |
+| 05 | [three-tier-web](microlabs/05-web3tier-lb-mig-cloudsql) | LB global, Cloud Armor, MIG regional, Cloud SQL HA, Secret Manager | 06 (ALB + RDS) | ~USD 120/mes ⚠️ |
+| 06 | [gke-autopilot](microlabs/06-k8s-gke-autopilot) | GKE Autopilot, Workload Identity, HPA/PDB/NetworkPolicy | — (nuevo) | ~USD 95/mes ⚠️ |
+| 07 | [sre-observability](microlabs/07-sre-slo-monitoring) | Cloud Monitoring SLOs, burn rate, uptime checks, dashboard | 07 (CloudWatch SLO) | Gratis |
+| 08 | [bigquery-analytics](microlabs/08-data-bigquery-analytics) | BigQuery (capas, partición, vista autorizada), scheduled query | — (nuevo) | Free tier |
+| 09 | [dms-migration](microlabs/09-migration-dms) | Database Migration Service, Cloud SQL, origen simulado | 09 (MGN) | ~USD 2/día ⚠️ |
+| 10 | [org-governance](microlabs/10-governance-org-policies) | Carpetas, Org Policies, tags, firewall jerárquico, fábrica de proyectos | 10 (StackSets + SCP) | USD 0 |
+| 11 | [security-governance](microlabs/11-security-iam-deny-rbac) | Audit logs, sinks, IAM Deny, RBAC, break-glass, SCC/VPC-SC | 11 (CloudTrail + GuardDuty) | Bajo |
 
 ## Estructura
 
 ```
-lab11/
+lab11_terraform_gcp/
 ├── .gitlab-ci.yml          # plantillas: validate → security → plan → apply → smoke → destroy (WIF)
 ├── Makefile, scripts/      # lab.sh (init/plan/apply/test/destroy), lib.sh (helpers de smoke tests)
+├── DESPLIEGUE.md           # guía desde cero (herramientas, credenciales, orden)
+├── sdk-examples/           # scripts cortos del SDK de IA
 ├── modules/                # módulos compartidos de GCP
 │   ├── project-services/   # habilita APIs + espera de propagación
 │   ├── gcs-secure-bucket/  # UBLA, PAP enforced, versionado, CMEK, soft delete, lifecycle, retención
@@ -52,26 +65,26 @@ lab11/
 ## Ejecución local
 
 ```bash
-cd lab11
+cd lab11_terraform_gcp
 gcloud auth login && gcloud auth application-default login
 gcloud config set project <PROJECT_ID>
 
-cp microlabs/00-bootstrap/terraform.tfvars.example microlabs/00-bootstrap/terraform.tfvars
-bash scripts/lab.sh init 00-bootstrap && bash scripts/lab.sh apply 00-bootstrap
-export TF_STATE_BUCKET=$(terraform -chdir=microlabs/00-bootstrap output -raw tf_state_bucket)
+cp microlabs/00-platform-bootstrap-gcs-wif/terraform.tfvars.example microlabs/00-platform-bootstrap-gcs-wif/terraform.tfvars
+bash scripts/lab.sh init 00-platform-bootstrap-gcs-wif && bash scripts/lab.sh apply 00-platform-bootstrap-gcs-wif
+export TF_STATE_BUCKET=$(terraform -chdir=microlabs/00-platform-bootstrap-gcs-wif output -raw tf_state_bucket)
 
-cp microlabs/01-api-gateway-functions/terraform.tfvars.example microlabs/01-api-gateway-functions/terraform.tfvars
-bash scripts/lab.sh init  01-api-gateway-functions
-bash scripts/lab.sh apply 01-api-gateway-functions
-bash scripts/lab.sh test  01-api-gateway-functions
-bash scripts/lab.sh destroy 01-api-gateway-functions
+cp microlabs/01-serverless-apigw-functions-firestore/terraform.tfvars.example microlabs/01-serverless-apigw-functions-firestore/terraform.tfvars
+bash scripts/lab.sh init  01-serverless-apigw-functions-firestore
+bash scripts/lab.sh apply 01-serverless-apigw-functions-firestore
+bash scripts/lab.sh test  01-serverless-apigw-functions-firestore
+bash scripts/lab.sh destroy 01-serverless-apigw-functions-firestore
 
 bash scripts/lab.sh validate-all      # fmt/validate de los 12 labs sin credenciales
 ```
 
 ## Configuración de GitLab
 
-**CI/CD configuration file:** `lab11/.gitlab-ci.yml` (o inclúyelo desde un `.gitlab-ci.yml` raíz junto con lab10).
+**CI/CD configuration file:** `lab11_terraform_gcp/.gitlab-ci.yml` (o inclúyelo desde un `.gitlab-ci.yml` raíz junto con lab10_terraform_aws).
 
 | Variable | Tipo | Protegida | Origen |
 |---|---|---|---|
@@ -104,7 +117,7 @@ Protecciones: rama `main` protegida, approvals + CODEOWNERS, *protected environm
 | 10 | Org policies efectivas, baseline por proyecto, llave de SA bloqueada |
 | 11 | Auditoría y sinks, **deny policy** bloquea llaves, evento en el log bucket, RBAC |
 
-> El repositorio vive en **GitHub**; `.github/workflows/lab10-lab11-terraform.yml` ejecuta `fmt` y `validate` de lab10 y lab11 en cada PR. Los pipelines de este lab están escritos para **GitLab CI**.
+> El repositorio vive en **GitHub**; `.github/workflows/lab10-lab11-terraform.yml` ejecuta `fmt` y `validate` de lab10_terraform_aws y lab11_terraform_gcp en cada PR. Los pipelines de este lab están escritos para **GitLab CI**.
 
 ## Estado de validación
 

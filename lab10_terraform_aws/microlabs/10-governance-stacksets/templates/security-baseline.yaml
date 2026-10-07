@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >
-  lab10 - Baseline de seguridad por cuenta (desplegado con StackSets a todas las cuentas de las OUs destino).
+  lab10_terraform_aws - Baseline de seguridad por cuenta (desplegado con StackSets a todas las cuentas de las OUs destino).
   Rol de auditoría cross-account, reenvío de eventos críticos al bus central y reglas de AWS Config opcionales.
 
 Parameters:

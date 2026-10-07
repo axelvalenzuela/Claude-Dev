@@ -1,16 +1,16 @@
-# Jobs de GitLab CI para el micro lab 02-appsync-graphql. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 02-serverless-appsync-graphql. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB02_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab02_vars:
   variables:
-    LAB_NAME: "02-appsync-graphql"
-    LAB_DIR: "lab10/microlabs/02-appsync-graphql"
+    LAB_NAME: "02-serverless-appsync-graphql"
+    LAB_DIR: "lab10_terraform_aws/microlabs/02-serverless-appsync-graphql"
     TFVARS_FILE: $LAB02_TFVARS
 
 .lab02_changes: &lab02_changes
-  - lab10/microlabs/02-appsync-graphql/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/02-serverless-appsync-graphql/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
 lab02:validate:
   extends: [.tf_validate, .lab02_vars]
@@ -52,5 +52,5 @@ lab02:destroy:
   extends: [.tf_destroy, .lab02_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "02-appsync-graphql"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "02-serverless-appsync-graphql"
       when: manual

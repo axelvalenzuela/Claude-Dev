@@ -597,9 +597,9 @@ LABS = [
     },
 ]
 
-LAB_DIRS = ["00-bootstrap", "01-serverless-api", "02-appsync-graphql", "03-eventbridge-event-driven",
-            "04-chatbot-bedrock", "05-ai-document-pipeline", "06-three-tier-web", "07-sre-observability",
-            "08-neptune-graph", "09-mgn-migration", "10-cloudformation-stacksets", "11-security-governance"]
+LAB_DIRS = ["00-platform-bootstrap-s3-oidc", "01-serverless-apigw-lambda-dynamodb", "02-serverless-appsync-graphql", "03-events-eventbridge-sqs",
+            "04-genai-chatbot-bedrock", "05-genai-docs-stepfunctions", "06-web3tier-alb-asg-rds", "07-sre-slo-cloudwatch-fis",
+            "08-data-neptune-graph", "09-migration-mgn", "10-governance-stacksets", "11-security-guardrails-rbac"]
 SMOKE = [
     "bucket seguro, OIDC por rama, boundary niega iam:CreateUser",
     "200/401/403/400/201/204/404, throttling, logs y X-Ray",
@@ -685,7 +685,7 @@ GITLAB_VARS = [
     ["AWS_APPLY_ROLE_ARN", "Variable", "Sí", "Sí", "output aws_apply_role_arn (lab 00)"],
     ["AWS_REGION / TF_ENV", "Variable", "No", "No", "us-east-1 / dev (environment scope para prod)"],
     ["LAB01_TFVARS … LAB11_TFVARS", "File", "Sí", "No", "Contenido de terraform.tfvars de cada lab"],
-    ["DESTROY_LAB", "Variable (al ejecutar)", "No", "No", "Nombre del lab a destruir, p. ej. 06-three-tier-web"],
+    ["DESTROY_LAB", "Variable (al ejecutar)", "No", "No", "Nombre del lab a destruir, p. ej. 06-web3tier-alb-asg-rds"],
     ["TF_VAR_*", "Variable", "Según dato", "Según dato", "Sobrescribe una variable puntual (p. ej. TF_VAR_system_prompt)"],
 ]
 
@@ -763,7 +763,7 @@ def build():
     for lab, name, svc, kind in zip(LABS, names, services, kinds):
         idx.append([lab["id"], name, svc, kind])
     s.append(table(idx, [0.4 * inch, 3.4 * inch, 4.3 * inch, 1.9 * inch]))
-    s += [Spacer(1, 10), P("Código fuente: <b>lab10/</b> (módulos en <b>modules/</b>, labs en <b>microlabs/NN-nombre/</b>). "
+    s += [Spacer(1, 10), P("Código fuente: <b>lab10_terraform_aws/</b> (módulos en <b>modules/</b>, labs en <b>microlabs/NN-nombre/</b>). "
                            "Cada lab incluye README con instrucciones, terraform.tfvars.example y ci.yml. "
                            "Todos pasan terraform validate (Terraform 1.13 · AWS provider 6.x); no se han desplegado en una cuenta real.", "small"),
           PageBreak()]
@@ -797,7 +797,7 @@ def build():
           P("1.5 Variables a configurar en GitLab (Settings → CI/CD → Variables)", "h2"),
           table(GITLAB_VARS, [2.2 * inch, 1.3 * inch, 0.9 * inch, 1.0 * inch, 4.6 * inch]),
           Spacer(1, 6),
-          P("CI/CD configuration file: <b>lab10/.gitlab-ci.yml</b> · Protected branch: <b>main</b> (merge: Maintainers, push: nadie) · "
+          P("CI/CD configuration file: <b>lab10_terraform_aws/.gitlab-ci.yml</b> · Protected branch: <b>main</b> (merge: Maintainers, push: nadie) · "
             "Protected environments: <b>dev/*</b>, <b>prod/*</b> · Pipeline must succeed + 1 aprobación + CODEOWNERS.", "small"),
           PageBreak()]
 

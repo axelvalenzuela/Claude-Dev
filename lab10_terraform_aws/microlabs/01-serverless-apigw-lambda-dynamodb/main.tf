@@ -12,7 +12,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "01-serverless-api"
+    MicroLab    = "01-serverless-apigw-lambda-dynamodb"
   }
 }
 

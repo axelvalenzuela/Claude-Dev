@@ -33,7 +33,7 @@ expect_match "Política restringe a la organización" \
 if [ "${SEND_TEST_EVENT:-0}" = "1" ]; then
   R=$(aws events put-events --entries "[{\"Source\":\"lab10.smoke\",\"DetailType\":\"Smoke test\",\"Detail\":\"{}\",\"EventBusName\":\"$BUS_ARN\"}]")
   expect "Evento de prueba publicado" "$(echo "$R" | jq .FailedEntryCount)" "0"
-  info "Debe llegar un correo '[lab10 security] Smoke test ...'"
+  info "Debe llegar un correo '[lab10_terraform_aws security] Smoke test ...'"
 fi
 
 summary

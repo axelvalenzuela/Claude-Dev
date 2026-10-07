@@ -1,16 +1,16 @@
-# Jobs de GitLab CI para el micro lab 07-sre-observability. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 07-sre-slo-cloudwatch-fis. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB07_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab07_vars:
   variables:
-    LAB_NAME: "07-sre-observability"
-    LAB_DIR: "lab10/microlabs/07-sre-observability"
+    LAB_NAME: "07-sre-slo-cloudwatch-fis"
+    LAB_DIR: "lab10_terraform_aws/microlabs/07-sre-slo-cloudwatch-fis"
     TFVARS_FILE: $LAB07_TFVARS
 
 .lab07_changes: &lab07_changes
-  - lab10/microlabs/07-sre-observability/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/07-sre-slo-cloudwatch-fis/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
 lab07:validate:
   extends: [.tf_validate, .lab07_vars]
@@ -52,5 +52,5 @@ lab07:destroy:
   extends: [.tf_destroy, .lab07_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "07-sre-observability"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "07-sre-slo-cloudwatch-fis"
       when: manual

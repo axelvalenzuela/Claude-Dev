@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 05-web3tier-lb-mig-cloudsql. Plantillas en lab11_terraform_gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP05_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp05_vars:
+  variables:
+    LAB_NAME: "05-web3tier-lb-mig-cloudsql"
+    LAB_DIR: "lab11_terraform_gcp/microlabs/05-web3tier-lb-mig-cloudsql"
+    TFVARS_FILE: $GCP05_TFVARS
+
+.gcp05_changes: &gcp05_changes
+  - lab11_terraform_gcp/microlabs/05-web3tier-lb-mig-cloudsql/**/*
+  - lab11_terraform_gcp/modules/**/*
+  - lab11_terraform_gcp/.gitlab-ci.yml
+
+gcp05:validate:
+  extends: [.tf_validate, .gcp05_vars]
+  rules:
+    - changes: *gcp05_changes
+
+gcp05:lint:
+  extends: [.tf_lint, .gcp05_vars]
+  rules:
+    - changes: *gcp05_changes
+
+gcp05:checkov:
+  extends: [.tf_checkov, .gcp05_vars]
+  rules:
+    - changes: *gcp05_changes
+
+gcp05:plan:
+  extends: [.tf_plan, .gcp05_vars]
+  needs: ["gcp05:validate"]
+  rules:
+    - changes: *gcp05_changes
+
+gcp05:apply:
+  extends: [.tf_apply, .gcp05_vars]
+  needs: ["gcp05:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp05_changes
+      when: manual
+
+gcp05:smoke:
+  extends: [.tf_smoke, .gcp05_vars]
+  needs: ["gcp05:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp05_changes
+
+gcp05:destroy:
+  extends: [.tf_destroy, .gcp05_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "05-web3tier-lb-mig-cloudsql"
+      when: manual

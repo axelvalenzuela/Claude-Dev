@@ -14,7 +14,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "03-eventbridge-event-driven"
+    MicroLab    = "03-events-eventbridge-sqs"
   }
 }
 

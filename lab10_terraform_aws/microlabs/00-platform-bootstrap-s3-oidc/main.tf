@@ -16,7 +16,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "00-bootstrap"
+    MicroLab    = "00-platform-bootstrap-s3-oidc"
   }
 }
 

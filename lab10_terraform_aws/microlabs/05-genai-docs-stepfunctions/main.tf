@@ -14,7 +14,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "05-ai-document-pipeline"
+    MicroLab    = "05-genai-docs-stepfunctions"
   }
 }
 

@@ -223,7 +223,7 @@ OUT = Path(__file__).parent / "lab11-arquitecturas-gcp.pdf"
 # ---------------------------------------------------------------------------
 LABS = [
     {
-        "id": "00", "dir": "00-bootstrap", "title": "Bootstrap: estado remoto, Workload Identity Federation y presupuesto",
+        "id": "00", "dir": "00-platform-bootstrap-gcs-wif", "title": "Bootstrap: estado remoto, Workload Identity Federation y presupuesto",
         "goal": "Prepara el proyecto para desplegar desde GitLab sin llaves JSON: estado en GCS, federación OIDC, SAs separadas de plan y apply, builder de Cloud Build y presupuesto.",
         "groups": [("GitLab", 1, 4, 22, 88), ("Proyecto GCP", 27, 4, 72, 88)],
         "nodes": [
@@ -254,7 +254,7 @@ LABS = [
         "smoke": "bucket seguro, provider ACTIVE, SA apply sin llaves y solo desde main",
     },
     {
-        "id": "01", "dir": "01-api-gateway-functions", "title": "API serverless: API Gateway + Cloud Run functions + Firestore",
+        "id": "01", "dir": "01-serverless-apigw-functions-firestore", "title": "API serverless: API Gateway + Cloud Run functions + Firestore",
         "goal": "API REST con contrato OpenAPI, API keys con cuota por consumidor, backend privado (solo el gateway lo invoca) e IAM condicionado a una base de Firestore.",
         "groups": [("Región us-central1", 16, 3, 83, 92)],
         "nodes": [
@@ -282,7 +282,7 @@ LABS = [
         "smoke": "401/400, 403 backend privado, CRUD 201→200→204→404, 429 por cuota",
     },
     {
-        "id": "02", "dir": "02-pubsub-event-driven", "title": "Orientado a eventos con Pub/Sub: schema, push OIDC, DLQ, filtros y BigQuery",
+        "id": "02", "dir": "02-events-pubsub-scheduler", "title": "Orientado a eventos con Pub/Sub: schema, push OIDC, DLQ, filtros y BigQuery",
         "goal": "Contrato AVRO validado al publicar, push autenticado con reintentos y dead letter, suscripción filtrada, auditoría directa en BigQuery y Cloud Scheduler.",
         "groups": [("Pub/Sub", 20, 3, 34, 92)],
         "nodes": [
@@ -314,7 +314,7 @@ LABS = [
         "smoke": "schema rechaza inválidos, filtro, DLQ tras 5 intentos, BigQuery, Scheduler",
     },
     {
-        "id": "03", "dir": "03-vertex-ai-chatbot", "title": "Chatbot de IA generativa con Vertex AI Gemini",
+        "id": "03", "dir": "03-genai-chatbot-vertex-gemini", "title": "Chatbot de IA generativa con Vertex AI Gemini",
         "goal": "Chatbot privado con Gemini (SDK google-genai), historial en Firestore con TTL nativo, guardrails en capas y métricas de tokens en Logging.",
         "groups": [("Proyecto GCP", 18, 3, 81, 92)],
         "nodes": [
@@ -342,7 +342,7 @@ LABS = [
         "smoke": "403 sin token, STOP + tokens, memoria, tema e injection bloqueados",
     },
     {
-        "id": "04", "dir": "04-document-ai-workflows", "title": "Pipeline de IA para documentos con Cloud Workflows",
+        "id": "04", "dir": "04-genai-docs-workflows", "title": "Pipeline de IA para documentos con Cloud Workflows",
         "goal": "Orquestar APIs de IA con conectores de Workflows, sin funciones propias: OCR, entidades y resumen en paralelo, con try/except y resultados en BigQuery.",
         "groups": [("Cloud Workflows", 36, 3, 63, 92)],
         "nodes": [
@@ -371,7 +371,7 @@ LABS = [
         "smoke": "SUCCEEDED con entidades + resumen; .docx FAILED; otros/ ignorado",
     },
     {
-        "id": "05", "dir": "05-three-tier-web", "title": "Arquitectura web de 3 niveles: Load Balancer + MIG + Cloud SQL HA",
+        "id": "05", "dir": "05-web3tier-lb-mig-cloudsql", "title": "Arquitectura web de 3 niveles: Load Balancer + MIG + Cloud SQL HA",
         "goal": "LB global con Cloud Armor, MIG regional sin IPs públicas con autohealing, y Cloud SQL PostgreSQL HA solo por IP privada con TLS y Secret Manager.",
         "groups": [("VPC lab11-dev-3t", 14, 2, 85, 94, "#6A3FB5", "#FBFAFE"),
                    ("Borde global", 17, 8, 24, 84, "#8A97A3", "#F7F9FB"),
@@ -405,7 +405,7 @@ LABS = [
         "smoke": "2 zonas sanas, /db TLS, SQL REGIONAL + PITR, Armor SQLi/XSS; CHAOS=1",
     },
     {
-        "id": "06", "dir": "06-gke-autopilot", "title": "GKE Autopilot privado con workload endurecido",
+        "id": "06", "dir": "06-k8s-gke-autopilot", "title": "GKE Autopilot privado con workload endurecido",
         "goal": "Kubernetes administrado con seguridad por defecto: nodos privados, Workload Identity, Pod Security restricted, NetworkPolicy, HPA y PDB, todo en Terraform.",
         "groups": [("GKE Autopilot regional (nodos privados)", 22, 3, 77, 92, "#6A3FB5", "#FBFAFE"),
                    ("namespace lab11-app · PSA restricted", 26, 22, 70, 70, "#8A97A3", "#F7F9FB")],
@@ -436,7 +436,7 @@ LABS = [
         "smoke": "nodos privados, WI, pod privilegiado rechazado, LB 200, PDB/NetPol; LOAD=1",
     },
     {
-        "id": "07", "dir": "07-sre-observability", "title": "SRE con Cloud Monitoring: SLOs, burn rate, uptime y dashboard",
+        "id": "07", "dir": "07-sre-slo-monitoring", "title": "SRE con Cloud Monitoring: SLOs, burn rate, uptime y dashboard",
         "goal": "SLOs request-based sobre la función del lab 01 y alertas por consumo del presupuesto de error (multi-window, multi-burn-rate), con uptime checks y señales doradas.",
         "groups": [("Cloud Monitoring", 22, 3, 56, 92)],
         "nodes": [
@@ -466,7 +466,7 @@ LABS = [
         "smoke": "2 SLOs, alertas; GENERATE_ERRORS=1 → burn rate 5 min > 14.4",
     },
     {
-        "id": "08", "dir": "08-bigquery-analytics", "title": "Analítica con BigQuery: ingesta streaming, capas y vista autorizada",
+        "id": "08", "dir": "08-data-bigquery-analytics", "title": "Analítica con BigQuery: ingesta streaming, capas y vista autorizada",
         "goal": "Data platform mínima: ingesta sin código desde Pub/Sub, partición + clustering con filtro obligatorio, MERGE programado y analistas solo sobre vistas sin PII.",
         "groups": [("BigQuery", 34, 3, 65, 92)],
         "nodes": [
@@ -494,7 +494,7 @@ LABS = [
         "smoke": "30 filas, consulta sin partición rechazada, DLQ, MERGE, vista sin PII",
     },
     {
-        "id": "09", "dir": "09-dms-migration", "title": "Migración con Database Migration Service (dump + CDC)",
+        "id": "09", "dir": "09-migration-dms", "title": "Migración con Database Migration Service (dump + CDC)",
         "goal": "Migrar PostgreSQL a Cloud SQL con DMS continuo: origen on-prem simulado con pglogical, conectividad privada por VPC peering y cutover controlado (promote).",
         "groups": [("Red corporativa simulada (VPC)", 1, 4, 40, 90, "#7A8691", "#F7F7F7"),
                    ("Servicios administrados", 46, 4, 53, 90, "#6A3FB5", "#FBFAFE")],
@@ -522,7 +522,7 @@ LABS = [
         "smoke": "origen 500/5000 filas, verify; RUN_MIGRATION=1 → fase CDC",
     },
     {
-        "id": "10", "dir": "10-org-governance", "title": "Gobernanza de organización: Org Policies, tags y fábrica de proyectos",
+        "id": "10", "dir": "10-governance-org-policies", "title": "Gobernanza de organización: Org Policies, tags y fábrica de proyectos",
         "goal": "El equivalente de StackSets + SCPs: guardrails heredados por carpeta, firewall jerárquico, políticas condicionadas por tag y N proyectos con el mismo baseline.",
         "groups": [("Organización → carpeta sandbox → lab11-dev", 1, 3, 98, 50, "#232F3E", "#F7F9FB"),
                    ("Proyectos creados por la fábrica", 1, 60, 98, 36, "#8A97A3", "#FAFBFC")],
@@ -552,7 +552,7 @@ LABS = [
         "smoke": "políticas efectivas por proyecto, sin red default, llave de SA bloqueada",
     },
     {
-        "id": "11", "dir": "11-security-governance", "title": "Seguridad del proyecto: auditoría, IAM Deny, RBAC y alertas",
+        "id": "11", "dir": "11-security-iam-deny-rbac", "title": "Seguridad del proyecto: auditoría, IAM Deny, RBAC y alertas",
         "goal": "Controles detectivos y preventivos: Data Access logs, archivo con CMEK, alertas sobre eventos de alto riesgo, deny policy, RBAC por equipo y break-glass con caducidad.",
         "groups": [("Preventivos", 1, 3, 30, 92, "#C62828", "#FFFBFB"), ("Detectivos", 35, 3, 34, 92, "#2E7D32", "#FAFDFA"),
                    ("Respuesta", 73, 3, 26, 92, "#C2185B", "#FFFAFC")],
@@ -713,7 +713,7 @@ def build():
     s += [Spacer(1, 0.6 * inch), P("Lab 11: Micro labs de Google Cloud con Terraform", "title"), Spacer(1, 6),
           P("Diagramas de arquitectura, implementación con Terraform, RBAC y seguridad DevOps con Workload Identity Federation "
             "sobre GitLab CI, alineados con el Google Cloud Architecture Framework.", "subtitle"), Spacer(1, 18)]
-    idx = [["#", "Micro lab", "Servicios principales", "Equivalente AWS (lab10)"]]
+    idx = [["#", "Micro lab", "Servicios principales", "Equivalente AWS (lab10_terraform_aws)"]]
     names = ["Bootstrap", "API Gateway + functions", "Pub/Sub event-driven", "Chatbot Vertex AI", "Pipeline IA con Workflows",
              "Web de 3 niveles", "GKE Autopilot", "SRE observabilidad", "BigQuery analítica", "Migración DMS",
              "Gobernanza de organización", "Seguridad y gobernanza"]
@@ -728,7 +728,7 @@ def build():
     for lab, n, sv, eq in zip(LABS, names, services, equiv):
         idx.append([lab["id"], n, sv, eq])
     s.append(table(idx, [0.4 * inch, 2.4 * inch, 5.0 * inch, 2.2 * inch]))
-    s += [Spacer(1, 10), P("Código fuente: <b>lab11/</b> (módulos en <b>modules/</b>, labs en <b>microlabs/NN-nombre/</b>). "
+    s += [Spacer(1, 10), P("Código fuente: <b>lab11_terraform_gcp/</b> (módulos en <b>modules/</b>, labs en <b>microlabs/NN-nombre/</b>). "
                            "Cada lab incluye README, terraform.tfvars.example, ci.yml y scripts/smoke-test.sh. "
                            "Todos pasan terraform validate (Terraform 1.13 · google 7.x); no se han desplegado en un proyecto real.", "small"),
           PageBreak()]

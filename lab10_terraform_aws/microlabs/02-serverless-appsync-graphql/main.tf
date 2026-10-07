@@ -10,7 +10,7 @@ locals {
     Owner       = var.owner
     CostCenter  = var.cost_center
     ManagedBy   = "Terraform"
-    MicroLab    = "02-appsync-graphql"
+    MicroLab    = "02-serverless-appsync-graphql"
   }
 
   resolvers = {

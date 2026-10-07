@@ -6,10 +6,10 @@
 # Acciones: init | plan | apply | test | output | destroy | validate | validate-all | fmt
 # Ejemplos:
 #   export TF_STATE_BUCKET=lab10-dev-tfstate-123456789012
-#   ./scripts/lab.sh init 01-serverless-api
-#   ./scripts/lab.sh apply 01-serverless-api
-#   ./scripts/lab.sh test 01-serverless-api
-#   ./scripts/lab.sh destroy 01-serverless-api
+#   ./scripts/lab.sh init 01-serverless-apigw-lambda-dynamodb
+#   ./scripts/lab.sh apply 01-serverless-apigw-lambda-dynamodb
+#   ./scripts/lab.sh test 01-serverless-apigw-lambda-dynamodb
+#   ./scripts/lab.sh destroy 01-serverless-apigw-lambda-dynamodb
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,7 +22,7 @@ usage() { sed -n '2,13p' "$0"; exit 1; }
 [ -z "$ACTION" ] && usage
 
 lab_dir() {
-  [ -z "$LAB" ] && { echo "Falta el nombre del lab (p. ej. 01-serverless-api)"; exit 1; }
+  [ -z "$LAB" ] && { echo "Falta el nombre del lab (p. ej. 01-serverless-apigw-lambda-dynamodb)"; exit 1; }
   local d="$ROOT/microlabs/$LAB"
   [ -d "$d" ] || { echo "No existe $d"; ls "$ROOT/microlabs"; exit 1; }
   echo "$d"
@@ -36,13 +36,13 @@ tfvars_args() {
 case "$ACTION" in
   init)
     D=$(lab_dir)
-    if [ "$LAB" = "00-bootstrap" ]; then
+    if [ "$LAB" = "00-platform-bootstrap-s3-oidc" ]; then
       terraform -chdir="$D" init
     else
-      : "${TF_STATE_BUCKET:?Define TF_STATE_BUCKET (output del lab 00-bootstrap)}"
+      : "${TF_STATE_BUCKET:?Define TF_STATE_BUCKET (output del lab 00-platform-bootstrap-s3-oidc)}"
       terraform -chdir="$D" init -reconfigure \
         -backend-config="bucket=$TF_STATE_BUCKET" \
-        -backend-config="key=lab10/$LAB/$ENVIRONMENT.tfstate" \
+        -backend-config="key=lab10_terraform_aws/$LAB/$ENVIRONMENT.tfstate" \
         -backend-config="region=$REGION" \
         -backend-config="use_lockfile=true" \
         -backend-config="encrypt=true"

@@ -1,56 +1,56 @@
-# Jobs de GitLab CI para el micro lab 10-cloudformation-stacksets. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 10-governance-stacksets. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB10_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab10_vars:
   variables:
-    LAB_NAME: "10-cloudformation-stacksets"
-    LAB_DIR: "lab10/microlabs/10-cloudformation-stacksets"
+    LAB_NAME: "10-governance-stacksets"
+    LAB_DIR: "lab10_terraform_aws/microlabs/10-governance-stacksets"
     TFVARS_FILE: $LAB10_TFVARS
 
 .lab10_changes: &lab10_changes
-  - lab10/microlabs/10-cloudformation-stacksets/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/10-governance-stacksets/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
-lab10:validate:
+lab10_terraform_aws:validate:
   extends: [.tf_validate, .lab10_vars]
   rules:
     - changes: *lab10_changes
 
-lab10:lint:
+lab10_terraform_aws:lint:
   extends: [.tf_lint, .lab10_vars]
   rules:
     - changes: *lab10_changes
 
-lab10:checkov:
+lab10_terraform_aws:checkov:
   extends: [.tf_checkov, .lab10_vars]
   rules:
     - changes: *lab10_changes
 
-lab10:plan:
+lab10_terraform_aws:plan:
   extends: [.tf_plan, .lab10_vars]
-  needs: ["lab10:validate"]
+  needs: ["lab10_terraform_aws:validate"]
   rules:
     - changes: *lab10_changes
 
-lab10:apply:
+lab10_terraform_aws:apply:
   extends: [.tf_apply, .lab10_vars]
-  needs: ["lab10:plan"]
+  needs: ["lab10_terraform_aws:plan"]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes: *lab10_changes
       when: manual
 
-lab10:smoke:
+lab10_terraform_aws:smoke:
   extends: [.tf_smoke, .lab10_vars]
-  needs: ["lab10:apply"]
+  needs: ["lab10_terraform_aws:apply"]
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes: *lab10_changes
 
-lab10:destroy:
+lab10_terraform_aws:destroy:
   extends: [.tf_destroy, .lab10_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "10-cloudformation-stacksets"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "10-governance-stacksets"
       when: manual

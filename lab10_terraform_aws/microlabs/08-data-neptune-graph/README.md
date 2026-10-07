@@ -2,6 +2,59 @@
 
 > **Objetivo:** modelar relaciones (detección de fraude o recomendaciones) en una base de grafos totalmente privada, con autenticación IAM, carga masiva desde S3 y consultas openCypher desde Lambda.
 
+<!-- despliegue -->
+## Despliegue paso a paso (desde cero)
+
+> Si es tu primera vez, sigue antes la guía general [DESPLIEGUE.md](../../DESPLIEGUE.md) (herramientas, credenciales y lab 00).
+
+**Tiempo de apply:** ~15 min · **Costo si queda encendido:** ~USD 115/mes ⚠️ destruir al terminar
+
+**Prerrequisitos**
+
+- Lab 00
+- Presupuesto: ~USD 4/día
+
+**1. Prepara las variables**
+
+```bash
+cd lab10_terraform_aws
+cp microlabs/08-data-neptune-graph/terraform.tfvars.example microlabs/08-data-neptune-graph/terraform.tfvars
+```
+
+Edita como mínimo:
+
+| Variable | Valor |
+|---|---|
+| `owner` | tu correo |
+| `engine_version / neptune_family` | deben coincidir |
+
+**2. Despliega**
+
+```bash
+export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>
+bash scripts/lab.sh init  08-data-neptune-graph
+bash scripts/lab.sh plan  08-data-neptune-graph   # revisa qué se crea
+bash scripts/lab.sh apply 08-data-neptune-graph
+```
+
+**3. Después del apply**
+
+- El smoke test hace el bulk load de `data/*.csv`
+
+**4. Verifica**
+
+```bash
+bash scripts/lab.sh test 08-data-neptune-graph   # debe terminar en SMOKE TEST OK
+```
+
+**5. Destruye al terminar**
+
+```bash
+bash scripts/lab.sh destroy 08-data-neptune-graph
+```
+<!-- despliegue -->
+
+
 ## Arquitectura
 
 ```
@@ -63,16 +116,16 @@ GitLab: `LAB08_TFVARS` (File).
 ## Ejecución rápida
 
 ```bash
-cd lab10
+cd lab10_terraform_aws
 export TF_STATE_BUCKET=<output tf_state_bucket del lab 00>   # no aplica al lab 00
-cp microlabs/08-neptune-graph/terraform.tfvars.example microlabs/08-neptune-graph/terraform.tfvars   # edita owner y demás
-bash scripts/lab.sh init  08-neptune-graph
-bash scripts/lab.sh apply 08-neptune-graph
-bash scripts/lab.sh test  08-neptune-graph      # smoke test automatizado (abajo)
-bash scripts/lab.sh destroy 08-neptune-graph
+cp microlabs/08-data-neptune-graph/terraform.tfvars.example microlabs/08-data-neptune-graph/terraform.tfvars   # edita owner y demás
+bash scripts/lab.sh init  08-data-neptune-graph
+bash scripts/lab.sh apply 08-data-neptune-graph
+bash scripts/lab.sh test  08-data-neptune-graph      # smoke test automatizado (abajo)
+bash scripts/lab.sh destroy 08-data-neptune-graph
 ```
 
-Con `make`: `make apply LAB=08-neptune-graph` · `make test LAB=08-neptune-graph`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
+Con `make`: `make apply LAB=08-data-neptune-graph` · `make test LAB=08-data-neptune-graph`. Requisitos del smoke test: AWS CLI v2, `jq`, `curl` y credenciales con permisos de escritura sobre el lab.
 
 ## Prueba automatizada (`scripts/smoke-test.sh`)
 

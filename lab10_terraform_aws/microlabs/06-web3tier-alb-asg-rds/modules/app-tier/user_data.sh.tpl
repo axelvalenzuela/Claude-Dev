@@ -69,7 +69,7 @@ class Handler(BaseHTTPRequestHandler):
                                         "postgres": version, "ssl": ssl == "t"})
             except subprocess.CalledProcessError as e:
                 return self._send(500, {"status": "error", "detail": (e.stderr or str(e))[-300:]})
-        return self._send(200, f"<h1>lab10 · 3 niveles</h1><p>Instancia <b>{INSTANCE}</b> en <b>{AZ}</b></p>"
+        return self._send(200, f"<h1>lab10_terraform_aws · 3 niveles</h1><p>Instancia <b>{INSTANCE}</b> en <b>{AZ}</b></p>"
                                f"<p><a href='/db'>/db</a> prueba la conexión a PostgreSQL ({DB_HOST})</p>", "text/html")
 
     def log_message(self, fmt, *args):
@@ -81,7 +81,7 @@ PY
 
 cat > /etc/systemd/system/lab10-app.service <<UNIT
 [Unit]
-Description=lab10 three-tier demo app
+Description=lab10_terraform_aws three-tier demo app
 After=network-online.target
 Wants=network-online.target
 

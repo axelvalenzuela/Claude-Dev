@@ -105,5 +105,5 @@ variable "fis_target_tag_key" {
 
 variable "fis_target_tag_value" {
   type    = string
-  default = "06-three-tier-web"
+  default = "06-web3tier-alb-asg-rds"
 }

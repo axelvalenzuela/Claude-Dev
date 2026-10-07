@@ -1,16 +1,16 @@
-# Jobs de GitLab CI para el micro lab 06-three-tier-web. Plantillas en lab10/.gitlab-ci.yml
+# Jobs de GitLab CI para el micro lab 06-web3tier-alb-asg-rds. Plantillas en lab10_terraform_aws/.gitlab-ci.yml
 # Variable requerida en GitLab: LAB06_TFVARS (tipo File) con el contenido de terraform.tfvars
 
 .lab06_vars:
   variables:
-    LAB_NAME: "06-three-tier-web"
-    LAB_DIR: "lab10/microlabs/06-three-tier-web"
+    LAB_NAME: "06-web3tier-alb-asg-rds"
+    LAB_DIR: "lab10_terraform_aws/microlabs/06-web3tier-alb-asg-rds"
     TFVARS_FILE: $LAB06_TFVARS
 
 .lab06_changes: &lab06_changes
-  - lab10/microlabs/06-three-tier-web/**/*
-  - lab10/modules/**/*
-  - lab10/.gitlab-ci.yml
+  - lab10_terraform_aws/microlabs/06-web3tier-alb-asg-rds/**/*
+  - lab10_terraform_aws/modules/**/*
+  - lab10_terraform_aws/.gitlab-ci.yml
 
 lab06:validate:
   extends: [.tf_validate, .lab06_vars]
@@ -52,5 +52,5 @@ lab06:destroy:
   extends: [.tf_destroy, .lab06_vars]
   needs: []
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "06-three-tier-web"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "06-web3tier-alb-asg-rds"
       when: manual

@@ -3,3 +3,16 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.db
+
+# Secretos y artefactos
+.env
+node_modules/
+dist/
+.terraform/
+.ruff_cache/
+*.generated.tfvars.json
+
+# Restos locales de labs viejos (su codigo vive en learning-labs o en ai-engineer-gcp-aws)
+lab3/
+lab6/
+lab8_IAcourse/

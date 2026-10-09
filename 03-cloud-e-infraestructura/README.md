@@ -9,4 +9,4 @@ Contenedores, infraestructura como código y arquitecturas empresariales, con pr
 
 **Orden sugerido:** lab05 → lab06.
 
-**Terraform en AWS y Google Cloud (antes lab10 y lab11):** los micro labs de serverless, eventos, SRE, migración, gobernanza e IA generativa están en el repositorio [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws) (módulos `06-terraform-gcp` y `08-terraform-aws`).
+**Terraform en AWS y Google Cloud (antes lab10 y lab11):** los micro labs de serverless, eventos, SRE, migración, gobernanza e IA generativa están en el área [04-ai-engineer-gcp-aws](../04-ai-engineer-gcp-aws/) (módulos `06-terraform-gcp` y `08-terraform-aws`).

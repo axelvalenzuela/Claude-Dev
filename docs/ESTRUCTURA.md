@@ -22,47 +22,39 @@ Claude-Dev/
 │   ├── README.md
 │   ├── lab05-kubernetes-local/
 │   └── lab06-sap-s4hana-fiori/
+├── 04-ai-engineer-gcp-aws/
+│   ├── EMPIEZA-AQUI.md           Ruta del curso en orden
+│   ├── 01-python-for-ai/ … 08-terraform-aws/
+│   └── 03-gemini-sdk/03-lab9-safety-y-vertex/
 └── .github/workflows/            Un workflow por lab, filtrado por ruta
 ```
 
 - **Área (`NN-area/`):** agrupa labs del mismo tema; su README compara los labs y sugiere el orden.
 - **Lab (`labNN-tema/`):** el número es el orden de creación (no se reutiliza); el tema describe qué se construye.
 
-## Ramas y flujo de trabajo
+## Rama y flujo de trabajo
 
-El repositorio tiene solo dos ramas:
-
-| Rama | Contenido | Reglas |
-|---|---|---|
-| `main` | Versión estable; rama por defecto en GitHub | No se trabaja directo aquí: solo recibe Pull Requests desde `develop` |
-| `develop` | Trabajo en curso | Aquí haces commits; cuando algo está terminado y validado, abres un PR a `main` |
-
-Flujo diario:
+El repositorio tiene **una sola rama: `main`**. Todo se separa por carpetas, no por ramas.
 
 ```bash
-git switch develop
 git pull
 # ... trabajas y haces commits ...
 git push
-# en GitHub: Pull Request develop -> main; al aprobarlo, main queda actualizado
-git switch develop && git merge main      # opcional: re-sincronizar develop después del merge
 ```
 
-Si quieres probar algo grande sin ensuciar `develop`, crea una rama temporal desde `develop` (`git switch -c prueba-x`), intégrala con un PR y **bórrala al terminar** para que siempre queden solo estas dos.
+## Material de IA (04-ai-engineer-gcp-aws)
 
-## Labs movidos a otro repositorio
+Los labs de IA generativa y Terraform en la nube viven en la carpeta [04-ai-engineer-gcp-aws](../04-ai-engineer-gcp-aws/), enfocada en la preparación como AI Engineer en Google Cloud y AWS. Su recorrido en orden está en [EMPIEZA-AQUI.md](../04-ai-engineer-gcp-aws/EMPIEZA-AQUI.md).
 
-Los labs de IA generativa y Terraform en la nube se movieron a [ai-engineer-gcp-aws](https://github.com/axelvalenzuela/ai-engineer-gcp-aws), un repositorio enfocado en la preparación como AI Engineer en Google Cloud y AWS. Sus números no se reutilizan aquí.
-
-| Antes (Claude-Dev) | Ahora (ai-engineer-gcp-aws) |
+| Antes | Ahora (`04-ai-engineer-gcp-aws/`) |
 |---|---|
 | `lab07-rag-vertex-cloudrun` | `05-rag-app-cloud-run` |
 | `lab08-curso-ia` parte 0 / parte 1 / parte 2 | `01-python-for-ai` / `02-ai-fundamentals` / `04-vertex-ai-projects` |
-| `lab09-gemini-sdk-basico` | `03-gemini-sdk/01-gemini-api-quickstart` |
+| `lab09-gemini-sdk-basico` | `03-gemini-sdk/01-gemini-api-quickstart` (básico) y `03-gemini-sdk/03-lab9-safety-y-vertex` (versión ampliada con safety settings y Vertex AI) |
 | `lab10-terraform-aws` | `08-terraform-aws` (y sus ejemplos de SDK en `07-bedrock-sdk`) |
 | `lab11-terraform-gcp` | `06-terraform-gcp` (y sus ejemplos de SDK en `03-gemini-sdk/02-vertex-ai-examples`) |
 
-El historial de esos archivos sigue disponible en Git (`git log -- 04-ia-generativa/`).
+El historial anterior de esos archivos sigue disponible en Git (`git log -- 04-ia-generativa/`).
 
 ## Equivalencia con los nombres originales
 
@@ -74,7 +66,7 @@ El historial de esos archivos sigue disponible en Git (`git log -- 04-ia-generat
 | `lab4/` | `02-mcp-y-agentes/lab04-kohi-multi-mcp/` |
 | `lab5/` | `03-cloud-e-infraestructura/lab05-kubernetes-local/` |
 | `lab6/` | `03-cloud-e-infraestructura/lab06-sap-s4hana-fiori/` |
-| `lab7/`, `lab8_IAcourse/`, `lab9_googleSDK/`, `lab10_terraform_aws/`, `lab11_terraform_gcp/` | Repositorio [ai-engineer-gcp-aws](#labs-movidos-a-otro-repositorio) |
+| `lab7/`, `lab8_IAcourse/`, `lab9_googleSDK/`, `lab10_terraform_aws/`, `lab11_terraform_gcp/` | Carpeta [04-ai-engineer-gcp-aws](#material-de-ia-04-ai-engineer-gcp-aws) |
 
 ## Convenciones de cada lab
 
@@ -108,4 +100,4 @@ El historial de esos archivos sigue disponible en Git (`git log -- 04-ia-generat
 3. Agrega una fila en el README del área y en el [catálogo del README raíz](../README.md#catálogo-de-labs).
 4. Si tiene CI, crea `.github/workflows/labNN-ci.yml` con `paths` y `working-directory` del lab.
 5. Si conviene, agrégalo a una ruta en [RUTAS-DE-APRENDIZAJE.md](RUTAS-DE-APRENDIZAJE.md).
-6. Trabaja en `develop` y súbelo a `main` con un Pull Request.
+6. Haz commit y `git push` directo a `main`.

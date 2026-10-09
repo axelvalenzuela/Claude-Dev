@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 11-security-guardrails-rbac. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS11_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws11_vars:
+  variables:
+    LAB_NAME: "11-security-guardrails-rbac"
+    LAB_DIR: "08-terraform-aws/microlabs/11-security-guardrails-rbac"
+    TFVARS_FILE: $AWS11_TFVARS
+
+.aws11_changes: &aws11_changes
+  - 08-terraform-aws/microlabs/11-security-guardrails-rbac/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+06-terraform-gcp:validate:
+  extends: [.tf_validate, .aws11_vars]
+  rules:
+    - changes: *aws11_changes
+
+06-terraform-gcp:lint:
+  extends: [.tf_lint, .aws11_vars]
+  rules:
+    - changes: *aws11_changes
+
+06-terraform-gcp:checkov:
+  extends: [.tf_checkov, .aws11_vars]
+  rules:
+    - changes: *aws11_changes
+
+06-terraform-gcp:plan:
+  extends: [.tf_plan, .aws11_vars]
+  needs: ["06-terraform-gcp:validate"]
+  rules:
+    - changes: *aws11_changes
+
+06-terraform-gcp:apply:
+  extends: [.tf_apply, .aws11_vars]
+  needs: ["06-terraform-gcp:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws11_changes
+      when: manual
+
+06-terraform-gcp:smoke:
+  extends: [.tf_smoke, .aws11_vars]
+  needs: ["06-terraform-gcp:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws11_changes
+
+06-terraform-gcp:destroy:
+  extends: [.tf_destroy, .aws11_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "11-security-guardrails-rbac"
+      when: manual

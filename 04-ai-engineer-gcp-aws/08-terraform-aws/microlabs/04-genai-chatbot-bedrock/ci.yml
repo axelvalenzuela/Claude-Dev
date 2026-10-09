@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 04-genai-chatbot-bedrock. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS04_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws04_vars:
+  variables:
+    LAB_NAME: "04-genai-chatbot-bedrock"
+    LAB_DIR: "08-terraform-aws/microlabs/04-genai-chatbot-bedrock"
+    TFVARS_FILE: $AWS04_TFVARS
+
+.aws04_changes: &aws04_changes
+  - 08-terraform-aws/microlabs/04-genai-chatbot-bedrock/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws04:validate:
+  extends: [.tf_validate, .aws04_vars]
+  rules:
+    - changes: *aws04_changes
+
+aws04:lint:
+  extends: [.tf_lint, .aws04_vars]
+  rules:
+    - changes: *aws04_changes
+
+aws04:checkov:
+  extends: [.tf_checkov, .aws04_vars]
+  rules:
+    - changes: *aws04_changes
+
+aws04:plan:
+  extends: [.tf_plan, .aws04_vars]
+  needs: ["aws04:validate"]
+  rules:
+    - changes: *aws04_changes
+
+aws04:apply:
+  extends: [.tf_apply, .aws04_vars]
+  needs: ["aws04:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws04_changes
+      when: manual
+
+aws04:smoke:
+  extends: [.tf_smoke, .aws04_vars]
+  needs: ["aws04:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws04_changes
+
+aws04:destroy:
+  extends: [.tf_destroy, .aws04_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "04-genai-chatbot-bedrock"
+      when: manual

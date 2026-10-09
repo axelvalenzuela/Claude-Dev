@@ -1,0 +1,8 @@
+aws_region              = "us-east-1"
+project                 = "aie"
+environment             = "dev"
+owner                   = "tu.correo@dominio.com"
+model_id                = "amazon.nova-lite-v1:0"
+language_code           = "es"
+document_retention_days = 30
+alert_emails            = ["tu.correo@dominio.com"]

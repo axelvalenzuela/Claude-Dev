@@ -1,0 +1,13 @@
+# Copia a terraform.tfvars y ajusta. NO subas terraform.tfvars con datos reales a Git.
+aws_region            = "us-east-1"
+project               = "aie"
+environment           = "dev"
+owner                 = "tu.correo@dominio.com"
+cost_center           = "training"
+gitlab_host           = "gitlab.com"
+gitlab_audience       = "https://gitlab.com"
+gitlab_project_path   = "mi-grupo/claude-dev"
+gitlab_default_branch = "main"
+allowed_regions       = ["us-east-1", "us-west-2"]
+monthly_budget_usd    = 50
+alert_emails          = ["tu.correo@dominio.com"]

@@ -1,0 +1,10 @@
+project_id            = "mi-proyecto-labs"
+region                = "us-central1"
+environment           = "dev"
+owner                 = "axel"
+build_service_account = "projects/mi-proyecto-labs/serviceAccounts/aie-dev-builder@mi-proyecto-labs.iam.gserviceaccount.com"
+invoker_members       = ["user:tu.correo@dominio.com"]
+search_location       = "global"
+chunk_size            = 500
+company_name          = "NubeMX"
+model                 = "gemini-2.5-flash"

@@ -1,0 +1,15 @@
+# Archivos binarios: git nunca debe convertir sus saltos de linea
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.zip  binary
+*.xlsx binary
+*.xlsm binary
+*.docx binary
+*.pptx binary
+
+# Scripts que se ejecutan en Linux
+*.sh text eol=lf

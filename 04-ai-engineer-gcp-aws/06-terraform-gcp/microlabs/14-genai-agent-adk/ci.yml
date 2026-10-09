@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 14-genai-agent-adk. Plantillas en 06-terraform-gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP14_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp14_vars:
+  variables:
+    LAB_NAME: "14-genai-agent-adk"
+    LAB_DIR: "06-terraform-gcp/microlabs/14-genai-agent-adk"
+    TFVARS_FILE: $GCP14_TFVARS
+
+.gcp14_changes: &gcp14_changes
+  - 06-terraform-gcp/microlabs/14-genai-agent-adk/**/*
+  - 06-terraform-gcp/modules/**/*
+  - 06-terraform-gcp/.gitlab-ci.yml
+
+gcp14:validate:
+  extends: [.tf_validate, .gcp14_vars]
+  rules:
+    - changes: *gcp14_changes
+
+gcp14:lint:
+  extends: [.tf_lint, .gcp14_vars]
+  rules:
+    - changes: *gcp14_changes
+
+gcp14:checkov:
+  extends: [.tf_checkov, .gcp14_vars]
+  rules:
+    - changes: *gcp14_changes
+
+gcp14:plan:
+  extends: [.tf_plan, .gcp14_vars]
+  needs: ["gcp14:validate"]
+  rules:
+    - changes: *gcp14_changes
+
+gcp14:apply:
+  extends: [.tf_apply, .gcp14_vars]
+  needs: ["gcp14:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp14_changes
+      when: manual
+
+gcp14:smoke:
+  extends: [.tf_smoke, .gcp14_vars]
+  needs: ["gcp14:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp14_changes
+
+gcp14:destroy:
+  extends: [.tf_destroy, .gcp14_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "14-genai-agent-adk"
+      when: manual

@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 02-serverless-appsync-graphql. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS02_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws02_vars:
+  variables:
+    LAB_NAME: "02-serverless-appsync-graphql"
+    LAB_DIR: "08-terraform-aws/microlabs/02-serverless-appsync-graphql"
+    TFVARS_FILE: $AWS02_TFVARS
+
+.aws02_changes: &aws02_changes
+  - 08-terraform-aws/microlabs/02-serverless-appsync-graphql/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws02:validate:
+  extends: [.tf_validate, .aws02_vars]
+  rules:
+    - changes: *aws02_changes
+
+aws02:lint:
+  extends: [.tf_lint, .aws02_vars]
+  rules:
+    - changes: *aws02_changes
+
+aws02:checkov:
+  extends: [.tf_checkov, .aws02_vars]
+  rules:
+    - changes: *aws02_changes
+
+aws02:plan:
+  extends: [.tf_plan, .aws02_vars]
+  needs: ["aws02:validate"]
+  rules:
+    - changes: *aws02_changes
+
+aws02:apply:
+  extends: [.tf_apply, .aws02_vars]
+  needs: ["aws02:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws02_changes
+      when: manual
+
+aws02:smoke:
+  extends: [.tf_smoke, .aws02_vars]
+  needs: ["aws02:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws02_changes
+
+aws02:destroy:
+  extends: [.tf_destroy, .aws02_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "02-serverless-appsync-graphql"
+      when: manual

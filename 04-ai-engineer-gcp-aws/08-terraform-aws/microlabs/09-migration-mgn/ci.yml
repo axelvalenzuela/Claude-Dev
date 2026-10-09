@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 09-migration-mgn. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS09_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws09_vars:
+  variables:
+    LAB_NAME: "09-migration-mgn"
+    LAB_DIR: "08-terraform-aws/microlabs/09-migration-mgn"
+    TFVARS_FILE: $AWS09_TFVARS
+
+.aws09_changes: &aws09_changes
+  - 08-terraform-aws/microlabs/09-migration-mgn/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws09:validate:
+  extends: [.tf_validate, .aws09_vars]
+  rules:
+    - changes: *aws09_changes
+
+aws09:lint:
+  extends: [.tf_lint, .aws09_vars]
+  rules:
+    - changes: *aws09_changes
+
+aws09:checkov:
+  extends: [.tf_checkov, .aws09_vars]
+  rules:
+    - changes: *aws09_changes
+
+aws09:plan:
+  extends: [.tf_plan, .aws09_vars]
+  needs: ["aws09:validate"]
+  rules:
+    - changes: *aws09_changes
+
+aws09:apply:
+  extends: [.tf_apply, .aws09_vars]
+  needs: ["aws09:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws09_changes
+      when: manual
+
+aws09:smoke:
+  extends: [.tf_smoke, .aws09_vars]
+  needs: ["aws09:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws09_changes
+
+aws09:destroy:
+  extends: [.tf_destroy, .aws09_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "09-migration-mgn"
+      when: manual

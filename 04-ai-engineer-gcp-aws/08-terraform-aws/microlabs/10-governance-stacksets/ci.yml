@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 10-governance-stacksets. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS10_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws10_vars:
+  variables:
+    LAB_NAME: "10-governance-stacksets"
+    LAB_DIR: "08-terraform-aws/microlabs/10-governance-stacksets"
+    TFVARS_FILE: $AWS10_TFVARS
+
+.aws10_changes: &aws10_changes
+  - 08-terraform-aws/microlabs/10-governance-stacksets/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+08-terraform-aws:validate:
+  extends: [.tf_validate, .aws10_vars]
+  rules:
+    - changes: *aws10_changes
+
+08-terraform-aws:lint:
+  extends: [.tf_lint, .aws10_vars]
+  rules:
+    - changes: *aws10_changes
+
+08-terraform-aws:checkov:
+  extends: [.tf_checkov, .aws10_vars]
+  rules:
+    - changes: *aws10_changes
+
+08-terraform-aws:plan:
+  extends: [.tf_plan, .aws10_vars]
+  needs: ["08-terraform-aws:validate"]
+  rules:
+    - changes: *aws10_changes
+
+08-terraform-aws:apply:
+  extends: [.tf_apply, .aws10_vars]
+  needs: ["08-terraform-aws:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws10_changes
+      when: manual
+
+08-terraform-aws:smoke:
+  extends: [.tf_smoke, .aws10_vars]
+  needs: ["08-terraform-aws:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws10_changes
+
+08-terraform-aws:destroy:
+  extends: [.tf_destroy, .aws10_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "10-governance-stacksets"
+      when: manual

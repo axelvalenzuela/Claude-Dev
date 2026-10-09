@@ -1,0 +1,9 @@
+project_id            = "mi-proyecto-labs"
+region                = "us-central1" # Model Armor es regional: el template y el endpoint deben coincidir
+environment           = "dev"
+owner                 = "axel"
+build_service_account = "projects/mi-proyecto-labs/serviceAccounts/aie-dev-builder@mi-proyecto-labs.iam.gserviceaccount.com"
+invoker_members       = ["user:tu.correo@dominio.com"]
+rai_confidence        = "MEDIUM_AND_ABOVE"
+injection_confidence  = "LOW_AND_ABOVE"
+model                 = "gemini-2.5-flash"

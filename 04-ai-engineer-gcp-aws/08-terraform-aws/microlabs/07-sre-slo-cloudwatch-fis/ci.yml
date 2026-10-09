@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 07-sre-slo-cloudwatch-fis. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS07_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws07_vars:
+  variables:
+    LAB_NAME: "07-sre-slo-cloudwatch-fis"
+    LAB_DIR: "08-terraform-aws/microlabs/07-sre-slo-cloudwatch-fis"
+    TFVARS_FILE: $AWS07_TFVARS
+
+.aws07_changes: &aws07_changes
+  - 08-terraform-aws/microlabs/07-sre-slo-cloudwatch-fis/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws07:validate:
+  extends: [.tf_validate, .aws07_vars]
+  rules:
+    - changes: *aws07_changes
+
+aws07:lint:
+  extends: [.tf_lint, .aws07_vars]
+  rules:
+    - changes: *aws07_changes
+
+aws07:checkov:
+  extends: [.tf_checkov, .aws07_vars]
+  rules:
+    - changes: *aws07_changes
+
+aws07:plan:
+  extends: [.tf_plan, .aws07_vars]
+  needs: ["aws07:validate"]
+  rules:
+    - changes: *aws07_changes
+
+aws07:apply:
+  extends: [.tf_apply, .aws07_vars]
+  needs: ["aws07:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws07_changes
+      when: manual
+
+aws07:smoke:
+  extends: [.tf_smoke, .aws07_vars]
+  needs: ["aws07:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws07_changes
+
+aws07:destroy:
+  extends: [.tf_destroy, .aws07_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "07-sre-slo-cloudwatch-fis"
+      when: manual

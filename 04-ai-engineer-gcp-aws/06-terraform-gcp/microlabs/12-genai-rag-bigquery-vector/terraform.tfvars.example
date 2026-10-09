@@ -1,0 +1,11 @@
+project_id            = "mi-proyecto-labs"
+region                = "us-central1"
+environment           = "dev"
+owner                 = "axel"
+build_service_account = "projects/mi-proyecto-labs/serviceAccounts/aie-dev-builder@mi-proyecto-labs.iam.gserviceaccount.com"
+invoker_members       = ["user:tu.correo@dominio.com"]
+bq_location           = "US"
+embedding_endpoint    = "text-multilingual-embedding-002"
+model                 = "gemini-2.5-flash"
+top_k                 = 4
+max_distance          = 0.6

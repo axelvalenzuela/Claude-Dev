@@ -16,3 +16,6 @@ dist/
 lab3/
 lab6/
 lab8_IAcourse/
+
+# El canary de CloudWatch Synthetics necesita esta ruta node_modules (codigo propio, no dependencias)
+!04-ai-engineer-gcp-aws/08-terraform-aws/microlabs/07-sre-slo-cloudwatch-fis/canary/nodejs/node_modules/

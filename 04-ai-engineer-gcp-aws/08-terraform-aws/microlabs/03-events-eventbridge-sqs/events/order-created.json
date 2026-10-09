@@ -1,0 +1,20 @@
+[
+  {
+    "Source": "com.aie.orders",
+    "DetailType": "order.created",
+    "Detail": "{\"orderId\": \"A-1001\", \"amount\": 250, \"customer\": \"c-01\"}",
+    "EventBusName": "aie-dev-evt-orders"
+  },
+  {
+    "Source": "com.aie.orders",
+    "DetailType": "order.created",
+    "Detail": "{\"orderId\": \"A-1002\", \"amount\": 4800, \"customer\": \"c-02\"}",
+    "EventBusName": "aie-dev-evt-orders"
+  },
+  {
+    "Source": "com.aie.orders",
+    "DetailType": "order.created",
+    "Detail": "{\"orderId\": \"A-1003\", \"customer\": \"c-03\"}",
+    "EventBusName": "aie-dev-evt-orders"
+  }
+]

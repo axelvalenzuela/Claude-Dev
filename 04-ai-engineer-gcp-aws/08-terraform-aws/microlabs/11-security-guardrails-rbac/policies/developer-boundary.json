@@ -1,0 +1,68 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowWorkloadServices",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:*", "appsync:*", "lambda:*", "dynamodb:*", "s3:*", "sqs:*", "sns:*",
+        "events:*", "scheduler:*", "states:*", "logs:*", "cloudwatch:*", "xray:*",
+        "bedrock:*", "comprehend:*", "textract:*", "ec2:*", "elasticloadbalancing:*",
+        "autoscaling:*", "rds:*", "neptune-db:*", "secretsmanager:*", "kms:*", "ssm:*",
+        "cognito-idp:*", "wafv2:*", "cloudformation:*", "iam:PassRole", "iam:Get*", "iam:List*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowCreatingRolesOnlyWithBoundary",
+      "Effect": "Allow",
+      "Action": ["iam:CreateRole", "iam:PutRolePermissionsBoundary", "iam:AttachRolePolicy", "iam:PutRolePolicy"],
+      "Resource": "arn:aws:iam::*:role/aie-*",
+      "Condition": {
+        "StringLike": { "iam:PermissionsBoundary": "arn:aws:iam::*:policy/aie-*-developer-boundary" }
+      }
+    },
+    {
+      "Sid": "DenySecurityServicesTampering",
+      "Effect": "Deny",
+      "Action": [
+        "cloudtrail:StopLogging", "cloudtrail:DeleteTrail", "cloudtrail:UpdateTrail",
+        "guardduty:Delete*", "guardduty:Disassociate*", "guardduty:UpdateDetector",
+        "securityhub:Disable*", "securityhub:Delete*",
+        "config:Stop*", "config:Delete*",
+        "access-analyzer:DeleteAnalyzer"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyBoundaryChanges",
+      "Effect": "Deny",
+      "Action": ["iam:DeleteRolePermissionsBoundary", "iam:CreatePolicyVersion", "iam:DeletePolicy", "iam:SetDefaultPolicyVersion"],
+      "Resource": "arn:aws:iam::*:policy/aie-*-developer-boundary"
+    },
+    {
+      "Sid": "DenyIamUsersAndKeys",
+      "Effect": "Deny",
+      "Action": ["iam:CreateUser", "iam:CreateAccessKey", "iam:CreateLoginProfile"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyLargeEc2Instances",
+      "Effect": "Deny",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+        "StringNotLike": { "ec2:InstanceType": ["t4g.*", "t3.*", "t3a.*"] }
+      }
+    },
+    {
+      "Sid": "DenyLargeRdsInstances",
+      "Effect": "Deny",
+      "Action": "rds:CreateDBInstance",
+      "Resource": "*",
+      "Condition": {
+        "StringNotLike": { "rds:DatabaseClass": ["db.t4g.*", "db.t3.*"] }
+      }
+    }
+  ]
+}

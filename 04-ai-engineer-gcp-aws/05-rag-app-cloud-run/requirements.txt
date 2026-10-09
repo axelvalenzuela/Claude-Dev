@@ -1,0 +1,18 @@
+# Pinned to exact versions (best practice: reproducible installs).
+# Regenerate with: pip freeze > requirements.txt (after reviewing new versions).
+
+# Web server that hosts the chat page and the /api/chat endpoint.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Unified Google GenAI SDK. With vertexai=True it talks to Vertex AI
+# (Gemini for generation, text-embedding-005 for embeddings) using the
+# same client — no separate "google-cloud-aiplatform" package needed.
+google-genai==1.3.0
+
+# Loads GCP_PROJECT_ID / GCP_LOCATION / etc. from .env in local dev.
+# In Cloud Run these are set as real environment variables instead.
+python-dotenv==1.0.1
+
+# Vector math for the local, in-memory retrieval index (cosine similarity).
+numpy==2.2.1

@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 01-serverless-apigw-lambda-dynamodb. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS01_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws01_vars:
+  variables:
+    LAB_NAME: "01-serverless-apigw-lambda-dynamodb"
+    LAB_DIR: "08-terraform-aws/microlabs/01-serverless-apigw-lambda-dynamodb"
+    TFVARS_FILE: $AWS01_TFVARS
+
+.aws01_changes: &aws01_changes
+  - 08-terraform-aws/microlabs/01-serverless-apigw-lambda-dynamodb/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws01:validate:
+  extends: [.tf_validate, .aws01_vars]
+  rules:
+    - changes: *aws01_changes
+
+aws01:lint:
+  extends: [.tf_lint, .aws01_vars]
+  rules:
+    - changes: *aws01_changes
+
+aws01:checkov:
+  extends: [.tf_checkov, .aws01_vars]
+  rules:
+    - changes: *aws01_changes
+
+aws01:plan:
+  extends: [.tf_plan, .aws01_vars]
+  needs: ["aws01:validate"]
+  rules:
+    - changes: *aws01_changes
+
+aws01:apply:
+  extends: [.tf_apply, .aws01_vars]
+  needs: ["aws01:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws01_changes
+      when: manual
+
+aws01:smoke:
+  extends: [.tf_smoke, .aws01_vars]
+  needs: ["aws01:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws01_changes
+
+aws01:destroy:
+  extends: [.tf_destroy, .aws01_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "01-serverless-apigw-lambda-dynamodb"
+      when: manual

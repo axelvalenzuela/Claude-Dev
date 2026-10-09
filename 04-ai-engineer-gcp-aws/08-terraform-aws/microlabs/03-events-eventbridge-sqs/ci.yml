@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 03-events-eventbridge-sqs. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS03_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws03_vars:
+  variables:
+    LAB_NAME: "03-events-eventbridge-sqs"
+    LAB_DIR: "08-terraform-aws/microlabs/03-events-eventbridge-sqs"
+    TFVARS_FILE: $AWS03_TFVARS
+
+.aws03_changes: &aws03_changes
+  - 08-terraform-aws/microlabs/03-events-eventbridge-sqs/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws03:validate:
+  extends: [.tf_validate, .aws03_vars]
+  rules:
+    - changes: *aws03_changes
+
+aws03:lint:
+  extends: [.tf_lint, .aws03_vars]
+  rules:
+    - changes: *aws03_changes
+
+aws03:checkov:
+  extends: [.tf_checkov, .aws03_vars]
+  rules:
+    - changes: *aws03_changes
+
+aws03:plan:
+  extends: [.tf_plan, .aws03_vars]
+  needs: ["aws03:validate"]
+  rules:
+    - changes: *aws03_changes
+
+aws03:apply:
+  extends: [.tf_apply, .aws03_vars]
+  needs: ["aws03:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws03_changes
+      when: manual
+
+aws03:smoke:
+  extends: [.tf_smoke, .aws03_vars]
+  needs: ["aws03:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws03_changes
+
+aws03:destroy:
+  extends: [.tf_destroy, .aws03_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "03-events-eventbridge-sqs"
+      when: manual

@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 08-data-neptune-graph. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS08_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws08_vars:
+  variables:
+    LAB_NAME: "08-data-neptune-graph"
+    LAB_DIR: "08-terraform-aws/microlabs/08-data-neptune-graph"
+    TFVARS_FILE: $AWS08_TFVARS
+
+.aws08_changes: &aws08_changes
+  - 08-terraform-aws/microlabs/08-data-neptune-graph/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws08:validate:
+  extends: [.tf_validate, .aws08_vars]
+  rules:
+    - changes: *aws08_changes
+
+aws08:lint:
+  extends: [.tf_lint, .aws08_vars]
+  rules:
+    - changes: *aws08_changes
+
+aws08:checkov:
+  extends: [.tf_checkov, .aws08_vars]
+  rules:
+    - changes: *aws08_changes
+
+aws08:plan:
+  extends: [.tf_plan, .aws08_vars]
+  needs: ["aws08:validate"]
+  rules:
+    - changes: *aws08_changes
+
+aws08:apply:
+  extends: [.tf_apply, .aws08_vars]
+  needs: ["aws08:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws08_changes
+      when: manual
+
+aws08:smoke:
+  extends: [.tf_smoke, .aws08_vars]
+  needs: ["aws08:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws08_changes
+
+aws08:destroy:
+  extends: [.tf_destroy, .aws08_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "08-data-neptune-graph"
+      when: manual

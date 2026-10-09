@@ -1,0 +1,12 @@
+aws_region                       = "us-east-1"
+project                          = "aie"
+environment                      = "dev"
+owner                            = "tu.correo@dominio.com"
+vpc_cidr                         = "10.90.0.0/16"
+enable_nat_gateway               = false
+source_cidrs                     = ["203.0.113.10/32"] # IP pública de tu servidor/VM origen
+replication_over_private_link    = false
+bandwidth_throttle_mbps          = 0
+replication_server_instance_type = "t3.small"
+target_app_ports                 = [80, 443]
+installer_principal_arns         = [] # p. ej. ["arn:aws:iam::<account>:role/AWSReservedSSO_Admin_xxxx"]

@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 06-k8s-gke-autopilot. Plantillas en 06-terraform-gcp/.gitlab-ci.yml
+# Variable requerida en GitLab: GCP06_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.gcp06_vars:
+  variables:
+    LAB_NAME: "06-k8s-gke-autopilot"
+    LAB_DIR: "06-terraform-gcp/microlabs/06-k8s-gke-autopilot"
+    TFVARS_FILE: $GCP06_TFVARS
+
+.gcp06_changes: &gcp06_changes
+  - 06-terraform-gcp/microlabs/06-k8s-gke-autopilot/**/*
+  - 06-terraform-gcp/modules/**/*
+  - 06-terraform-gcp/.gitlab-ci.yml
+
+gcp06:validate:
+  extends: [.tf_validate, .gcp06_vars]
+  rules:
+    - changes: *gcp06_changes
+
+gcp06:lint:
+  extends: [.tf_lint, .gcp06_vars]
+  rules:
+    - changes: *gcp06_changes
+
+gcp06:checkov:
+  extends: [.tf_checkov, .gcp06_vars]
+  rules:
+    - changes: *gcp06_changes
+
+gcp06:plan:
+  extends: [.tf_plan, .gcp06_vars]
+  needs: ["gcp06:validate"]
+  rules:
+    - changes: *gcp06_changes
+
+gcp06:apply:
+  extends: [.tf_apply, .gcp06_vars]
+  needs: ["gcp06:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp06_changes
+      when: manual
+
+gcp06:smoke:
+  extends: [.tf_smoke, .gcp06_vars]
+  needs: ["gcp06:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *gcp06_changes
+
+gcp06:destroy:
+  extends: [.tf_destroy, .gcp06_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "06-k8s-gke-autopilot"
+      when: manual

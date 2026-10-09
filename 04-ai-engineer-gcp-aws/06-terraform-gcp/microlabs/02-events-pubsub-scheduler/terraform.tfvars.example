@@ -1,0 +1,10 @@
+project_id            = "mi-proyecto-labs"
+region                = "us-central1"
+environment           = "dev"
+owner                 = "axel"
+build_service_account = "projects/mi-proyecto-labs/serviceAccounts/aie-dev-builder@mi-proyecto-labs.iam.gserviceaccount.com"
+max_delivery_attempts = 5
+audit_retention_days  = 30
+report_schedule       = "0 * * * *"
+schedule_timezone     = "America/Tijuana"
+notification_channels = [] # ["projects/<p>/notificationChannels/<id>"]

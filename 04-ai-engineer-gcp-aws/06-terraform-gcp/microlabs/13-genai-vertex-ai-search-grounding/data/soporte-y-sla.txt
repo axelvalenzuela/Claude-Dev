@@ -1,0 +1,9 @@
+NubeMX - Soporte y acuerdo de nivel de servicio
+
+Severidad 1 (servicio caído para todos los usuarios): respuesta en 1 hora para el plan Empresa y 4 horas para el plan Pro.
+
+Severidad 2 (función importante degradada): respuesta en 8 horas hábiles.
+
+Severidad 3 (pregunta o problema menor): respuesta en 2 días hábiles.
+
+Si la disponibilidad mensual del plan Empresa baja de 99.95 por ciento, el cliente recibe un crédito de 10 por ciento de la factura mensual; si baja de 99 por ciento, el crédito es de 25 por ciento. Los créditos se solicitan dentro de los 30 días siguientes al incidente.

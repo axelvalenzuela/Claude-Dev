@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 06-web3tier-alb-asg-rds. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS06_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws06_vars:
+  variables:
+    LAB_NAME: "06-web3tier-alb-asg-rds"
+    LAB_DIR: "08-terraform-aws/microlabs/06-web3tier-alb-asg-rds"
+    TFVARS_FILE: $AWS06_TFVARS
+
+.aws06_changes: &aws06_changes
+  - 08-terraform-aws/microlabs/06-web3tier-alb-asg-rds/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws06:validate:
+  extends: [.tf_validate, .aws06_vars]
+  rules:
+    - changes: *aws06_changes
+
+aws06:lint:
+  extends: [.tf_lint, .aws06_vars]
+  rules:
+    - changes: *aws06_changes
+
+aws06:checkov:
+  extends: [.tf_checkov, .aws06_vars]
+  rules:
+    - changes: *aws06_changes
+
+aws06:plan:
+  extends: [.tf_plan, .aws06_vars]
+  needs: ["aws06:validate"]
+  rules:
+    - changes: *aws06_changes
+
+aws06:apply:
+  extends: [.tf_apply, .aws06_vars]
+  needs: ["aws06:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws06_changes
+      when: manual
+
+aws06:smoke:
+  extends: [.tf_smoke, .aws06_vars]
+  needs: ["aws06:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws06_changes
+
+aws06:destroy:
+  extends: [.tf_destroy, .aws06_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "06-web3tier-alb-asg-rds"
+      when: manual

@@ -1,0 +1,56 @@
+# Jobs de GitLab CI para el micro lab 05-genai-docs-stepfunctions. Plantillas en 08-terraform-aws/.gitlab-ci.yml
+# Variable requerida en GitLab: AWS05_TFVARS (tipo File) con el contenido de terraform.tfvars
+
+.aws05_vars:
+  variables:
+    LAB_NAME: "05-genai-docs-stepfunctions"
+    LAB_DIR: "08-terraform-aws/microlabs/05-genai-docs-stepfunctions"
+    TFVARS_FILE: $AWS05_TFVARS
+
+.aws05_changes: &aws05_changes
+  - 08-terraform-aws/microlabs/05-genai-docs-stepfunctions/**/*
+  - 08-terraform-aws/modules/**/*
+  - 08-terraform-aws/.gitlab-ci.yml
+
+aws05:validate:
+  extends: [.tf_validate, .aws05_vars]
+  rules:
+    - changes: *aws05_changes
+
+aws05:lint:
+  extends: [.tf_lint, .aws05_vars]
+  rules:
+    - changes: *aws05_changes
+
+aws05:checkov:
+  extends: [.tf_checkov, .aws05_vars]
+  rules:
+    - changes: *aws05_changes
+
+aws05:plan:
+  extends: [.tf_plan, .aws05_vars]
+  needs: ["aws05:validate"]
+  rules:
+    - changes: *aws05_changes
+
+aws05:apply:
+  extends: [.tf_apply, .aws05_vars]
+  needs: ["aws05:plan"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws05_changes
+      when: manual
+
+aws05:smoke:
+  extends: [.tf_smoke, .aws05_vars]
+  needs: ["aws05:apply"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes: *aws05_changes
+
+aws05:destroy:
+  extends: [.tf_destroy, .aws05_vars]
+  needs: []
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DESTROY_LAB == "05-genai-docs-stepfunctions"
+      when: manual

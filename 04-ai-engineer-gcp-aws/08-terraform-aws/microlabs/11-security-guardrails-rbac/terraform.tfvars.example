@@ -1,0 +1,16 @@
+aws_region                 = "us-east-1"
+project                    = "aie"
+environment                = "dev"
+owner                      = "tu.correo@dominio.com"
+audit_log_retention_days   = 365
+record_global_resources    = true      # solo en UNA región
+config_recording_frequency = "DAILY"   # CONTINUOUS en producción
+security_emails            = ["seguridad@dominio.com"]
+guardduty_features         = ["S3_DATA_EVENTS", "EBS_MALWARE_PROTECTION", "LAMBDA_NETWORK_LOGS", "RDS_LOGIN_EVENTS"]
+securityhub_standards = [
+  "aws-foundational-security-best-practices/v/1.0.0",
+  "cis-aws-foundations-benchmark/v/3.0.0",
+]
+# rbac_roles = { ... }   # usa el default o personaliza (ver variables.tf)
+manage_scps    = false     # true solo en la cuenta de management
+scp_target_ids = []        # ["ou-xxxx-sandbox"]
